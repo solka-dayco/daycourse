@@ -2,12 +2,23 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>DayCourse</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>데이트 코스</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<h1>데이코스 테스트 페이지</h1>
-<p>데이트 코스 서비스 개발 시작</p>
-
+  <header>💕 데이트 코스 만들기</header>
+  <div class="map-card">
+    <div id="map"></div>
+  </div>
+  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&autoload=false"></script>
+  <script>
+    kakao.maps.load(function() {
+      const map = new kakao.maps.Map(document.getElementById('map'), {
+        center: new kakao.maps.LatLng(37.5665, 126.9780),
+        level: 5
+      });
+    });
+  </script>
 </body>
 </html>
