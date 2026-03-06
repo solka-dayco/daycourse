@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>코스 상세</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="course.css">
+</head>
+<body>
+  <header>
+    <a href="feed.html" class="back-btn">← 뒤로</a>
+    <span>💕 코스 상세</span>
+    <div></div>
+  </header>
+
+  <div class="course-container">
+
+    <!-- 4분할 썸네일 -->
+    <div class="detail-thumbnail" id="detail-thumbnail"></div>
+
+    <!-- 코스 제목 + 날짜 -->
+    <div class="detail-header">
+      <h2 id="detail-title"></h2>
+      <span id="detail-date"></span>
+    </div>
+
+    <!-- 코스 장소 목록 -->
+    <div class="detail-section">
+      <h3>📍 코스 목록</h3>
+      <ul id="detail-places"></ul>
+    </div>
+
+    <!-- 지도 -->
+    <div class="detail-section">
+      <h3>🗺 동선 지도</h3>
+      <div id="detail-map"></div>
+    </div>
+
+    <!-- 삭제 버튼 -->
+    <div class="detail-delete">
+      <button id="delete-btn">🗑 게시글 삭제</button>
+    </div>
+
+    <!-- 좋아요 / 댓글 / 공유 -->
+    <div class="detail-actions">
+      <button id="like-btn">❤️ <span id="like-count">0</span></button>
+      <button>💬 <span id="comment-count">0</span></button>
+      <button>📤 공유</button>
+    </div>
+
+  </div>
+
+  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&autoload=false"></script>
+  <script src="course.js"></script>
+</body>
+</html>

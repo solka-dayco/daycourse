@@ -3,11 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>데이트 코스</title>
+  <header>
+    <span>💕 데이트 코스 만들기</span>
+    <a href="feed.html" class="header-btn">피드 보기</a>
+  </header>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>💕 데이트 코스 만들기</header>
+  <header> 테스트</header>
 
   <div class="container">
 
@@ -20,15 +23,22 @@
     <!-- 검색 결과 드롭다운 목록 -->
     <ul id="search-result"></ul>
 
-    <!-- 지도 영역 -->
-    <div id="map"></div>
+    <!-- 지도 + 내 위치 버튼 묶음 -->
+    <div class="map-wrapper">
+      <div id="map"></div>
+      <button id="my-location-btn">📍</button>
+    </div>
 
-    <!-- 매장 정보 미리보기 (검색 결과 클릭 시 표시) -->
+    <!-- 매장 정보 미리보기 -->
     <div id="place-preview" class="hidden">
       <div class="preview-info">
         <p id="preview-name"></p>
-        <p id="preview-address"></p>
         <p id="preview-category"></p>
+        <p id="preview-address"></p>
+        <p id="preview-phone"></p>
+        <a id="preview-link" href="#" target="_blank" class="preview-kakao-btn">
+          카카오맵에서 리뷰/예약 확인 →
+        </a>
       </div>
       <button id="add-btn">+ 코스에 추가</button>
     </div>
@@ -37,6 +47,33 @@
     <div class="course-section">
       <h3>📍 내 코스</h3>
       <ul id="course-list"></ul>
+
+      <!-- 사진 4장 업로드 -->
+      <div class="photo-upload-box">
+        <p class="photo-upload-title">📷 코스 사진 4장 업로드</p>
+        <div class="photo-grid">
+          <label class="photo-slot" for="photo1">
+            <input type="file" id="photo1" accept="image/*" hidden>
+            <span>+</span>
+            <img id="preview1" class="hidden">
+          </label>
+          <label class="photo-slot" for="photo2">
+            <input type="file" id="photo2" accept="image/*" hidden>
+            <span>+</span>
+            <img id="preview2" class="hidden">
+          </label>
+          <label class="photo-slot" for="photo3">
+            <input type="file" id="photo3" accept="image/*" hidden>
+            <span>+</span>
+            <img id="preview3" class="hidden">
+          </label>
+          <label class="photo-slot" for="photo4">
+            <input type="file" id="photo4" accept="image/*" hidden>
+            <span>+</span>
+            <img id="preview4" class="hidden">
+          </label>
+        </div>
+      </div>
 
       <!-- 코스 이름 입력 + 저장 버튼 -->
       <div class="save-box">
