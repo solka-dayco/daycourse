@@ -282,7 +282,17 @@ kakao.maps.load(function () {
     polyline.setMap(map);
   }
 
-  // ── 사진 미리보기 (압축 포함) ────────────────────
+  // ── 사진 크롭 + 미리보기 ─────────────────────────
+  let cropTargetNum = null;
+  let cropImgEl = null;
+  let cropOffsetX = 0;
+  let cropOffsetY = 0;
+  let cropStartX = 0;
+  let cropStartY = 0;
+  let isDragging = false;
+  const CROP_SIZE = 280;
+
+  // 파일 선택 시 크롭 팝업 열기
   [1, 2, 3, 4].forEach(function (num) {
     document.getElementById('photo' + num).addEventListener('change', function (e) {
       const file = e.target.files[0];
@@ -290,35 +300,179 @@ kakao.maps.load(function () {
 
       const reader = new FileReader();
       reader.onload = function (event) {
-        const imgEl = new Image();
-        imgEl.onload = function () {
-          const canvas = document.createElement('canvas');
-          const maxSize = 400;
-          let width = imgEl.width;
-          let height = imgEl.height;
+        cropTargetNum = num;
+        cropImgEl = document.getElementById('crop-image');
+        cropImgEl.src = event.target.result;
 
-          if (width > height && width > maxSize) {
-            height = (height * maxSize) / width;
-            width = maxSize;
-          } else if (height > maxSize) {
-            width = (width * maxSize) / height;
-            height = maxSize;
+        cropImgEl.onload = function () {
+          // 이미지 초기 크기 설정 (짧은 쪽이 280px)
+          const ratio = cropImgEl.naturalWidth / cropImgEl.naturalHeight;
+          let w, h;
+          if (ratio > 1) {
+            h = CROP_SIZE;
+            w = Math.round(CROP_SIZE * ratio);
+          } else {
+            w = CROP_SIZE;
+            h = Math.round(CROP_SIZE / ratio);
           }
+          cropImgEl.style.width = w + 'px';
+          cropImgEl.style.height = h + 'px';
 
-          canvas.width = width;
-          canvas.height = height;
-          canvas.getContext('2d').drawImage(imgEl, 0, 0, width, height);
+          // 초기 위치 중앙
+          cropOffsetX = -Math.round((w - CROP_SIZE) / 2);
+          cropOffsetY = -Math.round((h - CROP_SIZE) / 2);
+          cropImgEl.parentElement.style.left = cropOffsetX + 'px';
+          cropImgEl.parentElement.style.top = cropOffsetY + 'px';
 
-          const compressed = canvas.toDataURL('image/jpeg', 0.1);
-          const preview = document.getElementById('preview' + num);
-          preview.src = compressed;
-          preview.classList.remove('hidden');
-          preview.previousElementSibling.style.display = 'none';
+          document.getElementById('crop-modal').classList.remove('hidden');
         };
-        imgEl.src = event.target.result;
       };
       reader.readAsDataURL(file);
     });
+  });
+
+  // 크롭 드래그
+  const cropArea = document.querySelector('.crop-area');
+
+  cropArea.addEventListener('mousedown', function (e) {
+    isDragging = true;
+    cropStartX = e.clientX - cropOffsetX;
+    cropStartY = e.clientY - cropOffsetY;
+    cropArea.style.cursor = 'grabbing';
+  });
+
+  cropArea.addEventListener('touchstart', function (e) {
+    isDragging = true;
+    cropStartX = e.touches[0].clientX - cropOffsetX;
+    cropStartY = e.touches[0].clientY - cropOffsetY;
+  }, { passive: true });
+
+  document.addEventListener('mousemove', function (e) {
+    if (!isDragging) return;
+    moveCrop(e.clientX, e.clientY);
+  });
+
+  document.addEventListener('touchmove', function (e) {
+    if (!isDragging) return;
+    moveCrop(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+
+  document.addEventListener('mouseup', function () {
+    isDragging = false;
+    cropArea.style.cursor = 'grab';
+  });
+
+  document.addEventListener('touchend', function () {
+    isDragging = false;
+  });
+
+  function moveCrop(clientX, clientY) {
+    if (!cropImgEl) return;
+    const imgW = cropImgEl.offsetWidth;
+    const imgH = cropImgEl.offsetHeight;
+
+    let newX = clientX - cropStartX;
+    let newY = clientY - cropStartY;
+
+    // 경계 제한
+    newX = Math.min(0, Math.max(newX, -(imgW - CROP_SIZE)));
+    newY = Math.min(0, Math.max(newY, -(imgH - CROP_SIZE)));
+
+    cropOffsetX = newX;
+    cropOffsetY = newY;
+    cropImgEl.parentElement.style.left = newX + 'px';
+    cropImgEl.parentElement.style.top = newY + 'px';
+  }
+
+  // 크롭 취소
+  document.getElementById('crop-cancel').addEventListener('click', function () {
+    document.getElementById('crop-modal').classList.add('hidden');
+    document.getElementById('photo' + cropTargetNum).value = '';
+    cropTargetNum = null;
+  });
+
+  // 크롭 확인 → 정사각형으로 잘라서 미리보기에 적용
+  document.getElementById('crop-confirm').addEventListener('click', function () {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 400;
+    const ctx = canvas.getContext('2d');
+
+    const scaleX = cropImgEl.naturalWidth / cropImgEl.offsetWidth;
+    const scaleY = cropImgEl.naturalHeight / cropImgEl.offsetHeight;
+
+    const sx = (-cropOffsetX) * scaleX;
+    const sy = (-cropOffsetY) * scaleY;
+    const sw = CROP_SIZE * scaleX;
+    const sh = CROP_SIZE * scaleY;
+
+    ctx.drawImage(cropImgEl, sx, sy, sw, sh, 0, 0, 400, 400);
+
+    const compressed = canvas.toDataURL('image/jpeg', 0.3);
+    const preview = document.getElementById('preview' + cropTargetNum);
+    preview.src = compressed;
+    preview.classList.remove('hidden');
+    preview.previousElementSibling.style.display = 'none';
+
+    document.getElementById('crop-modal').classList.add('hidden');
+    cropTargetNum = null;
+  });
+
+  // ── 사진 뷰어 팝업 ───────────────────────────────
+  let viewerPhotos = [];
+  let viewerIndex = 0;
+
+  function openViewer(photos, startIndex) {
+    viewerPhotos = photos.filter(function (p) { return p; });
+    if (viewerPhotos.length === 0) return;
+
+    viewerIndex = startIndex;
+    updateViewer();
+    document.getElementById('photo-viewer').classList.remove('hidden');
+  }
+
+  function updateViewer() {
+    document.getElementById('viewer-img').src = viewerPhotos[viewerIndex];
+
+    const dots = document.getElementById('viewer-dots');
+    dots.innerHTML = '';
+    viewerPhotos.forEach(function (_, i) {
+      const dot = document.createElement('div');
+      dot.className = 'viewer-dot' + (i === viewerIndex ? ' active' : '');
+      dots.appendChild(dot);
+    });
+  }
+
+  document.getElementById('viewer-close').addEventListener('click', function () {
+    document.getElementById('photo-viewer').classList.add('hidden');
+  });
+
+  document.getElementById('viewer-prev').addEventListener('click', function () {
+    viewerIndex = (viewerIndex - 1 + viewerPhotos.length) % viewerPhotos.length;
+    updateViewer();
+  });
+
+  document.getElementById('viewer-next').addEventListener('click', function () {
+    viewerIndex = (viewerIndex + 1) % viewerPhotos.length;
+    updateViewer();
+  });
+
+  // 썸네일 클릭 시 뷰어 열기
+  document.querySelector('.photo-grid').addEventListener('click', function (e) {
+    const slot = e.target.closest('.photo-slot');
+    if (!slot) return;
+    const img = slot.querySelector('img');
+    if (!img || img.classList.contains('hidden')) return;
+
+    const photos = [];
+    [1, 2, 3, 4].forEach(function (num) {
+      const p = document.getElementById('preview' + num);
+      if (p && !p.classList.contains('hidden')) photos.push(p.src);
+    });
+
+    const clickedSrc = img.src;
+    const startIndex = photos.indexOf(clickedSrc);
+    openViewer(photos, startIndex >= 0 ? startIndex : 0);
   });
 
   // ── 코스 저장 ────────────────────────────────────

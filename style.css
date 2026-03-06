@@ -410,3 +410,160 @@ header {
   top: 6px;
   right: 10px;
 }
+
+/* ── 크롭 팝업 ──────────────────────────────────── */
+#crop-modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.8);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#crop-modal.hidden { display: none; }
+
+.crop-modal-inner {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  width: 320px;
+}
+
+.crop-title {
+  font-size: 13px;
+  color: #666;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.crop-area {
+  width: 280px;
+  height: 280px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #000;
+  position: relative;
+  cursor: grab;
+}
+
+.crop-box {
+  position: absolute;
+  top: 0; left: 0;
+}
+
+.crop-box img {
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.crop-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.crop-actions button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#crop-cancel {
+  background: #f0f0f0;
+  color: #666;
+}
+
+#crop-confirm {
+  background: #ff4e6a;
+  color: white;
+}
+
+/* ── 사진 뷰어 팝업 ─────────────────────────────── */
+#photo-viewer {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.95);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#photo-viewer.hidden { display: none; }
+
+.photo-viewer-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.viewer-img-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#viewer-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+#viewer-close {
+  position: absolute;
+  top: 16px; right: 16px;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+  z-index: 10;
+}
+
+#viewer-prev, #viewer-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+  font-size: 36px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 10;
+}
+
+#viewer-prev { left: 12px; }
+#viewer-next { right: 12px; }
+
+.viewer-dots {
+  position: absolute;
+  bottom: 24px;
+  display: flex;
+  gap: 8px;
+}
+
+.viewer-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+}
+
+.viewer-dot.active {
+  background: white;
+}
