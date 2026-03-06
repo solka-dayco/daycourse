@@ -1,3 +1,7 @@
+import { db, storage } from './firebase.js';
+import { collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
 kakao.maps.load(function () {
 
   // ── 지도 초기화 ──────────────────────────────────
@@ -9,23 +13,19 @@ kakao.maps.load(function () {
   const ps = new kakao.maps.services.Places();
 
   // ── 상태 변수 ────────────────────────────────────
-  let selectedPlace = null;   // 미리보기 중인 장소
-  let previewMarker = null;   // 미리보기 임시 마커
-  let previewOverlay = null;  // 미리보기 임시 말풍선
-  let coursePlaces = [];      // 확정된 장소 목록
-  let polyline = null;        // 현재 그려진 동선
-  let activeMarkers = [];     // 확정 마커 목록
-  let activeOverlays = [];    // 확정 말풍선 목록
-  let myLocationOverlay = null; // 내 위치 파란 점
+  let selectedPlace = null;
+  let previewMarker = null;
+  let previewOverlay = null;
+  let coursePlaces = [];
+  let polyline = null;
+  let activeMarkers = [];
+  let activeOverlays = [];
+  let myLocationOverlay = null;
 
   // ── 내 위치 기능 ─────────────────────────────────
-
-  // 내 위치 파란 점 표시
   function showMyLocation(pos) {
     const position = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-
     if (myLocationOverlay) myLocationOverlay.setMap(null);
-
     myLocationOverlay = new kakao.maps.CustomOverlay({
       position: position,
       content: '<div style="width:14px; height:14px; background:#4a90e2; border:2px solid white; border-radius:50%; box-shadow:0 0 6px rgba(74,144,226,0.8);"></div>',
@@ -35,7 +35,6 @@ kakao.maps.load(function () {
     map.setCenter(position);
   }
 
-  // 위치 권한 안내 메시지 표시
   function showLocationGuide() {
     const existing = document.getElementById('location-guide');
     if (existing) return;
@@ -65,39 +64,31 @@ kakao.maps.load(function () {
     document.querySelector('.map-wrapper').appendChild(guide);
   }
 
-  // 위치 가져오기 옵션
   const geoOptions = {
-    enableHighAccuracy: false, // 일단 false로 낮춰서 빠르게 시도
-    timeout: 15000,            // 15초로 늘림
-    maximumAge: 60000          // 1분 이내 캐시 허용
+    enableHighAccuracy: false,
+    timeout: 15000,
+    maximumAge: 60000
   };
 
-  // 페이지 로드 시 조용히 내 위치로 이동 (실패해도 안내 안 띄움)
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(showMyLocation, function () {}, geoOptions);
   }
 
-  // 📍 버튼 클릭 시 내 위치로 이동 (실패 시 안내 띄움)
   document.getElementById('my-location-btn').addEventListener('click', function () {
     if (!navigator.geolocation) {
       showLocationGuide();
       return;
     }
-
-    // 버튼 로딩 표시
     const btn = document.getElementById('my-location-btn');
     btn.textContent = '⏳';
     btn.disabled = true;
-
     navigator.geolocation.getCurrentPosition(
-      function(pos) {
-        // 성공 시 버튼 원래대로
+      function (pos) {
         btn.textContent = '📍';
         btn.disabled = false;
         showMyLocation(pos);
       },
-      function(error) {
-        // 실패 시 버튼 원래대로 + 안내
+      function () {
         btn.textContent = '📍';
         btn.disabled = false;
         showLocationGuide();
@@ -109,7 +100,6 @@ kakao.maps.load(function () {
   // ── 장소 미리보기 패널 표시 ──────────────────────
   function showPreview(place) {
     selectedPlace = place;
-
     document.getElementById('preview-name').textContent = place.place_name;
     document.getElementById('preview-category').textContent = '🏷 ' + (place.category_name || '');
     document.getElementById('preview-address').textContent = '📌 ' + (place.road_address_name || place.address_name || '');
@@ -122,7 +112,6 @@ kakao.maps.load(function () {
     } else {
       link.style.display = 'none';
     }
-
     document.getElementById('place-preview').classList.remove('hidden');
   }
 
@@ -166,7 +155,6 @@ kakao.maps.load(function () {
   // ── 지도 클릭 시 반경 30m 내 장소 검색 ──────────
   kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
     const position = mouseEvent.latLng;
-
     const categories = ['FD6', 'CE7', 'AT4', 'CT1'];
     let allResults = [];
     let searchCount = 0;
@@ -174,7 +162,6 @@ kakao.maps.load(function () {
     categories.forEach(function (category) {
       ps.categorySearch(category, function (data, status) {
         searchCount++;
-
         if (status === kakao.maps.services.Status.OK) {
           allResults = allResults.concat(data);
         }
@@ -314,7 +301,7 @@ kakao.maps.load(function () {
   });
 
   // ── 코스 저장 ────────────────────────────────────
-  document.getElementById('save-btn').addEventListener('click', function () {
+  document.getElementById('save-btn').addEventListener('click', async function () {
     const courseName = document.getElementById('course-name').value.trim();
 
     if (!courseName) {
@@ -327,118 +314,168 @@ kakao.maps.load(function () {
       return;
     }
 
-    const photos = [];
-    [1, 2, 3, 4].forEach(function (num) {
-      const img = document.getElementById('preview' + num);
-      photos.push(img && !img.classList.contains('hidden') ? img.src : null);
-    });
+    try {
+      const saveBtn = document.getElementById('save-btn');
+      saveBtn.textContent = '저장 중...';
+      saveBtn.disabled = true;
 
-    const courseData = {
-      id: Date.now(),
-      name: courseName,
-      places: coursePlaces,
-      photos: photos,
-      createdAt: new Date().toLocaleDateString('ko-KR')
-    };
+      const photoURLs = [];
+      const photoPromises = [1, 2, 3, 4].map(async function (num) {
+        const img = document.getElementById('preview' + num);
+        if (img && !img.classList.contains('hidden') && img.src) {
+          const photoRef = ref(storage, `courses/${Date.now()}_${num}.jpg`);
+          await uploadString(photoRef, img.src, 'data_url');
+          const url = await getDownloadURL(photoRef);
+          photoURLs[num - 1] = url;
+        } else {
+          photoURLs[num - 1] = null;
+        }
+      });
+      await Promise.all(photoPromises);
 
-    const existing = JSON.parse(localStorage.getItem('courses') || '[]');
-    existing.push(courseData);
-    localStorage.setItem('courses', JSON.stringify(existing));
+      const courseData = {
+        name: courseName,
+        places: coursePlaces,
+        photos: photoURLs,
+        likes: 0,
+        comments: 0,
+        createdAt: new Date().toLocaleDateString('ko-KR')
+      };
 
-    renderSavedList();
-    document.getElementById('course-name').value = '';
-    alert('코스가 저장됐습니다! 🎉');
+      await addDoc(collection(db, 'courses'), courseData);
+
+      renderSavedList();
+      document.getElementById('course-name').value = '';
+      alert('코스가 저장됐습니다! 🎉');
+
+    } catch (error) {
+      console.error('저장 오류:', error);
+      alert('저장 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      const saveBtn = document.getElementById('save-btn');
+      saveBtn.textContent = '저장';
+      saveBtn.disabled = false;
+    }
   });
 
   // ── 저장된 코스 목록 표시 ────────────────────────
-  function renderSavedList() {
-    const saved = JSON.parse(localStorage.getItem('courses') || '[]');
+  async function renderSavedList() {
     const list = document.getElementById('saved-list');
-    list.innerHTML = '';
+    list.innerHTML = '<li style="color:#aaa; font-size:13px;">불러오는 중...</li>';
 
-    if (saved.length === 0) {
-      list.innerHTML = '<li style="color:#aaa; font-size:13px;">저장된 코스가 없습니다.</li>';
-      return;
-    }
+    try {
+      const snapshot = await getDocs(collection(db, 'courses'));
 
-    saved.forEach(function (course) {
-      const li = document.createElement('li');
-      li.innerHTML = `
-        <div>
-          <strong style="cursor:pointer; color:#ff4e6a;" class="load-course" data-id="${course.id}">${course.name}</strong>
-          <span style="font-size:12px; color:#aaa; margin-left:8px;">${course.createdAt}</span>
-          <div style="font-size:12px; color:#888; margin-top:4px;">
-            ${course.places.map(p => p.name).join(' → ')}
+      if (snapshot.empty) {
+        list.innerHTML = '<li style="color:#aaa; font-size:13px;">저장된 코스가 없습니다.</li>';
+        return;
+      }
+
+      list.innerHTML = '';
+
+      snapshot.forEach(function (docSnap) {
+        const course = docSnap.data();
+        const id = docSnap.id;
+
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div>
+            <strong style="cursor:pointer; color:#ff4e6a;" class="load-course" data-id="${id}">${course.name}</strong>
+            <span style="font-size:12px; color:#aaa; margin-left:8px;">${course.createdAt}</span>
+            <div style="font-size:12px; color:#888; margin-top:4px;">
+              ${course.places.map(p => p.name).join(' → ')}
+            </div>
           </div>
-        </div>
-        <button class="delete-btn" data-id="${course.id}">🗑</button>
-      `;
-      list.appendChild(li);
-    });
-
-    document.querySelectorAll('.delete-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        deleteCourse(parseInt(this.dataset.id));
+          <button class="delete-btn" data-id="${id}">🗑</button>
+        `;
+        list.appendChild(li);
       });
-    });
 
-    document.querySelectorAll('.load-course').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        loadCourse(parseInt(this.dataset.id));
+      document.querySelectorAll('.delete-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          deleteCourse(this.dataset.id);
+        });
       });
-    });
+
+      document.querySelectorAll('.load-course').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          loadCourse(this.dataset.id);
+        });
+      });
+
+    } catch (error) {
+      console.error('불러오기 오류:', error);
+      list.innerHTML = '<li style="color:#aaa; font-size:13px;">불러오기 실패. 새로고침 해주세요.</li>';
+    }
   }
 
   // ── 코스 삭제 ────────────────────────────────────
-  function deleteCourse(id) {
-    const saved = JSON.parse(localStorage.getItem('courses') || '[]');
-    const filtered = saved.filter(function (c) { return c.id !== id; });
-    localStorage.setItem('courses', JSON.stringify(filtered));
-    renderSavedList();
+  async function deleteCourse(id) {
+    if (!confirm('이 코스를 삭제할까요?')) return;
+
+    try {
+      await deleteDoc(doc(db, 'courses', id));
+      renderSavedList();
+    } catch (error) {
+      console.error('삭제 오류:', error);
+      alert('삭제 중 오류가 발생했습니다.');
+    }
   }
 
   // ── 저장된 코스 지도에 불러오기 ──────────────────
-  function loadCourse(id) {
-    const saved = JSON.parse(localStorage.getItem('courses') || '[]');
-    const course = saved.find(function (c) { return c.id === id; });
-    if (!course) return;
+  async function loadCourse(id) {
+    try {
+      const snapshot = await getDocs(collection(db, 'courses'));
+      let course = null;
 
-    activeMarkers.forEach(function (marker) { marker.setMap(null); });
-    activeOverlays.forEach(function (overlay) { overlay.setMap(null); });
-    activeMarkers = [];
-    activeOverlays = [];
-
-    document.getElementById('course-list').innerHTML = '';
-    coursePlaces = course.places;
-
-    coursePlaces.forEach(function (place) {
-      const position = new kakao.maps.LatLng(place.lat, place.lng);
-
-      const marker = new kakao.maps.Marker({ position: position, map: map });
-      activeMarkers.push(marker);
-
-      const overlay = new kakao.maps.CustomOverlay({
-        position: position,
-        content: '<div class="label">' + place.name + '</div>',
-        yAnchor: 2.5
+      snapshot.forEach(function (docSnap) {
+        if (docSnap.id === id) {
+          course = docSnap.data();
+        }
       });
-      overlay.setMap(map);
-      activeOverlays.push(overlay);
 
-      const list = document.getElementById('course-list');
-      const number = list.children.length + 1;
-      const li = document.createElement('li');
-      li.dataset.index = number - 1;
-      li.innerHTML = `
-        <span class="course-number">${number}</span>
-        <span>${place.name}</span>
-        <span class="drag-handle">☰</span>
-      `;
-      list.appendChild(li);
-    });
+      if (!course) return;
 
-    drawPolyline();
-    map.setCenter(new kakao.maps.LatLng(coursePlaces[0].lat, coursePlaces[0].lng));
+      activeMarkers.forEach(function (marker) { marker.setMap(null); });
+      activeOverlays.forEach(function (overlay) { overlay.setMap(null); });
+      activeMarkers = [];
+      activeOverlays = [];
+
+      document.getElementById('course-list').innerHTML = '';
+      coursePlaces = course.places;
+
+      coursePlaces.forEach(function (place) {
+        const position = new kakao.maps.LatLng(place.lat, place.lng);
+
+        const marker = new kakao.maps.Marker({ position: position, map: map });
+        activeMarkers.push(marker);
+
+        const overlay = new kakao.maps.CustomOverlay({
+          position: position,
+          content: '<div class="label">' + place.name + '</div>',
+          yAnchor: 2.5
+        });
+        overlay.setMap(map);
+        activeOverlays.push(overlay);
+
+        const list = document.getElementById('course-list');
+        const number = list.children.length + 1;
+        const li = document.createElement('li');
+        li.dataset.index = number - 1;
+        li.innerHTML = `
+          <span class="course-number">${number}</span>
+          <span>${place.name}</span>
+          <span class="drag-handle">☰</span>
+        `;
+        list.appendChild(li);
+      });
+
+      drawPolyline();
+      map.setCenter(new kakao.maps.LatLng(coursePlaces[0].lat, coursePlaces[0].lng));
+
+    } catch (error) {
+      console.error('불러오기 오류:', error);
+    }
   }
 
   // ── 페이지 로드 시 저장 목록 표시 ───────────────

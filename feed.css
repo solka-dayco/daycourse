@@ -1,8 +1,12 @@
+/* ── 헤더 ──────────────────────────────────────── */
 header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-right: 24px;
+  padding: 16px 20px;
+  position: sticky;  /* 스크롤해도 헤더 고정 */
+  top: 0;
+  z-index: 100;
 }
 
 .header-btn {
@@ -10,41 +14,50 @@ header {
   color: #ff4e6a;
   border: 2px solid #ff4e6a;
   padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 20px;
+  font-size: 13px;
   font-weight: bold;
   text-decoration: none;
+  white-space: nowrap;
 }
 
-/* 피드 전체 컨테이너 */
+/* ── 피드 컨테이너 ──────────────────────────────── */
 .feed-container {
   max-width: 700px;
-  margin: 40px auto;
-  padding: 0 16px;
+  margin: 0 auto;
+  padding: 16px 12px 40px;
 }
 
-/* 카드 그리드 (2열) */
+/* ── 카드 그리드 ────────────────────────────────── */
 #feed-list {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 10px;
 }
 
-/* 카드 */
+/* ── 카드 ───────────────────────────────────────── */
 .feed-card {
   background: white;
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform 0.15s;
+  -webkit-tap-highlight-color: transparent; /* 모바일 탭 하이라이트 제거 */
 }
 
-.feed-card:hover {
-  transform: translateY(-4px);
+.feed-card:active {
+  transform: scale(0.97); /* 모바일 탭 시 살짝 줄어드는 효과 */
 }
 
-/* 4분할 썸네일 */
+/* 데스크탑에서만 hover 효과 */
+@media (hover: hover) {
+  .feed-card:hover {
+    transform: translateY(-4px);
+  }
+}
+
+/* ── 4분할 썸네일 ───────────────────────────────── */
 .card-thumbnail {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -60,7 +73,6 @@ header {
   object-fit: cover;
 }
 
-/* 사진 없을 때 기본 색상 */
 .card-thumbnail .empty-slot {
   background: #f5f5f5;
   display: flex;
@@ -70,56 +82,90 @@ header {
   color: #ddd;
 }
 
-/* 카드 정보 영역 */
+/* ── 카드 정보 영역 ─────────────────────────────── */
 .card-info {
-  padding: 12px 14px;
+  padding: 10px 12px;
 }
 
 .card-title {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: bold;
   color: #222;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis; /* 너무 길면 ... 처리 */
+  text-overflow: ellipsis;
 }
 
 .card-places {
-  font-size: 12px;
+  font-size: 11px;
   color: #888;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+  line-height: 1.4;
 }
 
-/* 좋아요, 댓글, 공유 버튼 */
+/* ── 좋아요 / 댓글 / 공유 ───────────────────────── */
 .card-actions {
   display: flex;
-  gap: 12px;
-  font-size: 13px;
-  color: #aaa;
+  gap: 10px;
 }
 
 .card-actions button {
   background: none;
   border: none;
-  font-size: 13px;
+  font-size: 12px;
   color: #aaa;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.card-actions button:hover {
+.card-actions button:active {
   color: #ff4e6a;
 }
 
-/* 모바일 대응 */
-@media (max-width: 768px) {
-  #feed-list { grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (hover: hover) {
+  .card-actions button:hover {
+    color: #ff4e6a;
+  }
+}
+
+/* ── 빈 피드 안내 ───────────────────────────────── */
+.empty-feed {
+  grid-column: 1 / -1;  /* 2열 전체 차지 */
+  text-align: center;
+  padding: 60px 20px;
+  color: #aaa;
+}
+
+.empty-feed p {
+  font-size: 15px;
+  margin-bottom: 16px;
+}
+
+.empty-feed a {
+  display: inline-block;
+  background: #ff4e6a;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+/* ── 모바일 (480px 이하 소형 화면) ──────────────── */
+@media (max-width: 480px) {
+  .feed-container { padding: 12px 8px 40px; }
+  #feed-list { gap: 8px; }
   .card-info { padding: 8px 10px; }
-  .card-title { font-size: 13px; }
+  .card-title { font-size: 12px; }
+  .card-places { font-size: 10px; }
+  .card-actions button { font-size: 11px; }
 }
