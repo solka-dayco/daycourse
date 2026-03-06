@@ -283,7 +283,7 @@ kakao.maps.load(function () {
     polyline.setMap(map);
   }
 
-  // ── 사진 미리보기 ────────────────────────────────
+ // ── 사진 미리보기 (압축 포함) ────────────────────
   [1, 2, 3, 4].forEach(function (num) {
     document.getElementById('photo' + num).addEventListener('change', function (e) {
       const file = e.target.files[0];
@@ -291,10 +291,37 @@ kakao.maps.load(function () {
 
       const reader = new FileReader();
       reader.onload = function (event) {
-        const img = document.getElementById('preview' + num);
-        img.src = event.target.result;
-        img.classList.remove('hidden');
-        img.previousElementSibling.style.display = 'none';
+
+        // 이미지 압축 (최대 800px, 품질 70%)
+        const imgEl = new Image();
+        imgEl.onload = function () {
+          const canvas = document.createElement('canvas');
+          const maxSize = 800;
+          let width = imgEl.width;
+          let height = imgEl.height;
+
+          // 가로/세로 중 큰 쪽을 800px로 축소
+          if (width > height && width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          } else if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(imgEl, 0, 0, width, height);
+
+          // 품질 70%로 압축
+          const compressed = canvas.toDataURL('image/jpeg', 0.7);
+
+          const preview = document.getElementById('preview' + num);
+          preview.src = compressed;
+          preview.classList.remove('hidden');
+          preview.previousElementSibling.style.display = 'none';
+        };
+        imgEl.src = event.target.result;
       };
       reader.readAsDataURL(file);
     });
