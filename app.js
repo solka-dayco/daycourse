@@ -1,6 +1,5 @@
-import { db, storage } from './firebase.js';
+import { db } from './firebase.js';
 import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 kakao.maps.load(function () {
 
@@ -294,7 +293,7 @@ kakao.maps.load(function () {
         const imgEl = new Image();
         imgEl.onload = function () {
           const canvas = document.createElement('canvas');
-          const maxSize = 800;
+          const maxSize = 400;
           let width = imgEl.width;
           let height = imgEl.height;
 
@@ -310,7 +309,7 @@ kakao.maps.load(function () {
           canvas.height = height;
           canvas.getContext('2d').drawImage(imgEl, 0, 0, width, height);
 
-          const compressed = canvas.toDataURL('image/jpeg', 0.7);
+          const compressed = canvas.toDataURL('image/jpeg', 0.1);
           const preview = document.getElementById('preview' + num);
           preview.src = compressed;
           preview.classList.remove('hidden');
@@ -340,45 +339,30 @@ kakao.maps.load(function () {
     saveBtn.textContent = '저장 중...';
     saveBtn.disabled = true;
 
+    // 사진 base64 수집
+    const photos = [null, null, null, null];
+    [1, 2, 3, 4].forEach(function (num) {
+      const img = document.getElementById('preview' + num);
+      if (img && !img.classList.contains('hidden') && img.src && img.src.startsWith('data:')) {
+        photos[num - 1] = img.src;
+      }
+    });
+
     const courseData = {
       name: courseName,
       places: coursePlaces,
-      photos: [null, null, null, null],
+      photos: photos,
       likes: 0,
       comments: 0,
       createdAt: new Date().toLocaleDateString('ko-KR')
     };
 
-    // 코스 데이터 먼저 저장
-    addDoc(collection(db, 'courses'), courseData).then(function (docRef) {
-
+    addDoc(collection(db, 'courses'), courseData).then(function () {
       renderSavedList();
       document.getElementById('course-name').value = '';
       saveBtn.textContent = '저장';
       saveBtn.disabled = false;
       alert('코스가 저장됐습니다! 🎉');
-
-      // 사진 백그라운드 업로드
-      const photoURLs = [null, null, null, null];
-      const photoPromises = [1, 2, 3, 4].map(function (num) {
-        const img = document.getElementById('preview' + num);
-        if (img && !img.classList.contains('hidden') && img.src && img.src.startsWith('data:')) {
-          const photoRef = ref(storage, 'courses/' + docRef.id + '_' + num + '.jpg');
-          return uploadString(photoRef, img.src, 'data_url').then(function () {
-            return getDownloadURL(photoRef);
-          }).then(function (url) {
-            photoURLs[num - 1] = url;
-          });
-        }
-        return Promise.resolve();
-      });
-
-      Promise.all(photoPromises).then(function () {
-        return updateDoc(doc(db, 'courses', docRef.id), { photos: photoURLs });
-      }).catch(function (err) {
-        console.error('사진 업로드 오류:', err);
-      });
-
     }).catch(function (error) {
       console.error('저장 오류:', error);
       alert('저장 중 오류가 발생했습니다.');
