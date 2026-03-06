@@ -29,6 +29,7 @@ header {
   border-radius: 16px;
   overflow: hidden;
   margin-bottom: 20px;
+  cursor: pointer;
 }
 
 .detail-thumbnail img {
