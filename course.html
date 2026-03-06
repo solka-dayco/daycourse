@@ -52,6 +52,18 @@
   </div>
 
   <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&autoload=false"></script>
+  <!-- 사진 뷰어 팝업 -->
+    <div id="photo-viewer" class="hidden">
+      <div class="photo-viewer-inner">
+        <button id="viewer-close">✕</button>
+        <button id="viewer-prev">‹</button>
+        <div class="viewer-img-wrap">
+          <img id="viewer-img">
+        </div>
+        <button id="viewer-next">›</button>
+        <div class="viewer-dots" id="viewer-dots"></div>
+      </div>
+    </div>
   <script type="module" src="course.js"></script>
 </body>
 </html>
