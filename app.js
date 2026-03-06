@@ -1,5 +1,5 @@
 import { db, storage } from './firebase.js';
-import { collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 kakao.maps.load(function () {
@@ -283,7 +283,7 @@ kakao.maps.load(function () {
     polyline.setMap(map);
   }
 
- // ── 사진 미리보기 (압축 포함) ────────────────────
+  // ── 사진 미리보기 (압축 포함) ────────────────────
   [1, 2, 3, 4].forEach(function (num) {
     document.getElementById('photo' + num).addEventListener('change', function (e) {
       const file = e.target.files[0];
@@ -291,8 +291,6 @@ kakao.maps.load(function () {
 
       const reader = new FileReader();
       reader.onload = function (event) {
-
-        // 이미지 압축 (최대 800px, 품질 70%)
         const imgEl = new Image();
         imgEl.onload = function () {
           const canvas = document.createElement('canvas');
@@ -300,7 +298,6 @@ kakao.maps.load(function () {
           let width = imgEl.width;
           let height = imgEl.height;
 
-          // 가로/세로 중 큰 쪽을 800px로 축소
           if (width > height && width > maxSize) {
             height = (height * maxSize) / width;
             width = maxSize;
@@ -313,9 +310,7 @@ kakao.maps.load(function () {
           canvas.height = height;
           canvas.getContext('2d').drawImage(imgEl, 0, 0, width, height);
 
-          // 품질 70%로 압축
           const compressed = canvas.toDataURL('image/jpeg', 0.7);
-
           const preview = document.getElementById('preview' + num);
           preview.src = compressed;
           preview.classList.remove('hidden');
@@ -328,7 +323,7 @@ kakao.maps.load(function () {
   });
 
   // ── 코스 저장 ────────────────────────────────────
-  document.getElementById('save-btn').addEventListener('click', async function () {
+  document.getElementById('save-btn').addEventListener('click', function () {
     const courseName = document.getElementById('course-name').value.trim();
 
     if (!courseName) {
@@ -341,58 +336,63 @@ kakao.maps.load(function () {
       return;
     }
 
-    try {
-      const saveBtn = document.getElementById('save-btn');
-      saveBtn.textContent = '저장 중...';
-      saveBtn.disabled = true;
+    const saveBtn = document.getElementById('save-btn');
+    saveBtn.textContent = '저장 중...';
+    saveBtn.disabled = true;
 
-      const photoURLs = [];
-      const photoPromises = [1, 2, 3, 4].map(async function (num) {
-        const img = document.getElementById('preview' + num);
-        if (img && !img.classList.contains('hidden') && img.src) {
-          const photoRef = ref(storage, `courses/${Date.now()}_${num}.jpg`);
-          await uploadString(photoRef, img.src, 'data_url');
-          const url = await getDownloadURL(photoRef);
-          photoURLs[num - 1] = url;
-        } else {
-          photoURLs[num - 1] = null;
-        }
-      });
-      await Promise.all(photoPromises);
+    const courseData = {
+      name: courseName,
+      places: coursePlaces,
+      photos: [null, null, null, null],
+      likes: 0,
+      comments: 0,
+      createdAt: new Date().toLocaleDateString('ko-KR')
+    };
 
-      const courseData = {
-        name: courseName,
-        places: coursePlaces,
-        photos: photoURLs,
-        likes: 0,
-        comments: 0,
-        createdAt: new Date().toLocaleDateString('ko-KR')
-      };
-
-      await addDoc(collection(db, 'courses'), courseData);
+    // 코스 데이터 먼저 저장
+    addDoc(collection(db, 'courses'), courseData).then(function (docRef) {
 
       renderSavedList();
       document.getElementById('course-name').value = '';
-      alert('코스가 저장됐습니다! 🎉');
-
-    } catch (error) {
-      console.error('저장 오류:', error);
-      alert('저장 중 오류가 발생했습니다. 다시 시도해주세요.');
-    } finally {
-      const saveBtn = document.getElementById('save-btn');
       saveBtn.textContent = '저장';
       saveBtn.disabled = false;
-    }
+      alert('코스가 저장됐습니다! 🎉');
+
+      // 사진 백그라운드 업로드
+      const photoURLs = [null, null, null, null];
+      const photoPromises = [1, 2, 3, 4].map(function (num) {
+        const img = document.getElementById('preview' + num);
+        if (img && !img.classList.contains('hidden') && img.src && img.src.startsWith('data:')) {
+          const photoRef = ref(storage, 'courses/' + docRef.id + '_' + num + '.jpg');
+          return uploadString(photoRef, img.src, 'data_url').then(function () {
+            return getDownloadURL(photoRef);
+          }).then(function (url) {
+            photoURLs[num - 1] = url;
+          });
+        }
+        return Promise.resolve();
+      });
+
+      Promise.all(photoPromises).then(function () {
+        return updateDoc(doc(db, 'courses', docRef.id), { photos: photoURLs });
+      }).catch(function (err) {
+        console.error('사진 업로드 오류:', err);
+      });
+
+    }).catch(function (error) {
+      console.error('저장 오류:', error);
+      alert('저장 중 오류가 발생했습니다.');
+      saveBtn.textContent = '저장';
+      saveBtn.disabled = false;
+    });
   });
 
   // ── 저장된 코스 목록 표시 ────────────────────────
-  async function renderSavedList() {
+  function renderSavedList() {
     const list = document.getElementById('saved-list');
     list.innerHTML = '<li style="color:#aaa; font-size:13px;">불러오는 중...</li>';
 
-    try {
-      const snapshot = await getDocs(collection(db, 'courses'));
-
+    getDocs(collection(db, 'courses')).then(function (snapshot) {
       if (snapshot.empty) {
         list.innerHTML = '<li style="color:#aaa; font-size:13px;">저장된 코스가 없습니다.</li>';
         return;
@@ -410,7 +410,7 @@ kakao.maps.load(function () {
             <strong style="cursor:pointer; color:#ff4e6a;" class="load-course" data-id="${id}">${course.name}</strong>
             <span style="font-size:12px; color:#aaa; margin-left:8px;">${course.createdAt}</span>
             <div style="font-size:12px; color:#888; margin-top:4px;">
-              ${course.places.map(p => p.name).join(' → ')}
+              ${course.places.map(function(p) { return p.name; }).join(' → ')}
             </div>
           </div>
           <button class="delete-btn" data-id="${id}">🗑</button>
@@ -430,38 +430,30 @@ kakao.maps.load(function () {
         });
       });
 
-    } catch (error) {
+    }).catch(function (error) {
       console.error('불러오기 오류:', error);
       list.innerHTML = '<li style="color:#aaa; font-size:13px;">불러오기 실패. 새로고침 해주세요.</li>';
-    }
+    });
   }
 
   // ── 코스 삭제 ────────────────────────────────────
-  async function deleteCourse(id) {
+  function deleteCourse(id) {
     if (!confirm('이 코스를 삭제할까요?')) return;
 
-    try {
-      await deleteDoc(doc(db, 'courses', id));
+    deleteDoc(doc(db, 'courses', id)).then(function () {
       renderSavedList();
-    } catch (error) {
+    }).catch(function (error) {
       console.error('삭제 오류:', error);
       alert('삭제 중 오류가 발생했습니다.');
-    }
+    });
   }
 
   // ── 저장된 코스 지도에 불러오기 ──────────────────
-  async function loadCourse(id) {
-    try {
-      const snapshot = await getDocs(collection(db, 'courses'));
-      let course = null;
+  function loadCourse(id) {
+    getDoc(doc(db, 'courses', id)).then(function (docSnap) {
+      if (!docSnap.exists()) return;
 
-      snapshot.forEach(function (docSnap) {
-        if (docSnap.id === id) {
-          course = docSnap.data();
-        }
-      });
-
-      if (!course) return;
+      const course = docSnap.data();
 
       activeMarkers.forEach(function (marker) { marker.setMap(null); });
       activeOverlays.forEach(function (overlay) { overlay.setMap(null); });
@@ -500,9 +492,9 @@ kakao.maps.load(function () {
       drawPolyline();
       map.setCenter(new kakao.maps.LatLng(coursePlaces[0].lat, coursePlaces[0].lng));
 
-    } catch (error) {
+    }).catch(function (error) {
       console.error('불러오기 오류:', error);
-    }
+    });
   }
 
   // ── 페이지 로드 시 저장 목록 표시 ───────────────
