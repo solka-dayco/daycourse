@@ -6,38 +6,33 @@ kakao.maps.load(function () {
     level: 5
   });
 
-  // 내 위치 표시 함수
-  let myLocationOverlay = null;
+  const ps = new kakao.maps.services.Places();
 
-  function moveToMyLocation() {
-    if (!navigator.geolocation) {
-      alert('위치 정보를 혀용해 주세요.');
-      return;
-    }
+  // ── 상태 변수 ────────────────────────────────────
+  let selectedPlace = null;   // 미리보기 중인 장소
+  let previewMarker = null;   // 미리보기 임시 마커
+  let previewOverlay = null;  // 미리보기 임시 말풍선
+  let coursePlaces = [];      // 확정된 장소 목록
+  let polyline = null;        // 현재 그려진 동선
+  let activeMarkers = [];     // 확정 마커 목록
+  let activeOverlays = [];    // 확정 말풍선 목록
+  let myLocationOverlay = null; // 내 위치 파란 점
 
-    navigator.geolocation.getCurrentPosition(function (pos) {
-      const myLat = pos.coords.latitude;
-      const myLng = pos.coords.longitude;
-      const position = new kakao.maps.LatLng(myLat, myLng);
+  // ── 내 위치 기능 ─────────────────────────────────
 
-      // 이전 내 위치 마커 제거
-      if (myLocationOverlay) myLocationOverlay.setMap(null);
+  // 내 위치 파란 점 표시
+  function showMyLocation(pos) {
+    const position = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
 
-      // 내 위치에 파란 점 표시
-      myLocationOverlay = new kakao.maps.CustomOverlay({
-        position: position,
-        content: '<div style="width:14px; height:14px; background:#4a90e2; border:2px solid white; border-radius:50%; box-shadow:0 0 6px rgba(74,144,226,0.8);"></div>',
-        yAnchor: 0.5
-      });
-      myLocationOverlay.setMap(map);
+    if (myLocationOverlay) myLocationOverlay.setMap(null);
 
-      // 지도 이동
-      map.setCenter(position);
-
-    }, function (error) {
-      // 위치 권한 거부 또는 오류 시 안내
-      showLocationGuide();
+    myLocationOverlay = new kakao.maps.CustomOverlay({
+      position: position,
+      content: '<div style="width:14px; height:14px; background:#4a90e2; border:2px solid white; border-radius:50%; box-shadow:0 0 6px rgba(74,144,226,0.8);"></div>',
+      yAnchor: 0.5
     });
+    myLocationOverlay.setMap(map);
+    map.setCenter(position);
   }
 
   // 위치 권한 안내 메시지 표시
@@ -45,22 +40,19 @@ kakao.maps.load(function () {
     const existing = document.getElementById('location-guide');
     if (existing) return;
 
-    // 기기 종류 감지
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isSamsung = /SamsungBrowser/i.test(navigator.userAgent);
     const isAndroid = /Android/i.test(navigator.userAgent);
-    const isMobile = isIOS || isAndroid;
 
     let guideText = '';
-
     if (isIOS) {
-      // 아이폰 안내
       guideText = '설정 → Safari → 위치 → 허용 후 새로고침';
+    } else if (isSamsung) {
+      guideText = '주소창 왼쪽 🔒 탭 → 위치 → 허용 후 새로고침';
     } else if (isAndroid) {
-      // 안드로이드 안내
-      guideText = '브라우저 주소창 🔒 아이콘 → 권한 → 위치 → 허용 후 새로고침';
+      guideText = '주소창 왼쪽 🔒 탭 → 권한 → 위치 → 허용 후 새로고침';
     } else {
-      // 데스크탑 안내
-      guideText = '브라우저 주소창 왼쪽 🔒 아이콘 → 위치 → 허용 후 새로고침';
+      guideText = '주소창 왼쪽 🔒 아이콘 → 위치 → 허용 후 새로고침';
     }
 
     const guide = document.createElement('div');
@@ -73,31 +65,46 @@ kakao.maps.load(function () {
     document.querySelector('.map-wrapper').appendChild(guide);
   }
 
+  // 위치 가져오기 옵션
+  const geoOptions = {
+    enableHighAccuracy: false, // 일단 false로 낮춰서 빠르게 시도
+    timeout: 15000,            // 15초로 늘림
+    maximumAge: 60000          // 1분 이내 캐시 허용
+  };
+
   // 페이지 로드 시 조용히 내 위치로 이동 (실패해도 안내 안 띄움)
-  navigator.geolocation && navigator.geolocation.getCurrentPosition(function (pos) {
-    const position = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-    myLocationOverlay = new kakao.maps.CustomOverlay({
-      position: position,
-      content: '<div style="width:14px; height:14px; background:#4a90e2; border:2px solid white; border-radius:50%; box-shadow:0 0 6px rgba(74,144,226,0.8);"></div>',
-      yAnchor: 0.5
-    });
-    myLocationOverlay.setMap(map);
-    map.setCenter(position);
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(showMyLocation, function () {}, geoOptions);
+  }
+
+  // 📍 버튼 클릭 시 내 위치로 이동 (실패 시 안내 띄움)
+  document.getElementById('my-location-btn').addEventListener('click', function () {
+    if (!navigator.geolocation) {
+      showLocationGuide();
+      return;
+    }
+
+    // 버튼 로딩 표시
+    const btn = document.getElementById('my-location-btn');
+    btn.textContent = '⏳';
+    btn.disabled = true;
+
+    navigator.geolocation.getCurrentPosition(
+      function(pos) {
+        // 성공 시 버튼 원래대로
+        btn.textContent = '📍';
+        btn.disabled = false;
+        showMyLocation(pos);
+      },
+      function(error) {
+        // 실패 시 버튼 원래대로 + 안내
+        btn.textContent = '📍';
+        btn.disabled = false;
+        showLocationGuide();
+      },
+      geoOptions
+    );
   });
-
-  // 버튼 클릭 시 내 위치로 이동
-  document.getElementById('my-location-btn').addEventListener('click', moveToMyLocation);
-
-  const ps = new kakao.maps.services.Places();
-
-  // ── 상태 변수 ────────────────────────────────────
-  let selectedPlace = null;   // 미리보기 중인 장소
-  let previewMarker = null;   // 미리보기 임시 마커
-  let previewOverlay = null;  // 미리보기 임시 말풍선
-  let coursePlaces = [];      // 확정된 장소 목록
-  let polyline = null;        // 현재 그려진 동선
-  let activeMarkers = [];     // 확정 마커 목록 (코스 불러올 때 초기화용)
-  let activeOverlays = [];    // 확정 말풍선 목록
 
   // ── 장소 미리보기 패널 표시 ──────────────────────
   function showPreview(place) {
@@ -160,7 +167,6 @@ kakao.maps.load(function () {
   kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
     const position = mouseEvent.latLng;
 
-    // 음식점, 카페, 관광명소, 문화시설 카테고리 순서대로 검색
     const categories = ['FD6', 'CE7', 'AT4', 'CT1'];
     let allResults = [];
     let searchCount = 0;
@@ -173,11 +179,9 @@ kakao.maps.load(function () {
           allResults = allResults.concat(data);
         }
 
-        // 모든 카테고리 검색 완료 시 목록 표시
         if (searchCount === categories.length) {
           if (allResults.length === 0) return;
 
-          // 거리순 정렬
           allResults.sort(function (a, b) {
             return parseInt(a.distance) - parseInt(b.distance);
           });
@@ -323,7 +327,6 @@ kakao.maps.load(function () {
       return;
     }
 
-    // 사진 4장 수집
     const photos = [];
     [1, 2, 3, 4].forEach(function (num) {
       const img = document.getElementById('preview' + num);
@@ -400,7 +403,6 @@ kakao.maps.load(function () {
     const course = saved.find(function (c) { return c.id === id; });
     if (!course) return;
 
-    // 기존 마커/말풍선 초기화
     activeMarkers.forEach(function (marker) { marker.setMap(null); });
     activeOverlays.forEach(function (overlay) { overlay.setMap(null); });
     activeMarkers = [];
