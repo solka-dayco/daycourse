@@ -338,17 +338,74 @@ kakao.maps.load(function () {
     openCropWithFile(pendingFiles[pendingIndex], pendingSlots[pendingIndex]);
   }
 
-  // 슬롯 클릭 → 개별 교체
+  // 슬롯 클릭 → 사진 있으면 옵션 팝업, 없으면 바로 선택
   [1, 2, 3, 4].forEach(function (num) {
     document.getElementById('slot' + num).addEventListener('click', function () {
-      replaceSlotNum = num;
-      pendingFiles = [];
-      pendingSlots = [];
-      pendingIndex = 0;
-      const input = document.getElementById('photo-replace-input');
-      input.removeAttribute('capture');
-      input.click();
+      const preview = document.getElementById('preview' + num);
+      const hasPhoto = !preview.classList.contains('hidden');
+
+      if (hasPhoto) {
+        replaceSlotNum = num;
+        document.getElementById('slot-options').classList.remove('hidden');
+      } else {
+        replaceSlotNum = num;
+        pendingFiles = [];
+        pendingSlots = [];
+        pendingIndex = 0;
+        const input = document.getElementById('photo-replace-input');
+        input.removeAttribute('capture');
+        input.click();
+      }
     });
+  });
+
+  // 크게 보기
+  document.getElementById('slot-option-view').addEventListener('click', function () {
+    document.getElementById('slot-options').classList.add('hidden');
+    const photos = [];
+    [1, 2, 3, 4].forEach(function (num) {
+      const p = document.getElementById('preview' + num);
+      if (p && !p.classList.contains('hidden')) photos.push(p.src);
+    });
+    const preview = document.getElementById('preview' + replaceSlotNum);
+    const startIndex = photos.indexOf(preview.src);
+    openViewer(photos, startIndex >= 0 ? startIndex : 0);
+  });
+
+  // 사진 교체
+  document.getElementById('slot-option-replace').addEventListener('click', function () {
+    document.getElementById('slot-options').classList.add('hidden');
+    pendingFiles = [];
+    pendingSlots = [];
+    pendingIndex = 0;
+    const input = document.getElementById('photo-replace-input');
+    input.removeAttribute('capture');
+    input.click();
+  });
+
+  // 사진 삭제
+  document.getElementById('slot-option-delete').addEventListener('click', function () {
+    document.getElementById('slot-options').classList.add('hidden');
+    const preview = document.getElementById('preview' + replaceSlotNum);
+    const slot = document.getElementById('slot' + replaceSlotNum);
+    preview.src = '';
+    preview.classList.add('hidden');
+    slot.querySelector('span').style.display = '';
+    replaceSlotNum = null;
+  });
+
+  // 취소
+  document.getElementById('slot-option-cancel').addEventListener('click', function () {
+    document.getElementById('slot-options').classList.add('hidden');
+    replaceSlotNum = null;
+  });
+
+  // 배경 클릭 시 닫기
+  document.getElementById('slot-options').addEventListener('click', function (e) {
+    if (e.target === this) {
+      this.classList.add('hidden');
+      replaceSlotNum = null;
+    }
   });
 
   document.getElementById('photo-replace-input').addEventListener('change', function (e) {
