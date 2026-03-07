@@ -79,7 +79,6 @@ function saveCourse() {
   };
 
   addDoc(collection(db, 'courses'), courseData).then(function () {
-    renderSavedList();
     document.getElementById('course-name').value = '';
     saveBtn.textContent = '저장';
     saveBtn.disabled = false;
