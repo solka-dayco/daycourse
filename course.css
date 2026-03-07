@@ -20,6 +20,12 @@ header {
   box-sizing: border-box;
 }
 
+@media (max-width: 480px) {
+  .course-container {
+    width: 100%;
+  }
+}
+
 /* 4분할 썸네일 */
 .detail-thumbnail {
   display: grid;
