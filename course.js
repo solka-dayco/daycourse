@@ -239,6 +239,82 @@ try {
     document.getElementById('comments').scrollIntoView({ behavior: 'smooth' });
   });
 
+// 공유 팝업 열기/닫기
+  document.getElementById('share-btn').addEventListener('click', function () {
+    document.getElementById('share-modal').classList.remove('hidden');
+  });
+
+  document.getElementById('share-close').addEventListener('click', function () {
+    document.getElementById('share-modal').classList.add('hidden');
+  });
+
+  document.getElementById('share-modal').addEventListener('click', function (e) {
+    if (e.target === this) {
+      this.classList.add('hidden');
+    }
+  });
+
+  // ── 공유 기능 ────────────────────────────────────
+
+  // 링크 복사
+  document.getElementById('share-copy-btn').addEventListener('click', function () {
+    document.getElementById('share-modal').classList.add('hidden');
+    const url = window.location.href;
+
+    function showToast() {
+      const toast = document.getElementById('toast');
+      toast.classList.remove('hidden');
+      setTimeout(function () {
+        toast.classList.add('hidden');
+      }, 2000);
+    }
+
+    navigator.clipboard.writeText(url).then(function () {
+      showToast();
+    }).catch(function () {
+      const textarea = document.createElement('textarea');
+      textarea.value = url;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      showToast();
+    });
+  });
+
+  // 카카오톡 공유
+  if (window.Kakao) {
+    if (!Kakao.isInitialized()) {
+      Kakao.init('725e3b5f43c47c651837511245861cc8');
+    }
+
+    document.getElementById('share-kakao-btn').addEventListener('click', function () {
+      const placeSummary = course.places.map(function (p) { return p.name; }).join(' → ');
+
+      Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: course.name,
+          description: placeSummary,
+          imageUrl: (course.photos && course.photos[0]) ? course.photos[0] : 'https://solka-dayco.github.io/daycourse/og-image.png',
+          link: {
+            mobileWebUrl: window.location.href,
+            webUrl: window.location.href
+          }
+        },
+        buttons: [
+          {
+            title: '코스 보기',
+            link: {
+              mobileWebUrl: window.location.href,
+              webUrl: window.location.href
+            }
+          }
+        ]
+      });
+    });
+  }
+
   loadComments();
 
   // ── 지도 + 동선 ──────────────────────────────────

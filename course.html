@@ -46,7 +46,7 @@
     <div class="detail-actions">
       <button id="like-btn">❤️ <span id="like-count">0</span></button>
       <button id="comment-scroll-btn">💬 <span id="comment-count">0</span></button>
-      <button>📤 공유</button>
+      <button id="share-btn">📤 공유</button>
     </div>
 
     <!-- 댓글 섹션 -->
@@ -62,7 +62,28 @@
 
   </div>
 
-  <!-- 사진 뷰어 팝업 -->
+  <!-- 토스트 메시지 -->
+  <div id="toast" class="toast hidden">링크가 복사됐습니다! 🔗</div>
+
+  <!-- 공유 팝업 -->
+  <div id="share-modal" class="hidden">
+    <div class="share-modal-inner">
+      <p class="share-title">공유하기</p>
+      <div class="share-options">
+        <button id="share-copy-btn">
+          <div class="share-icon">🔗</div>
+          <span>링크 복사</span>
+        </button>
+        <button id="share-kakao-btn">
+          <div class="share-icon kakao-icon">
+            <img src="https://developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_btn_small.png">
+          </div>
+          <span>카카오톡</span>
+        </button>
+      </div>
+      <button id="share-close">닫기</button>
+    </div>
+  </div>
   <div id="photo-viewer" class="hidden">
     <div class="photo-viewer-inner">
       <button id="viewer-close">✕</button>
@@ -76,6 +97,6 @@
   </div>
 
   <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&autoload=false"></script>
-  <script type="module" src="course.js"></script>
+  <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.6.0/kakao.min.js"></script> <script type="module" src="course.js"></script>
 </body>
 </html>
