@@ -342,7 +342,8 @@ kakao.maps.load(function () {
 
   // 슬롯 클릭 → 사진 있으면 옵션 팝업, 없으면 파일 선택
   [1, 2, 3, 4].forEach(function (num) {
-    document.getElementById('slot' + num).addEventListener('click', function () {
+    document.getElementById('slot' + num).addEventListener('click', function (e) {
+      e.stopPropagation();
       const preview = document.getElementById('preview' + num);
       const hasPhoto = !preview.classList.contains('hidden');
       replaceSlotNum = num;
@@ -357,6 +358,12 @@ kakao.maps.load(function () {
         input.removeAttribute('capture');
         input.click();
       }
+    });
+
+    // img 태그 클릭도 slot 이벤트로 위임
+    document.getElementById('preview' + num).addEventListener('click', function (e) {
+      e.stopPropagation();
+      document.getElementById('slot' + num).click();
     });
   });
 
