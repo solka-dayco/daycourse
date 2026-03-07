@@ -45,8 +45,23 @@
     <!-- 좋아요 / 댓글 / 공유 -->
     <div class="detail-actions">
       <button id="like-btn">❤️ <span id="like-count">0</span></button>
-      <button>💬 <span id="comment-count">0</span></button>
+      <button id="comment-scroll-btn">💬 <span id="comment-count">0</span></button>
       <button>📤 공유</button>
+    </div>
+
+    <!-- 댓글 섹션 -->
+    <div class="detail-section" id="comments">
+      <h3>💬 댓글</h3>
+
+      <!-- 댓글 입력 -->
+      <div class="comment-input-box">
+        <input type="text" id="comment-nickname" placeholder="닉네임" maxlength="10">
+        <input type="text" id="comment-content" placeholder="댓글을 입력하세요" maxlength="100">
+        <button id="comment-submit">등록</button>
+      </div>
+
+      <!-- 댓글 목록 -->
+      <ul id="comment-list"></ul>
     </div>
 
   </div>

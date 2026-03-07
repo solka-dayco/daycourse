@@ -1,5 +1,5 @@
 import { db } from './firebase.js';
-import { doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { doc, getDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, orderBy, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const params = new URLSearchParams(window.location.search);
 const courseId = params.get('id');
@@ -132,6 +132,111 @@ try {
       this.classList.add('hidden');
     }
   });
+
+  // ── 댓글 기능 ────────────────────────────────────
+
+  // 댓글 목록 불러오기
+  function loadComments() {
+    const commentList = document.getElementById('comment-list');
+    commentList.innerHTML = '<li style="color:#aaa; font-size:13px;">불러오는 중...</li>';
+
+    const commentsRef = collection(db, 'courses', courseId, 'comments');
+    const q = query(commentsRef, orderBy('createdAt', 'desc'));
+
+    getDocs(q).then(function (snapshot) {
+      commentList.innerHTML = '';
+
+      if (snapshot.empty) {
+        commentList.innerHTML = '<li style="color:#aaa; font-size:13px;">첫 댓글을 남겨보세요!</li>';
+        return;
+      }
+
+      snapshot.forEach(function (docSnap) {
+        const comment = docSnap.data();
+        const id = docSnap.id;
+        const myNickname = localStorage.getItem('nickname') || '';
+
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div class="comment-header">
+            <span class="comment-nickname">${comment.nickname}</span>
+            <span>
+              <span class="comment-date">${comment.createdAt}</span>
+              ${comment.nickname === myNickname ? `<button class="comment-delete" data-id="${id}">삭제</button>` : ''}
+            </span>
+          </div>
+          <div class="comment-content">${comment.content}</div>
+        `;
+        commentList.appendChild(li);
+      });
+
+      document.querySelectorAll('.comment-delete').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (!confirm('댓글을 삭제할까요?')) return;
+          const commentId = this.dataset.id;
+          deleteDoc(doc(db, 'courses', courseId, 'comments', commentId)).then(function () {
+            loadComments();
+            updateCommentCount(-1);
+          });
+        });
+      });
+
+    }).catch(function (error) {
+      console.error('댓글 불러오기 오류:', error);
+    });
+  }
+
+  // 댓글 수 업데이트
+  function updateCommentCount(delta) {
+    const newCount = (course.comments || 0) + delta;
+    course.comments = newCount;
+    document.getElementById('comment-count').textContent = newCount;
+    updateDoc(docRef, { comments: newCount });
+  }
+
+  // 댓글 등록
+  document.getElementById('comment-submit').addEventListener('click', function () {
+    const nickname = document.getElementById('comment-nickname').value.trim();
+    const content = document.getElementById('comment-content').value.trim();
+
+    if (!nickname) {
+      alert('닉네임을 입력해주세요.');
+      return;
+    }
+    if (!content) {
+      alert('댓글 내용을 입력해주세요.');
+      return;
+    }
+
+    localStorage.setItem('nickname', nickname);
+
+    const commentsRef = collection(db, 'courses', courseId, 'comments');
+    addDoc(commentsRef, {
+      nickname: nickname,
+      content: content,
+      createdAt: new Date().toLocaleDateString('ko-KR') + ' ' + new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+    }).then(function () {
+      document.getElementById('comment-content').value = '';
+      loadComments();
+      updateCommentCount(1);
+    }).catch(function (error) {
+      console.error('댓글 등록 오류:', error);
+    });
+  });
+
+  // 닉네임 자동 입력
+  const savedNickname = localStorage.getItem('nickname');
+  if (savedNickname) {
+    document.getElementById('comment-nickname').value = savedNickname;
+  }
+
+  // 댓글 버튼 클릭 시 댓글 섹션으로 스크롤
+  document.getElementById('comment-scroll-btn').addEventListener('click', function () {
+    document.getElementById('comments').scrollIntoView({ behavior: 'smooth' });
+  });
+
+  // 페이지 로드 시 댓글 불러오기
+  loadComments();
 
   // ── 지도 + 동선 ──────────────────────────────────
   kakao.maps.load(function () {

@@ -256,3 +256,90 @@ header {
 .viewer-dot.active {
   background: white;
 }
+
+/* ── 댓글 입력 ──────────────────────────────────── */
+.comment-input-box {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.comment-input-box input {
+  padding: 8px 12px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+}
+
+#comment-nickname {
+  width: 80px;
+  flex-shrink: 0;
+}
+
+#comment-content {
+  flex: 1;
+  min-width: 0;
+}
+
+#comment-submit {
+  background: #ff4e6a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ── 댓글 목록 ──────────────────────────────────── */
+#comment-list {
+  list-style: none;
+}
+
+#comment-list li {
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
+}
+
+#comment-list li:last-child {
+  border-bottom: none;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.comment-nickname {
+  font-weight: bold;
+  color: #333;
+}
+
+.comment-date {
+  font-size: 11px;
+  color: #aaa;
+}
+
+.comment-content {
+  color: #555;
+  line-height: 1.5;
+}
+
+.comment-delete {
+  background: none;
+  border: none;
+  color: #ddd;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.comment-delete:hover {
+  color: #ff4e6a;
+}
