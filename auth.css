@@ -1,23 +1,94 @@
-.auth-title {
-  font-size: 20px;
-  font-weight: bold;
-  color: #333;
-  text-align: center;
-  margin-bottom: 24px;
+/* ── 인증 컨테이너 ─────────────────────────────── */
+.auth-container {
+  width: 400px;
+  max-width: 90vw;
+  margin: 60px auto 0;
+  background: white;
+  border-radius: 16px;
+  padding: 32px 28px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
 }
 
+/* ── 타이틀 ─────────────────────────────────────── */
+.auth-title {
+  font-size: 22px;
+  font-weight: bold;
+  color: #222;
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+/* ── 폼 ─────────────────────────────────────────── */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-form.hidden {
+  display: none;
+}
+
+.auth-form input {
+  padding: 14px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.auth-form input:focus {
+  border-color: #ff4e6a;
+}
+
+/* ── 버튼 ───────────────────────────────────────── */
+.auth-btn {
+  padding: 14px;
+  background: #ff4e6a;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.2s;
+}
+
+.auth-btn:hover {
+  background: #e8394f;
+}
+
+.auth-btn:active {
+  background: #d42e43;
+}
+
+/* ── 에러 메시지 ────────────────────────────────── */
+.auth-error {
+  font-size: 13px;
+  color: #ff4e6a;
+  text-align: center;
+}
+
+.auth-error.hidden {
+  display: none;
+}
+
+/* ── 링크 ───────────────────────────────────────── */
 .auth-links {
   display: flex;
   justify-content: center;
   gap: 12px;
-  margin-top: 16px;
+  margin-top: 20px;
   font-size: 13px;
   color: #aaa;
 }
 
 .auth-links a {
-  color: #aaa;
+  color: #999;
   text-decoration: none;
+  transition: color 0.2s;
 }
 
 .auth-links a:hover {
@@ -28,12 +99,46 @@
   color: #ddd;
 }
 
+/* ── 탭 (아이디/비밀번호 찾기) ──────────────────── */
+.auth-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 12px 0;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #aaa;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.auth-tab.active {
+  color: #ff4e6a;
+  border-bottom-color: #ff4e6a;
+}
+
+.auth-tab:hover {
+  color: #ff4e6a;
+}
+
+/* ── 설명 텍스트 ────────────────────────────────── */
 .auth-desc {
   font-size: 13px;
   color: #888;
   margin-bottom: 4px;
+  text-align: center;
 }
 
+/* ── 결과 박스 ──────────────────────────────────── */
 .auth-result {
   background: #f9f9f9;
   border-radius: 10px;
@@ -42,4 +147,17 @@
   color: #333;
   text-align: center;
   font-weight: bold;
+}
+
+.auth-result.hidden {
+  display: none;
+}
+
+/* ── 모바일 대응 ────────────────────────────────── */
+@media (max-width: 480px) {
+  .auth-container {
+    margin-top: 40px;
+    padding: 28px 20px;
+    border-radius: 12px;
+  }
 }
