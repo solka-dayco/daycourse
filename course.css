@@ -173,24 +173,24 @@ header {
   #detail-map { height: 220px; }
 }
 
-/* 삭제 버튼 */
-.detail-delete {
-  text-align: right;
-  margin-bottom: 12px;
+/* 헤더 상단 (제목 + 삭제) */
+.detail-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 #delete-btn {
   background: none;
-  border: 1px solid #ddd;
-  color: #aaa;
-  padding: 8px 14px;
-  border-radius: 8px;
+  border: none;
+  color: #bbb;
   font-size: 13px;
   cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
 }
 
 #delete-btn:hover {
-  border-color: #ff4e6a;
   color: #ff4e6a;
 }
 
