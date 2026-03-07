@@ -94,9 +94,19 @@
   <div id="slot-options" class="hidden">
     <div class="slot-options-inner">
       <button id="slot-option-view">🔍 크게 보기</button>
+      <button id="slot-option-order">🔢 순서 변경</button>
       <button id="slot-option-replace">🔄 사진 교체</button>
       <button id="slot-option-delete">🗑 삭제</button>
       <button id="slot-option-cancel">취소</button>
+    </div>
+  </div>
+  
+  <!-- 순서 변경 팝업 (body 직계) -->
+  <div id="slot-order-modal" class="hidden">
+    <div class="slot-options-inner">
+      <p style="font-size:14px; font-weight:bold; color:#333; padding:4px 0 8px;">이동할 위치를 선택하세요</p>
+      <div id="slot-order-list"></div>
+      <button id="slot-order-cancel" style="margin-top:4px;">취소</button>
     </div>
   </div>
 

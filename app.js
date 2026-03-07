@@ -327,6 +327,13 @@ kakao.maps.load(function () {
       }
     });
 
+    // 빈 슬롯이 없으면 아무것도 하지 않음
+    if (emptySlots.length === 0) {
+      alert('사진 슬롯이 모두 가득 찼습니다.\n기존 사진을 클릭해서 교체하거나 삭제해주세요.');
+      e.target.value = '';
+      return;
+    }
+
     pendingFiles = files.slice(0, emptySlots.length);
     pendingSlots = emptySlots.slice(0, files.length);
     pendingIndex = 0;
@@ -380,6 +387,81 @@ kakao.maps.load(function () {
     openViewer(photos, startIndex >= 0 ? startIndex : 0);
     replaceSlotNum = null;
   });
+
+  // 순서 변경 버튼 클릭 → 순서 선택 팝업
+  document.getElementById('slot-option-order').addEventListener('click', function () {
+    document.getElementById('slot-options').classList.add('hidden');
+    
+    // 현재 채워진 슬롯 목록
+    const filledSlots = [];
+    [1, 2, 3, 4].forEach(function (num) {
+      const p = document.getElementById('preview' + num);
+      if (p && !p.classList.contains('hidden')) filledSlots.push(num);
+    });
+
+    // 본인 슬롯 제외하고 이동 가능한 위치 표시
+    const orderList = document.getElementById('slot-order-list');
+    orderList.innerHTML = '';
+    filledSlots.forEach(function (num) {
+      const btn = document.createElement('button');
+      btn.textContent = num === replaceSlotNum ? num + '번 (현재 위치)' : num + '번 위치로 이동';
+      btn.disabled = num === replaceSlotNum;
+      btn.addEventListener('click', function () {
+        if (num !== replaceSlotNum) swapSlots(replaceSlotNum, num);
+        document.getElementById('slot-order-modal').classList.add('hidden');
+        replaceSlotNum = null;
+      });
+      orderList.appendChild(btn);
+    });
+
+    document.getElementById('slot-order-modal').classList.remove('hidden');
+  });
+
+  document.getElementById('slot-order-cancel').addEventListener('click', function () {
+    document.getElementById('slot-order-modal').classList.add('hidden');
+    replaceSlotNum = null;
+  });
+
+  // [버블링 수정] 배경 클릭 시 닫기
+  document.getElementById('slot-order-modal').addEventListener('click', function (e) {
+    if (e.target === this) {
+      this.classList.add('hidden');
+      replaceSlotNum = null;
+    }
+  });
+
+  // 슬롯 간 사진 교환
+  function swapSlots(fromNum, toNum) {
+    const previewFrom = document.getElementById('preview' + fromNum);
+    const previewTo = document.getElementById('preview' + toNum);
+    const slotFrom = document.getElementById('slot' + fromNum);
+    const slotTo = document.getElementById('slot' + toNum);
+
+    const fromSrc = previewFrom.src;
+    const fromHidden = previewFrom.classList.contains('hidden');
+    const toSrc = previewTo.src;
+    const toHidden = previewTo.classList.contains('hidden');
+
+    // 사진 교환
+    previewFrom.src = toSrc;
+    previewTo.src = fromSrc;
+
+    if (toHidden) {
+      previewFrom.classList.add('hidden');
+      slotFrom.querySelector('span').style.display = '';
+    } else {
+      previewFrom.classList.remove('hidden');
+      slotFrom.querySelector('span').style.display = 'none';
+    }
+
+    if (fromHidden) {
+      previewTo.classList.add('hidden');
+      slotTo.querySelector('span').style.display = '';
+    } else {
+      previewTo.classList.remove('hidden');
+      slotTo.querySelector('span').style.display = 'none';
+    }
+  }
 
   // 사진 교체
   document.getElementById('slot-option-replace').addEventListener('click', function () {
