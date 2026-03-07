@@ -442,3 +442,16 @@ header {
   font-size: 14px;
   cursor: pointer;
 }
+
+.comment-login-notice {
+  font-size: 13px;
+  color: #aaa;
+  text-align: center;
+  padding: 16px 0;
+}
+
+.comment-login-notice a {
+  color: #ff4e6a;
+  text-decoration: none;
+  font-weight: bold;
+}

@@ -1,6 +1,12 @@
 import { db } from './firebase.js';
 import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+// 비로그인 시 로그인 페이지로 이동
+if (!localStorage.getItem('userId')) {
+  alert('로그인이 필요합니다.');
+  window.location.href = 'login.html';
+}
+
 kakao.maps.load(function () {
 
   // ── 지도 초기화 ──────────────────────────────────

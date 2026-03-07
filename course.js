@@ -56,6 +56,11 @@ try {
   }
 
   likeBtn.addEventListener('click', function () {
+    if (!localStorage.getItem('userId')) {
+      alert('로그인이 필요합니다.');
+      window.location.href = 'login.html';
+      return;
+    }
     const isLiked = localStorage.getItem(likedKey);
 
     if (isLiked) {
@@ -220,26 +225,23 @@ try {
     updateDoc(docRef, { comments: newCount });
   }
 
-  document.getElementById('comment-submit').addEventListener('click', function () {
-    if (!localStorage.getItem('userId')) {
-      alert('로그인이 필요합니다.');
-      window.location.href = 'auth.html';
-      return;
-    }
+  // 비로그인 시 댓글창 숨기고 로그인 안내 표시
+  if (!localStorage.getItem('userId')) {
+    document.getElementById('comment-input-area').innerHTML = `
+      <p class="comment-login-notice">
+        댓글을 작성하려면 <a href="login.html">로그인</a>이 필요합니다.
+      </p>
+    `;
+  }
 
-    const nickname = document.getElementById('comment-nickname').value.trim();
+  document.getElementById('comment-submit') && document.getElementById('comment-submit').addEventListener('click', function () {
     const content = document.getElementById('comment-content').value.trim();
+    const nickname = localStorage.getItem('nickname') || '익명';
 
-    if (!nickname) {
-      alert('닉네임을 입력해주세요.');
-      return;
-    }
     if (!content) {
       alert('댓글 내용을 입력해주세요.');
       return;
     }
-
-    localStorage.setItem('nickname', nickname);
 
     const commentsRef = collection(db, 'courses', courseId, 'comments');
     addDoc(commentsRef, {
@@ -255,12 +257,7 @@ try {
       console.error('댓글 등록 오류:', error);
     });
   });
-
-  const savedNickname = localStorage.getItem('nickname');
-  if (savedNickname) {
-    document.getElementById('comment-nickname').value = savedNickname;
-  }
-
+ 
   document.getElementById('comment-scroll-btn').addEventListener('click', function () {
     document.getElementById('comments').scrollIntoView({ behavior: 'smooth' });
   });

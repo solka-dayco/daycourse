@@ -95,6 +95,11 @@ try {
 
       likeBtn.addEventListener('click', function (e) {
         e.stopPropagation();
+        if (!localStorage.getItem('userId')) {
+          alert('로그인이 필요합니다.');
+          window.location.href = 'login.html';
+          return;
+        }
         const isLiked = localStorage.getItem(likedKey);
 
         if (isLiked) {
