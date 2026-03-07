@@ -2,6 +2,13 @@
 // 담당: 전체 페이지 공통 사이드바
 
 export function initSidebar() {
+  // 뒤로가기/앞으로가기 시 항상 새로고침
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted) {
+      window.location.reload();
+    }
+  });
+
   const overlay = document.getElementById('sidebar-overlay');
   const sidebar = document.getElementById('sidebar');
   const menuBtn = document.getElementById('menu-btn');

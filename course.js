@@ -18,6 +18,11 @@ if (!courseId) {
   window.location.href = 'feed.html';
 }
 
+function hideSpinner() {
+  const spinner = document.getElementById('loading-spinner');
+  if (spinner) spinner.classList.add('hidden');
+}
+
 kakao.maps.load(function () {
   loadCourse();
 });
@@ -69,9 +74,11 @@ function loadCourse() {
 
     // 댓글 수
     loadComments();
+    hideSpinner();
 
   }).catch(function (error) {
     console.error('불러오기 오류:', error);
+    hideSpinner();
   });
 }
 
@@ -250,31 +257,31 @@ function renderComments(snapshot) {
     const replies = c.replies || [];
 
     const li = document.createElement('li');
-    li.className = 'comment-item';
+    li.className = 'comment-item-wrap';
 
-    // 댓글 본문 + 좋아요
     let html =
-      '<div class="comment-body">' +
-        '<div class="comment-header">' +
-          '<span class="comment-nickname">' + c.nickname + '</span>' +
-          '<span class="comment-date">' + getTimeAgo(c.createdAt) + '</span>' +
+      '<div class="comment-item">' +
+        '<div class="comment-body">' +
+          '<div class="comment-header">' +
+            '<span class="comment-nickname">' + c.nickname + '</span>' +
+            '<span class="comment-date">' + getTimeAgo(c.createdAt) + '</span>' +
+          '</div>' +
+          '<p class="comment-content">' + c.content + '</p>' +
+          '<div class="comment-footer">' +
+            (userId === c.authorId ? '<button class="comment-delete-btn" data-id="' + commentId + '">삭제</button>' : '') +
+            '<button class="comment-reply-toggle" data-id="' + commentId + '">답글 달기</button>' +
+          '</div>' +
+          '<div class="reply-input-box hidden" id="reply-input-' + commentId + '">' +
+            '<input type="text" class="reply-input" placeholder="답글을 입력하세요" maxlength="100">' +
+            '<button class="reply-submit" data-id="' + commentId + '">등록</button>' +
+          '</div>' +
         '</div>' +
-        '<p class="comment-content">' + c.content + '</p>' +
-        '<div class="comment-footer">' +
-          (userId === c.authorId ? '<button class="comment-delete-btn" data-id="' + commentId + '">삭제</button>' : '') +
-          '<button class="comment-reply-toggle" data-id="' + commentId + '">답글 달기</button>' +
-        '</div>' +
-        '<div class="reply-input-box hidden" id="reply-input-' + commentId + '">' +
-          '<input type="text" class="reply-input" placeholder="답글을 입력하세요" maxlength="100">' +
-          '<button class="reply-submit" data-id="' + commentId + '">등록</button>' +
-        '</div>' +
-      '</div>' +
-      '<button class="comment-like-btn' + (isLiked ? ' liked' : '') + '" data-id="' + commentId + '">' +
-        '<span class="comment-like-icon">♥</span>' +
-        '<span class="comment-like-count">' + (likeCount > 0 ? likeCount : '') + '</span>' +
-      '</button>';
+        '<button class="comment-like-btn' + (isLiked ? ' liked' : '') + '" data-id="' + commentId + '">' +
+          '<span class="comment-like-icon">♥</span>' +
+          '<span class="comment-like-count">' + (likeCount > 0 ? likeCount : '') + '</span>' +
+        '</button>' +
+      '</div>';
 
-    // 답글 목록
     if (replies.length > 0) {
       html += '<ul class="reply-list">';
       replies.forEach(function (r, rIndex) {
