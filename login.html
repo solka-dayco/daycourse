@@ -8,8 +8,21 @@
   <link rel="stylesheet" href="auth.css">
 </head>
 <body>
+  <div id="sidebar-overlay"></div>
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <span>데이코스</span>
+      <button id="sidebar-close">✕</button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="feed.html">피드</a>
+      <a href="create.html">새 게시물</a>
+    </nav>
+    <div id="sidebar-auth"></div>
+  </div>
+
   <header>
-    <div></div>
+    <button id="menu-btn">☰</button>
     <a href="feed.html" class="page-title">데이코스</a>
     <div></div>
   </header>
@@ -33,6 +46,10 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-  <script type="module" src="login.js"></script>
+  <script type="module">
+    import { initSidebar } from './sidebar.js';
+    import './login.js';
+    initSidebar();
+  </script>
 </body>
 </html>
