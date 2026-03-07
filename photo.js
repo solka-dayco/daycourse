@@ -36,13 +36,19 @@ export function initPhoto() {
       return !document.getElementById('preview' + num).classList.contains('hidden');
     }).length;
 
-    if (filledCount >= 4) {
-      alert('사진이 모두 가득 찼습니다.\n슬롯을 클릭해서 교체하거나 삭제해주세요.');
-      return;
-    }
-
     const input = document.getElementById('photo-input');
     input.removeAttribute('capture');
+
+    if (filledCount >= 4) {
+      [1, 2, 3, 4].forEach(function (num) {
+        const preview = document.getElementById('preview' + num);
+        const slot = document.getElementById('slot' + num);
+        preview.src = '';
+        preview.classList.add('hidden');
+        slot.querySelector('span').style.display = '';
+      });
+    }
+
     input.click();
   });
 
