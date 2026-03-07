@@ -288,7 +288,7 @@ kakao.maps.load(function () {
     polyline.setMap(map);
   }
 
-// ── 사진 업로드 ──────────────────────────────────
+  // ── 사진 업로드 ──────────────────────────────────
   let cropTargetNum = null;
   let cropImgEl = null;
   let cropOffsetX = 0;
@@ -299,7 +299,7 @@ kakao.maps.load(function () {
   let replaceSlotNum = null;
   let cropScale = 1;
   let cropMinScale = 1;
-  let cropMaxScale = 3;
+  let cropMaxScale = 4;
   let lastPinchDist = null;
   let pendingFiles = [];
   let pendingSlots = [];
@@ -340,7 +340,7 @@ kakao.maps.load(function () {
     openCropWithFile(pendingFiles[pendingIndex], pendingSlots[pendingIndex]);
   }
 
-  // 슬롯 클릭 → 사진 있으면 옵션 팝업, 없으면 바로 선택
+  // 슬롯 클릭 → 사진 있으면 옵션 팝업, 없으면 파일 선택
   [1, 2, 3, 4].forEach(function (num) {
     document.getElementById('slot' + num).addEventListener('click', function () {
       const preview = document.getElementById('preview' + num);
@@ -431,7 +431,6 @@ kakao.maps.load(function () {
         const naturalH = cropImgEl.naturalHeight;
         const ratio = naturalW / naturalH;
 
-        // 초기 표시 크기: 짧은 쪽이 CROP_SIZE에 딱 맞게
         let baseW, baseH;
         if (ratio > 1) {
           baseH = CROP_SIZE;
@@ -441,17 +440,15 @@ kakao.maps.load(function () {
           baseH = Math.round(CROP_SIZE / ratio);
         }
 
-        // cropScale=1 일 때의 실제 픽셀 크기를 dataset에 저장
         cropImgEl.dataset.baseW = baseW;
         cropImgEl.dataset.baseH = baseH;
         cropImgEl.style.width = baseW + 'px';
         cropImgEl.style.height = baseH + 'px';
 
         cropScale = 1;
-        cropMinScale = 1;   // 이미지가 crop 영역보다 작아지지 않도록
+        cropMinScale = 1;
         cropMaxScale = 4;
 
-        // 초기 위치: 이미지 중앙이 crop 영역 중앙에 오도록
         cropOffsetX = -Math.round((baseW - CROP_SIZE) / 2);
         cropOffsetY = -Math.round((baseH - CROP_SIZE) / 2);
         applyTransform();
@@ -475,11 +472,9 @@ kakao.maps.load(function () {
     const w = Math.round(baseW * cropScale);
     const h = Math.round(baseH * cropScale);
 
-    // 이미지 표시 크기 업데이트
     cropImgEl.style.width = w + 'px';
     cropImgEl.style.height = h + 'px';
 
-    // 이미지가 crop 영역 밖으로 나가지 않도록 경계 제한
     const maxOffsetX = 0;
     const minOffsetX = Math.min(0, CROP_SIZE - w);
     const maxOffsetY = 0;
@@ -632,14 +627,12 @@ kakao.maps.load(function () {
   });
 
   // ── 사진 뷰어 팝업 ───────────────────────────────
-
   let viewerPhotos = [];
   let viewerIndex = 0;
 
   function openViewer(photos, startIndex) {
     viewerPhotos = photos.filter(function (p) { return p; });
     if (viewerPhotos.length === 0) return;
-
     viewerIndex = startIndex;
     updateViewer();
     document.getElementById('photo-viewer').classList.remove('hidden');
@@ -647,7 +640,6 @@ kakao.maps.load(function () {
 
   function updateViewer() {
     document.getElementById('viewer-img').src = viewerPhotos[viewerIndex];
-
     const dots = document.getElementById('viewer-dots');
     dots.innerHTML = '';
     viewerPhotos.forEach(function (_, i) {
@@ -689,7 +681,6 @@ kakao.maps.load(function () {
     saveBtn.textContent = '저장 중...';
     saveBtn.disabled = true;
 
-    // 사진 base64 수집
     const photos = [null, null, null, null];
     [1, 2, 3, 4].forEach(function (num) {
       const img = document.getElementById('preview' + num);
