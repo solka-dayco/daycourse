@@ -288,7 +288,7 @@ kakao.maps.load(function () {
     polyline.setMap(map);
   }
 
-  // ── 사진 크롭 + 미리보기 ─────────────────────────
+  // ── 사진 업로드 ──────────────────────────────────
   let cropTargetNum = null;
   let cropImgEl = null;
   let cropOffsetX = 0;
@@ -296,46 +296,85 @@ kakao.maps.load(function () {
   let cropStartX = 0;
   let cropStartY = 0;
   let isDragging = false;
+  let replaceSlotNum = null;
   const CROP_SIZE = 280;
 
-  // 파일 선택 시 크롭 팝업 열기
+  // 사진 선택 버튼 → 갤러리 열기
+  document.getElementById('photo-add-btn').addEventListener('click', function () {
+    document.getElementById('photo-input').click();
+  });
+
+  // 다중 사진 선택 처리
+  document.getElementById('photo-input').addEventListener('change', function (e) {
+    const files = Array.from(e.target.files).slice(0, 4);
+    if (files.length === 0) return;
+
+    // 빈 슬롯 찾기
+    let slotNums = [];
+    [1, 2, 3, 4].forEach(function (num) {
+      const img = document.getElementById('preview' + num);
+      if (img.classList.contains('hidden')) slotNums.push(num);
+    });
+
+    files.forEach(function (file, index) {
+      if (index >= slotNums.length) return;
+      const targetNum = slotNums[index];
+      openCropWithFile(file, targetNum);
+    });
+
+    e.target.value = '';
+  });
+
+  // 슬롯 클릭 시 개별 교체
   [1, 2, 3, 4].forEach(function (num) {
-    document.getElementById('photo' + num).addEventListener('change', function (e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function (event) {
-        cropTargetNum = num;
-        cropImgEl = document.getElementById('crop-image');
-        cropImgEl.src = event.target.result;
-
-        cropImgEl.onload = function () {
-          // 이미지 초기 크기 설정 (짧은 쪽이 280px)
-          const ratio = cropImgEl.naturalWidth / cropImgEl.naturalHeight;
-          let w, h;
-          if (ratio > 1) {
-            h = CROP_SIZE;
-            w = Math.round(CROP_SIZE * ratio);
-          } else {
-            w = CROP_SIZE;
-            h = Math.round(CROP_SIZE / ratio);
-          }
-          cropImgEl.style.width = w + 'px';
-          cropImgEl.style.height = h + 'px';
-
-          // 초기 위치 중앙
-          cropOffsetX = -Math.round((w - CROP_SIZE) / 2);
-          cropOffsetY = -Math.round((h - CROP_SIZE) / 2);
-          cropImgEl.parentElement.style.left = cropOffsetX + 'px';
-          cropImgEl.parentElement.style.top = cropOffsetY + 'px';
-
-          document.getElementById('crop-modal').classList.remove('hidden');
-        };
-      };
-      reader.readAsDataURL(file);
+    document.getElementById('slot' + num).addEventListener('click', function () {
+      const img = document.getElementById('preview' + num);
+      if (!img.classList.contains('hidden')) {
+        replaceSlotNum = num;
+        document.getElementById('photo-replace-input').click();
+      }
     });
   });
+
+  document.getElementById('photo-replace-input').addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (!file || !replaceSlotNum) return;
+    openCropWithFile(file, replaceSlotNum);
+    replaceSlotNum = null;
+    e.target.value = '';
+  });
+
+  // 파일 → 크롭 팝업 열기
+  function openCropWithFile(file, num) {
+    const reader = new FileReader();
+    reader.onload = function (event) {
+      cropTargetNum = num;
+      cropImgEl = document.getElementById('crop-image');
+      cropImgEl.src = event.target.result;
+
+      cropImgEl.onload = function () {
+        const ratio = cropImgEl.naturalWidth / cropImgEl.naturalHeight;
+        let w, h;
+        if (ratio > 1) {
+          h = CROP_SIZE;
+          w = Math.round(CROP_SIZE * ratio);
+        } else {
+          w = CROP_SIZE;
+          h = Math.round(CROP_SIZE / ratio);
+        }
+        cropImgEl.style.width = w + 'px';
+        cropImgEl.style.height = h + 'px';
+
+        cropOffsetX = -Math.round((w - CROP_SIZE) / 2);
+        cropOffsetY = -Math.round((h - CROP_SIZE) / 2);
+        cropImgEl.parentElement.style.left = cropOffsetX + 'px';
+        cropImgEl.parentElement.style.top = cropOffsetY + 'px';
+
+        document.getElementById('crop-modal').classList.remove('hidden');
+      };
+    };
+    reader.readAsDataURL(file);
+  }
 
   // 크롭 드래그
   const cropArea = document.querySelector('.crop-area');
@@ -416,9 +455,10 @@ kakao.maps.load(function () {
 
     const compressed = canvas.toDataURL('image/jpeg', 0.3);
     const preview = document.getElementById('preview' + cropTargetNum);
+    const slot = document.getElementById('slot' + cropTargetNum);
     preview.src = compressed;
     preview.classList.remove('hidden');
-    preview.previousElementSibling.style.display = 'none';
+    slot.querySelector('span').style.display = 'none';
 
     document.getElementById('crop-modal').classList.add('hidden');
     cropTargetNum = null;

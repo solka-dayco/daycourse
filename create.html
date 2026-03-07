@@ -51,29 +51,28 @@
 
       <!-- 사진 4장 업로드 -->
       <div class="photo-upload-box">
-        <p class="photo-upload-title">📷 코스 사진 4장 업로드</p>
+        <p class="photo-upload-title">📷 코스 사진 업로드 (최대 4장)</p>
+        <input type="file" id="photo-input" accept="image/*" multiple hidden>
+        <button id="photo-add-btn" class="photo-add-btn">📷 사진 선택</button>
         <div class="photo-grid">
-          <label class="photo-slot" for="photo1">
-            <input type="file" id="photo1" accept="image/*" hidden>
+          <div class="photo-slot" id="slot1">
             <span>+</span>
             <img id="preview1" class="hidden">
-          </label>
-          <label class="photo-slot" for="photo2">
-            <input type="file" id="photo2" accept="image/*" hidden>
+          </div>
+          <div class="photo-slot" id="slot2">
             <span>+</span>
             <img id="preview2" class="hidden">
-          </label>
-          <label class="photo-slot" for="photo3">
-            <input type="file" id="photo3" accept="image/*" hidden>
+          </div>
+          <div class="photo-slot" id="slot3">
             <span>+</span>
             <img id="preview3" class="hidden">
-          </label>
-          <label class="photo-slot" for="photo4">
-            <input type="file" id="photo4" accept="image/*" hidden>
+          </div>
+          <div class="photo-slot" id="slot4">
             <span>+</span>
             <img id="preview4" class="hidden">
-          </label>
+          </div>
         </div>
+        <input type="file" id="photo-replace-input" accept="image/*" hidden>
       </div>
 
       <!-- 크롭 팝업 -->
