@@ -483,6 +483,131 @@ header {
 #crop-confirm {
   background: #ff4e6a;
   color: white;
+}/* ── 크롭 팝업 ──────────────────────────────────── */
+#crop-modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.9);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#crop-modal.hidden { display: none; }
+
+.crop-modal-inner {
+  background: #1a1a1a;
+  border-radius: 16px;
+  padding: 20px;
+  width: 320px;
+  max-width: 95vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.crop-title {
+  font-size: 13px;
+  color: #ccc;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.crop-progress {
+  text-align: center;
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 10px;
+}
+
+/* 뷰포트: 고정 크기, 바깥은 잘림 */
+.crop-area-wrapper {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  overflow: hidden;
+  background: #000;
+  cursor: grab;
+  touch-action: none;
+  flex-shrink: 0;
+}
+
+.crop-area-wrapper:active {
+  cursor: grabbing;
+}
+
+/* 이미지 컨테이너 */
+.crop-box {
+  position: absolute;
+  top: 0; left: 0;
+  touch-action: none;
+  transform-origin: 0 0;
+}
+
+.crop-box img {
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+  touch-action: none;
+  max-width: none;
+}
+
+/* 가이드라인 오버레이 */
+.crop-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.6);
+}
+
+/* 3x3 그리드 라인 */
+.crop-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px);
+  background-size: 33.33% 33.33%;
+}
+
+.crop-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  width: 280px;
+}
+
+.crop-actions button {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+#crop-cancel {
+  background: #333;
+  color: #aaa;
+}
+
+#crop-confirm {
+  background: #ff4e6a;
+  color: white;
+}
+
+.crop-hint {
+  font-size: 11px;
+  color: #666;
+  text-align: center;
+  margin-top: 8px;
 }
 
 /* ── 사진 뷰어 팝업 ─────────────────────────────── */

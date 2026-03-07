@@ -431,6 +431,7 @@ kakao.maps.load(function () {
         const naturalH = cropImgEl.naturalHeight;
         const ratio = naturalW / naturalH;
 
+        // 초기 표시 크기: 짧은 쪽이 CROP_SIZE에 딱 맞게
         let baseW, baseH;
         if (ratio > 1) {
           baseH = CROP_SIZE;
@@ -440,15 +441,17 @@ kakao.maps.load(function () {
           baseH = Math.round(CROP_SIZE / ratio);
         }
 
-        cropScale = 1;
-        cropMinScale = 1;
-        cropMaxScale = 3;
-
+        // cropScale=1 일 때의 실제 픽셀 크기를 dataset에 저장
         cropImgEl.dataset.baseW = baseW;
         cropImgEl.dataset.baseH = baseH;
         cropImgEl.style.width = baseW + 'px';
         cropImgEl.style.height = baseH + 'px';
 
+        cropScale = 1;
+        cropMinScale = 1;   // 이미지가 crop 영역보다 작아지지 않도록
+        cropMaxScale = 4;
+
+        // 초기 위치: 이미지 중앙이 crop 영역 중앙에 오도록
         cropOffsetX = -Math.round((baseW - CROP_SIZE) / 2);
         cropOffsetY = -Math.round((baseH - CROP_SIZE) / 2);
         applyTransform();
@@ -472,11 +475,18 @@ kakao.maps.load(function () {
     const w = Math.round(baseW * cropScale);
     const h = Math.round(baseH * cropScale);
 
+    // 이미지 표시 크기 업데이트
     cropImgEl.style.width = w + 'px';
     cropImgEl.style.height = h + 'px';
 
-    cropOffsetX = Math.min(0, Math.max(cropOffsetX, -(w - CROP_SIZE)));
-    cropOffsetY = Math.min(0, Math.max(cropOffsetY, -(h - CROP_SIZE)));
+    // 이미지가 crop 영역 밖으로 나가지 않도록 경계 제한
+    const maxOffsetX = 0;
+    const minOffsetX = Math.min(0, CROP_SIZE - w);
+    const maxOffsetY = 0;
+    const minOffsetY = Math.min(0, CROP_SIZE - h);
+
+    cropOffsetX = Math.min(maxOffsetX, Math.max(minOffsetX, cropOffsetX));
+    cropOffsetY = Math.min(maxOffsetY, Math.max(minOffsetY, cropOffsetY));
 
     document.getElementById('crop-box').style.left = cropOffsetX + 'px';
     document.getElementById('crop-box').style.top = cropOffsetY + 'px';
@@ -659,24 +669,6 @@ kakao.maps.load(function () {
   document.getElementById('viewer-next').addEventListener('click', function () {
     viewerIndex = (viewerIndex + 1) % viewerPhotos.length;
     updateViewer();
-  });
-
-  // 썸네일 클릭 시 뷰어 열기
-  document.querySelector('.photo-grid').addEventListener('click', function (e) {
-    const slot = e.target.closest('.photo-slot');
-    if (!slot) return;
-    const img = slot.querySelector('img');
-    if (!img || img.classList.contains('hidden')) return;
-
-    const photos = [];
-    [1, 2, 3, 4].forEach(function (num) {
-      const p = document.getElementById('preview' + num);
-      if (p && !p.classList.contains('hidden')) photos.push(p.src);
-    });
-
-    const clickedSrc = img.src;
-    const startIndex = photos.indexOf(clickedSrc);
-    openViewer(photos, startIndex >= 0 ? startIndex : 0);
   });
 
   // ── 코스 저장 ────────────────────────────────────
