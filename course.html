@@ -52,33 +52,30 @@
     <!-- 댓글 섹션 -->
     <div class="detail-section" id="comments">
       <h3>💬 댓글</h3>
-
-      <!-- 댓글 입력 -->
       <div class="comment-input-box">
         <input type="text" id="comment-nickname" placeholder="닉네임" maxlength="10">
         <input type="text" id="comment-content" placeholder="댓글을 입력하세요" maxlength="100">
         <button id="comment-submit">등록</button>
       </div>
-
-      <!-- 댓글 목록 -->
       <ul id="comment-list"></ul>
     </div>
 
   </div>
 
-  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&autoload=false"></script>
   <!-- 사진 뷰어 팝업 -->
-    <div id="photo-viewer" class="hidden">
-      <div class="photo-viewer-inner">
-        <button id="viewer-close">✕</button>
-        <button id="viewer-prev">‹</button>
-        <div class="viewer-img-wrap">
-          <img id="viewer-img">
-        </div>
-        <button id="viewer-next">›</button>
-        <div class="viewer-dots" id="viewer-dots"></div>
+  <div id="photo-viewer" class="hidden">
+    <div class="photo-viewer-inner">
+      <button id="viewer-close">✕</button>
+      <button id="viewer-prev">‹</button>
+      <div class="viewer-img-wrap">
+        <img id="viewer-img">
       </div>
+      <button id="viewer-next">›</button>
+      <div class="viewer-dots" id="viewer-dots"></div>
     </div>
+  </div>
+
+  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&autoload=false"></script>
   <script type="module" src="course.js"></script>
 </body>
 </html>
