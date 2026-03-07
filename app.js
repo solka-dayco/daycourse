@@ -327,7 +327,7 @@ kakao.maps.load(function () {
       }
     });
 
-    // 빈 슬롯이 없으면 아무것도 하지 않음
+    // 빈 슬롯이 없으면 안내 후 종료
     if (emptySlots.length === 0) {
       alert('사진 슬롯이 모두 가득 찼습니다.\n기존 사진을 클릭해서 교체하거나 삭제해주세요.');
       e.target.value = '';
@@ -348,6 +348,7 @@ kakao.maps.load(function () {
   }
 
   // 슬롯 클릭 → 사진 있으면 옵션 팝업, 없으면 파일 선택
+  // [버블링 수정] e.stopPropagation() 으로 photo-grid 이벤트 차단
   [1, 2, 3, 4].forEach(function (num) {
     document.getElementById('slot' + num).addEventListener('click', function (e) {
       e.stopPropagation();
@@ -367,7 +368,7 @@ kakao.maps.load(function () {
       }
     });
 
-    // img 태그 클릭도 slot 이벤트로 위임
+    // [버블링 수정] img 클릭을 slot 클릭으로 위임
     document.getElementById('preview' + num).addEventListener('click', function (e) {
       e.stopPropagation();
       document.getElementById('slot' + num).click();
@@ -387,81 +388,6 @@ kakao.maps.load(function () {
     openViewer(photos, startIndex >= 0 ? startIndex : 0);
     replaceSlotNum = null;
   });
-
-  // 순서 변경 버튼 클릭 → 순서 선택 팝업
-  document.getElementById('slot-option-order').addEventListener('click', function () {
-    document.getElementById('slot-options').classList.add('hidden');
-    
-    // 현재 채워진 슬롯 목록
-    const filledSlots = [];
-    [1, 2, 3, 4].forEach(function (num) {
-      const p = document.getElementById('preview' + num);
-      if (p && !p.classList.contains('hidden')) filledSlots.push(num);
-    });
-
-    // 본인 슬롯 제외하고 이동 가능한 위치 표시
-    const orderList = document.getElementById('slot-order-list');
-    orderList.innerHTML = '';
-    filledSlots.forEach(function (num) {
-      const btn = document.createElement('button');
-      btn.textContent = num === replaceSlotNum ? num + '번 (현재 위치)' : num + '번 위치로 이동';
-      btn.disabled = num === replaceSlotNum;
-      btn.addEventListener('click', function () {
-        if (num !== replaceSlotNum) swapSlots(replaceSlotNum, num);
-        document.getElementById('slot-order-modal').classList.add('hidden');
-        replaceSlotNum = null;
-      });
-      orderList.appendChild(btn);
-    });
-
-    document.getElementById('slot-order-modal').classList.remove('hidden');
-  });
-
-  document.getElementById('slot-order-cancel').addEventListener('click', function () {
-    document.getElementById('slot-order-modal').classList.add('hidden');
-    replaceSlotNum = null;
-  });
-
-  // [버블링 수정] 배경 클릭 시 닫기
-  document.getElementById('slot-order-modal').addEventListener('click', function (e) {
-    if (e.target === this) {
-      this.classList.add('hidden');
-      replaceSlotNum = null;
-    }
-  });
-
-  // 슬롯 간 사진 교환
-  function swapSlots(fromNum, toNum) {
-    const previewFrom = document.getElementById('preview' + fromNum);
-    const previewTo = document.getElementById('preview' + toNum);
-    const slotFrom = document.getElementById('slot' + fromNum);
-    const slotTo = document.getElementById('slot' + toNum);
-
-    const fromSrc = previewFrom.src;
-    const fromHidden = previewFrom.classList.contains('hidden');
-    const toSrc = previewTo.src;
-    const toHidden = previewTo.classList.contains('hidden');
-
-    // 사진 교환
-    previewFrom.src = toSrc;
-    previewTo.src = fromSrc;
-
-    if (toHidden) {
-      previewFrom.classList.add('hidden');
-      slotFrom.querySelector('span').style.display = '';
-    } else {
-      previewFrom.classList.remove('hidden');
-      slotFrom.querySelector('span').style.display = 'none';
-    }
-
-    if (fromHidden) {
-      previewTo.classList.add('hidden');
-      slotTo.querySelector('span').style.display = '';
-    } else {
-      previewTo.classList.remove('hidden');
-      slotTo.querySelector('span').style.display = 'none';
-    }
-  }
 
   // 사진 교체
   document.getElementById('slot-option-replace').addEventListener('click', function () {
@@ -491,6 +417,7 @@ kakao.maps.load(function () {
     replaceSlotNum = null;
   });
 
+  // [버블링 수정] 배경 클릭 시 닫기
   document.getElementById('slot-options').addEventListener('click', function (e) {
     if (e.target === this) {
       this.classList.add('hidden');
@@ -507,7 +434,177 @@ kakao.maps.load(function () {
     e.target.value = '';
   });
 
-  // 파일 → 크롭 팝업 열기
+  // ── 슬롯 간 드래그 앤 드롭 (사진 순서 변경) ─────
+  let dragFromNum = null;
+
+  [1, 2, 3, 4].forEach(function (num) {
+    const slot = document.getElementById('slot' + num);
+
+    // 데스크탑 드래그
+    slot.setAttribute('draggable', 'true');
+
+    slot.addEventListener('dragstart', function (e) {
+      const preview = document.getElementById('preview' + num);
+      if (preview.classList.contains('hidden')) {
+        e.preventDefault();
+        return;
+      }
+      dragFromNum = num;
+      slot.classList.add('drag-active');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    slot.addEventListener('dragend', function () {
+      dragFromNum = null;
+      slot.classList.remove('drag-active');
+      document.querySelectorAll('.photo-slot').forEach(function (s) {
+        s.classList.remove('drag-over');
+      });
+    });
+
+    slot.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      if (dragFromNum && dragFromNum !== num) {
+        slot.classList.add('drag-over');
+      }
+    });
+
+    slot.addEventListener('dragleave', function () {
+      slot.classList.remove('drag-over');
+    });
+
+    slot.addEventListener('drop', function (e) {
+      e.preventDefault();
+      slot.classList.remove('drag-over');
+      if (dragFromNum && dragFromNum !== num) {
+        swapSlots(dragFromNum, num);
+      }
+      dragFromNum = null;
+    });
+
+    // 모바일 터치 드래그
+    let touchDragEl = null;
+    let touchDragFrom = null;
+
+    slot.addEventListener('touchstart', function (e) {
+      const preview = document.getElementById('preview' + num);
+      if (preview.classList.contains('hidden')) return;
+
+      const touch = e.touches[0];
+      const startX = touch.clientX;
+      const startY = touch.clientY;
+
+      // 300ms 길게 누르면 드래그 시작
+      slot._touchTimer = setTimeout(function () {
+        touchDragFrom = num;
+        slot.classList.add('drag-active');
+
+        touchDragEl = slot.cloneNode(true);
+        touchDragEl.style.cssText = `
+          position: fixed;
+          width: ${slot.offsetWidth}px;
+          height: ${slot.offsetHeight}px;
+          opacity: 0.8;
+          pointer-events: none;
+          z-index: 3000;
+          border-radius: 8px;
+          overflow: hidden;
+          left: ${startX - slot.offsetWidth / 2}px;
+          top: ${startY - slot.offsetHeight / 2}px;
+        `;
+        document.body.appendChild(touchDragEl);
+      }, 300);
+    }, { passive: true });
+
+    slot.addEventListener('touchmove', function (e) {
+      if (!touchDragFrom) {
+        clearTimeout(slot._touchTimer);
+        return;
+      }
+      e.preventDefault();
+      const touch = e.touches[0];
+
+      if (touchDragEl) {
+        touchDragEl.style.left = (touch.clientX - touchDragEl.offsetWidth / 2) + 'px';
+        touchDragEl.style.top = (touch.clientY - touchDragEl.offsetHeight / 2) + 'px';
+      }
+
+      document.querySelectorAll('.photo-slot').forEach(function (s) {
+        s.classList.remove('drag-over');
+      });
+
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (el) {
+        const targetSlot = el.closest('.photo-slot');
+        if (targetSlot && targetSlot !== slot) {
+          targetSlot.classList.add('drag-over');
+        }
+      }
+    }, { passive: false });
+
+    slot.addEventListener('touchend', function (e) {
+      clearTimeout(slot._touchTimer);
+      if (!touchDragFrom) return;
+
+      if (touchDragEl) {
+        document.body.removeChild(touchDragEl);
+        touchDragEl = null;
+      }
+
+      slot.classList.remove('drag-active');
+      document.querySelectorAll('.photo-slot').forEach(function (s) {
+        s.classList.remove('drag-over');
+      });
+
+      const touch = e.changedTouches[0];
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (el) {
+        const targetSlot = el.closest('.photo-slot');
+        if (targetSlot) {
+          const targetNum = parseInt(targetSlot.id.replace('slot', ''));
+          if (targetNum && targetNum !== touchDragFrom) {
+            swapSlots(touchDragFrom, targetNum);
+          }
+        }
+      }
+
+      touchDragFrom = null;
+    });
+  });
+
+  // 슬롯 간 사진 교환
+  function swapSlots(fromNum, toNum) {
+    const previewFrom = document.getElementById('preview' + fromNum);
+    const previewTo = document.getElementById('preview' + toNum);
+    const slotFrom = document.getElementById('slot' + fromNum);
+    const slotTo = document.getElementById('slot' + toNum);
+
+    const fromSrc = previewFrom.src;
+    const fromHidden = previewFrom.classList.contains('hidden');
+    const toSrc = previewTo.src;
+    const toHidden = previewTo.classList.contains('hidden');
+
+    previewFrom.src = toSrc;
+    previewTo.src = fromSrc;
+
+    if (toHidden) {
+      previewFrom.classList.add('hidden');
+      slotFrom.querySelector('span').style.display = '';
+    } else {
+      previewFrom.classList.remove('hidden');
+      slotFrom.querySelector('span').style.display = 'none';
+    }
+
+    if (fromHidden) {
+      previewTo.classList.add('hidden');
+      slotTo.querySelector('span').style.display = '';
+    } else {
+      previewTo.classList.remove('hidden');
+      slotTo.querySelector('span').style.display = 'none';
+    }
+  }
+
+  // ── 파일 → 크롭 팝업 열기 ───────────────────────
   function openCropWithFile(file, num) {
     const reader = new FileReader();
     reader.onload = function (event) {

@@ -761,50 +761,15 @@ header {
 #slot-option-delete { background: #fff0f3; color: #ff4e6a; }
 #slot-option-cancel { background: #f0f0f0; color: #888; }
 
-/* ── 순서 변경 팝업 ─────────────────────────────── */
-#slot-order-modal {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.5);
-  z-index: 1500;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
+/* ── 슬롯 드래그 앤 드롭 ────────────────────────── */
+.photo-slot.drag-active {
+  opacity: 0.4;
+  border: 2px dashed #ff4e6a;
 }
 
-#slot-order-modal.hidden { display: none; }
-
-#slot-order-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-#slot-order-list button {
-  padding: 14px;
-  border: none;
-  border-radius: 10px;
-  font-size: 15px;
-  cursor: pointer;
-  text-align: left;
-  background: #f9f9f9;
-  color: #333;
-}
-
-#slot-order-list button:disabled {
+.photo-slot.drag-over {
+  border: 2px solid #ff4e6a;
   background: #fff0f3;
-  color: #ff4e6a;
-  font-weight: bold;
-}
-
-#slot-order-cancel {
-  padding: 14px;
-  border: none;
-  border-radius: 10px;
-  font-size: 15px;
-  cursor: pointer;
-  background: #f0f0f0;
-  color: #888;
-  width: 100%;
+  transform: scale(1.03);
+  transition: transform 0.1s;
 }
