@@ -202,6 +202,19 @@ function loadComments() {
   });
 }
 
+function getTimeAgo(date) {
+  if (!date) return '';
+  const now = new Date();
+  const target = date.toDate ? date.toDate() : new Date(date);
+  const diff = Math.floor((now - target) / 1000);
+  if (diff < 60) return '방금 전';
+  if (diff < 3600) return Math.floor(diff / 60) + '분 전';
+  if (diff < 86400) return Math.floor(diff / 3600) + '시간 전';
+  if (diff < 2592000) return Math.floor(diff / 86400) + '일 전';
+  if (diff < 31536000) return Math.floor(diff / 2592000) + '개월 전';
+  return Math.floor(diff / 31536000) + '년 전';
+}
+
 function renderComments(snapshot) {
   const ul = document.getElementById('comment-list');
   ul.innerHTML = '';
@@ -209,20 +222,64 @@ function renderComments(snapshot) {
 
   snapshot.forEach(function (docSnap) {
     const c = docSnap.data();
+    const commentId = docSnap.id;
+    const likedUsers = c.commentLikes || [];
+    const isLiked = userId && likedUsers.includes(userId);
+    const likeCount = likedUsers.length;
+
     const li = document.createElement('li');
     li.className = 'comment-item';
-    li.innerHTML = `
-      <span class="comment-nickname">${c.nickname}</span>
-      <span class="comment-content">${c.content}</span>
-      ${userId === c.authorId ? '<button class="comment-delete-btn" data-id="' + docSnap.id + '">삭제</button>' : ''}
-    `;
+    li.innerHTML =
+      '<div class="comment-body">' +
+        '<div class="comment-header">' +
+          '<span class="comment-nickname">' + c.nickname + '</span>' +
+          '<span class="comment-date">' + getTimeAgo(c.createdAt) + '</span>' +
+        '</div>' +
+        '<p class="comment-content">' + c.content + '</p>' +
+        '<div class="comment-footer">' +
+          (userId === c.authorId ? '<button class="comment-delete-btn" data-id="' + commentId + '">삭제</button>' : '') +
+        '</div>' +
+      '</div>' +
+      '<button class="comment-like-btn' + (isLiked ? ' liked' : '') + '" data-id="' + commentId + '">' +
+        '<span class="comment-like-icon">♥</span>' +
+        '<span class="comment-like-count">' + (likeCount > 0 ? likeCount : '') + '</span>' +
+      '</button>';
     ul.appendChild(li);
   });
 
+  // 댓글 삭제
   document.querySelectorAll('.comment-delete-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
       deleteComment(doc(db, 'courses', courseId, 'comments', this.dataset.id)).then(function () {
         loadComments();
+      });
+    });
+  });
+
+  // 댓글 좋아요
+  document.querySelectorAll('.comment-like-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (!userId) {
+        alert('로그인이 필요합니다.');
+        window.location.href = 'login.html';
+        return;
+      }
+      const cid = this.dataset.id;
+      const ref = doc(db, 'courses', courseId, 'comments', cid);
+      getDoc(ref).then(function (snap) {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        let likes = data.commentLikes || [];
+        if (likes.includes(userId)) {
+          likes = likes.filter(function (id) { return id !== userId; });
+        } else {
+          likes.push(userId);
+        }
+        import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then(function (m) {
+          m.updateDoc(ref, { commentLikes: likes }).then(function () {
+            loadComments();
+          });
+        });
       });
     });
   });
