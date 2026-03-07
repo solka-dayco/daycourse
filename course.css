@@ -399,13 +399,13 @@ header {
 }
 
 .comment-like-icon {
-  font-size: 16px;
+  font-size: 22px;
   color: #ddd;
   transition: color 0.2s;
 }
 
 .comment-like-btn.liked .comment-like-icon {
-  color: #ff4e6a;
+  color: #555;
 }
 
 .comment-like-count {
@@ -414,7 +414,116 @@ header {
 }
 
 .comment-like-btn.liked .comment-like-count {
+  color: #555;
+}
+
+/* ── 답글 달기 토글 ──────────────────────────────── */
+.comment-reply-toggle {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.comment-reply-toggle:hover {
   color: #ff4e6a;
+}
+
+/* ── 답글 입력 ──────────────────────────────────── */
+.reply-input-box {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.reply-input-box.hidden {
+  display: none;
+}
+
+.reply-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+}
+
+.reply-input:focus {
+  border-color: #ff4e6a;
+}
+
+.reply-submit {
+  background: #ff4e6a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ── 답글 목록 ──────────────────────────────────── */
+.reply-list {
+  list-style: none;
+  margin-top: 10px;
+  padding-left: 20px;
+  border-left: 2px solid #f0f0f0;
+  width: 100%;
+}
+
+.reply-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f8f8f8;
+}
+
+.reply-item:last-child {
+  border-bottom: none;
+}
+
+.reply-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.reply-delete-btn {
+  background: none;
+  border: none;
+  color: #bbb;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.reply-delete-btn:hover {
+  color: #ff4e6a;
+}
+
+.reply-like-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  min-width: 28px;
+  flex-shrink: 0;
+}
+
+.reply-like-btn.liked .comment-like-icon {
+  color: #555;
+}
+
+.reply-like-btn.liked .comment-like-count {
+  color: #555;
 }
 
 /* ── 토스트 메시지 ──────────────────────────────── */

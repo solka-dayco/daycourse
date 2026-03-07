@@ -170,37 +170,58 @@ function renderLikes(count) {
 }
 
 // ── 댓글 ─────────────────────────────────────────
+let isSubmitting = false;
+
 function loadComments() {
   const q = query(collection(db, 'courses', courseId, 'comments'), orderBy('createdAt', 'asc'));
   getDocs(q).then(function (snapshot) {
-    document.getElementById('comment-count').textContent = snapshot.size;
+    document.getElementById('comment-count').textContent = countAllComments(snapshot);
     renderComments(snapshot);
   });
+}
 
-  document.getElementById('comment-submit').addEventListener('click', function () {
-    const userId = localStorage.getItem('userId');
-    if (!userId) {
-      alert('로그인이 필요합니다.');
-      window.location.href = 'login.html';
-      return;
-    }
+function countAllComments(snapshot) {
+  let count = 0;
+  snapshot.forEach(function (docSnap) {
+    count++;
+    const c = docSnap.data();
+    if (c.replies) count += c.replies.length;
+  });
+  return count;
+}
 
-    const content = document.getElementById('comment-content').value.trim();
-    if (!content) return;
+function submitComment() {
+  if (isSubmitting) return;
+  const userId = localStorage.getItem('userId');
+  if (!userId) {
+    alert('로그인이 필요합니다.');
+    window.location.href = 'login.html';
+    return;
+  }
 
-    const comment = {
-      nickname: localStorage.getItem('nickname') || '익명',
-      content: content,
-      authorId: userId,
-      createdAt: new Date()
-    };
+  const content = document.getElementById('comment-content').value.trim();
+  if (!content) return;
 
-    addDoc(collection(db, 'courses', courseId, 'comments'), comment).then(function () {
-      document.getElementById('comment-content').value = '';
-      loadComments();
-    });
+  isSubmitting = true;
+  const comment = {
+    nickname: localStorage.getItem('nickname') || '익명',
+    content: content,
+    authorId: userId,
+    createdAt: new Date(),
+    commentLikes: [],
+    replies: []
+  };
+
+  addDoc(collection(db, 'courses', courseId, 'comments'), comment).then(function () {
+    document.getElementById('comment-content').value = '';
+    isSubmitting = false;
+    loadComments();
+  }).catch(function () {
+    isSubmitting = false;
   });
 }
+
+document.getElementById('comment-submit').addEventListener('click', submitComment);
 
 function getTimeAgo(date) {
   if (!date) return '';
@@ -226,10 +247,13 @@ function renderComments(snapshot) {
     const likedUsers = c.commentLikes || [];
     const isLiked = userId && likedUsers.includes(userId);
     const likeCount = likedUsers.length;
+    const replies = c.replies || [];
 
     const li = document.createElement('li');
     li.className = 'comment-item';
-    li.innerHTML =
+
+    // 댓글 본문 + 좋아요
+    let html =
       '<div class="comment-body">' +
         '<div class="comment-header">' +
           '<span class="comment-nickname">' + c.nickname + '</span>' +
@@ -238,12 +262,46 @@ function renderComments(snapshot) {
         '<p class="comment-content">' + c.content + '</p>' +
         '<div class="comment-footer">' +
           (userId === c.authorId ? '<button class="comment-delete-btn" data-id="' + commentId + '">삭제</button>' : '') +
+          '<button class="comment-reply-toggle" data-id="' + commentId + '">답글 달기</button>' +
+        '</div>' +
+        '<div class="reply-input-box hidden" id="reply-input-' + commentId + '">' +
+          '<input type="text" class="reply-input" placeholder="답글을 입력하세요" maxlength="100">' +
+          '<button class="reply-submit" data-id="' + commentId + '">등록</button>' +
         '</div>' +
       '</div>' +
       '<button class="comment-like-btn' + (isLiked ? ' liked' : '') + '" data-id="' + commentId + '">' +
         '<span class="comment-like-icon">♥</span>' +
         '<span class="comment-like-count">' + (likeCount > 0 ? likeCount : '') + '</span>' +
       '</button>';
+
+    // 답글 목록
+    if (replies.length > 0) {
+      html += '<ul class="reply-list">';
+      replies.forEach(function (r, rIndex) {
+        const rLikes = r.replyLikes || [];
+        const rIsLiked = userId && rLikes.includes(userId);
+        html +=
+          '<li class="reply-item">' +
+            '<div class="reply-body">' +
+              '<div class="comment-header">' +
+                '<span class="comment-nickname">' + r.nickname + '</span>' +
+                '<span class="comment-date">' + getTimeAgo(r.createdAt) + '</span>' +
+              '</div>' +
+              '<p class="comment-content">' + r.content + '</p>' +
+              '<div class="comment-footer">' +
+                (userId === r.authorId ? '<button class="reply-delete-btn" data-comment-id="' + commentId + '" data-reply-index="' + rIndex + '">삭제</button>' : '') +
+              '</div>' +
+            '</div>' +
+            '<button class="reply-like-btn' + (rIsLiked ? ' liked' : '') + '" data-comment-id="' + commentId + '" data-reply-index="' + rIndex + '">' +
+              '<span class="comment-like-icon">♥</span>' +
+              '<span class="comment-like-count">' + (rLikes.length > 0 ? rLikes.length : '') + '</span>' +
+            '</button>' +
+          '</li>';
+      });
+      html += '</ul>';
+    }
+
+    li.innerHTML = html;
     ul.appendChild(li);
   });
 
@@ -259,31 +317,109 @@ function renderComments(snapshot) {
   // 댓글 좋아요
   document.querySelectorAll('.comment-like-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      if (!userId) {
-        alert('로그인이 필요합니다.');
-        window.location.href = 'login.html';
-        return;
-      }
+      if (!userId) { alert('로그인이 필요합니다.'); window.location.href = 'login.html'; return; }
       const cid = this.dataset.id;
       const ref = doc(db, 'courses', courseId, 'comments', cid);
       getDoc(ref).then(function (snap) {
         if (!snap.exists()) return;
-        const data = snap.data();
-        let likes = data.commentLikes || [];
+        let likes = snap.data().commentLikes || [];
         if (likes.includes(userId)) {
           likes = likes.filter(function (id) { return id !== userId; });
         } else {
           likes.push(userId);
         }
         import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then(function (m) {
-          m.updateDoc(ref, { commentLikes: likes }).then(function () {
+          m.updateDoc(ref, { commentLikes: likes }).then(function () { loadComments(); });
+        });
+      });
+    });
+  });
+
+  // 답글 달기 토글
+  document.querySelectorAll('.comment-reply-toggle').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (!userId) { alert('로그인이 필요합니다.'); window.location.href = 'login.html'; return; }
+      const box = document.getElementById('reply-input-' + this.dataset.id);
+      box.classList.toggle('hidden');
+      if (!box.classList.contains('hidden')) {
+        box.querySelector('.reply-input').focus();
+      }
+    });
+  });
+
+  // 답글 등록
+  document.querySelectorAll('.reply-submit').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (isSubmitting) return;
+      const cid = this.dataset.id;
+      const input = document.getElementById('reply-input-' + cid).querySelector('.reply-input');
+      const content = input.value.trim();
+      if (!content) return;
+
+      isSubmitting = true;
+      const ref = doc(db, 'courses', courseId, 'comments', cid);
+      getDoc(ref).then(function (snap) {
+        if (!snap.exists()) { isSubmitting = false; return; }
+        const replies = snap.data().replies || [];
+        replies.push({
+          nickname: localStorage.getItem('nickname') || '익명',
+          content: content,
+          authorId: userId,
+          createdAt: new Date(),
+          replyLikes: []
+        });
+        import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then(function (m) {
+          m.updateDoc(ref, { replies: replies }).then(function () {
+            isSubmitting = false;
             loadComments();
           });
+        });
+      }).catch(function () { isSubmitting = false; });
+    });
+  });
+
+  // 답글 삭제
+  document.querySelectorAll('.reply-delete-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const cid = this.dataset.commentId;
+      const rIndex = parseInt(this.dataset.replyIndex);
+      const ref = doc(db, 'courses', courseId, 'comments', cid);
+      getDoc(ref).then(function (snap) {
+        if (!snap.exists()) return;
+        const replies = snap.data().replies || [];
+        replies.splice(rIndex, 1);
+        import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then(function (m) {
+          m.updateDoc(ref, { replies: replies }).then(function () { loadComments(); });
+        });
+      });
+    });
+  });
+
+  // 답글 좋아요
+  document.querySelectorAll('.reply-like-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (!userId) { alert('로그인이 필요합니다.'); window.location.href = 'login.html'; return; }
+      const cid = this.dataset.commentId;
+      const rIndex = parseInt(this.dataset.replyIndex);
+      const ref = doc(db, 'courses', courseId, 'comments', cid);
+      getDoc(ref).then(function (snap) {
+        if (!snap.exists()) return;
+        const replies = snap.data().replies || [];
+        let rLikes = replies[rIndex].replyLikes || [];
+        if (rLikes.includes(userId)) {
+          rLikes = rLikes.filter(function (id) { return id !== userId; });
+        } else {
+          rLikes.push(userId);
+        }
+        replies[rIndex].replyLikes = rLikes;
+        import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then(function (m) {
+          m.updateDoc(ref, { replies: replies }).then(function () { loadComments(); });
         });
       });
     });
   });
 }
+
 
 // ── 공유 ─────────────────────────────────────────
 document.getElementById('share-btn').addEventListener('click', function () {

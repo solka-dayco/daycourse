@@ -20,9 +20,21 @@ try {
 
     courses.reverse();
 
-    courses.forEach(function (course) {
+    courses.forEach(async function (course) {
       const card = document.createElement('div');
       card.className = 'feed-card';
+
+      // 댓글 + 답글 수 조회
+      let commentTotal = 0;
+      try {
+        const commentSnap = await getDocs(collection(db, 'courses', course.id, 'comments'));
+        commentSnap.forEach(function (cDoc) {
+          commentTotal++;
+          const replies = cDoc.data().replies || [];
+          commentTotal += replies.length;
+        });
+      } catch (e) { }
+      course.commentCount = commentTotal;
 
       const photos = course.photos || [];
       let thumbnailHTML = '';
@@ -45,7 +57,7 @@ try {
           <div class="card-meta">✍️ ${course.authorNickname || '익명'}</div>
           <div class="card-actions">
             <button class="like-btn" data-id="${course.id}"><span>${likes}</span></button>
-            <button class="comment-btn" data-id="${course.id}">💬 <span>${course.comments || 0}</span></button>
+            <button class="comment-btn" data-id="${course.id}">💬 <span>${course.commentCount}</span></button>
             <button class="share-btn" data-id="${course.id}">📤</button>
           </div>
         </div>
