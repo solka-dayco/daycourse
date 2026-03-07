@@ -95,6 +95,9 @@ export function initPhoto() {
       }
     });
 
+    // [모바일 잔상 수정] img 브라우저 기본 드래그 차단
+    document.getElementById('preview' + num).setAttribute('draggable', 'false');
+
     // [버블링 수정] img 클릭을 slot 클릭으로 위임
     document.getElementById('preview' + num).addEventListener('click', function (e) {
       e.stopPropagation();
