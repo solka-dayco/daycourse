@@ -46,7 +46,42 @@ try {
   document.getElementById('like-count').textContent = course.likes || 0;
   document.getElementById('comment-count').textContent = course.comments || 0;
 
-  // ── 좋아요 버튼 (중복 방지) ──────────────────────
+  // ── 좋아요 버튼 (토글) ───────────────────────────
+  const likeBtn = document.getElementById('like-btn');
+  const likedKey = 'liked_' + courseId;
+
+  // 초기 상태 반영
+  if (localStorage.getItem(likedKey)) {
+    likeBtn.style.color = '#ff4e6a';
+  }
+
+  likeBtn.addEventListener('click', function () {
+    const isLiked = localStorage.getItem(likedKey);
+
+    if (isLiked) {
+      // 좋아요 취소
+      const newLikes = Math.max((course.likes || 0) - 1, 0);
+      updateDoc(docRef, { likes: newLikes }).then(function () {
+        document.getElementById('like-count').textContent = newLikes;
+        course.likes = newLikes;
+        likeBtn.style.color = '';
+        localStorage.removeItem(likedKey);
+      }).catch(function (error) {
+        console.error('좋아요 취소 오류:', error);
+      });
+    } else {
+      // 좋아요 추가
+      const newLikes = (course.likes || 0) + 1;
+      updateDoc(docRef, { likes: newLikes }).then(function () {
+        document.getElementById('like-count').textContent = newLikes;
+        course.likes = newLikes;
+        likeBtn.style.color = '#ff4e6a';
+        localStorage.setItem(likedKey, 'true');
+      }).catch(function (error) {
+        console.error('좋아요 오류:', error);
+      });
+    }
+  });// ── 좋아요 버튼 (중복 방지) ──────────────────────
   const likeBtn = document.getElementById('like-btn');
   const likedKey = 'liked_' + courseId;
 

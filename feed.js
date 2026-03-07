@@ -1,5 +1,5 @@
 import { db } from './firebase.js';
-import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const feedList = document.getElementById('feed-list');
 feedList.innerHTML = '<p style="color:#aaa; font-size:14px;">불러오는 중...</p>';
@@ -22,7 +22,6 @@ try {
       courses.push({ id: docSnap.id, ...docSnap.data() });
     });
 
-    // 최신순 정렬
     courses.reverse();
 
     courses.forEach(function (course) {
@@ -40,6 +39,7 @@ try {
       }
 
       const placeSummary = course.places.map(p => p.name).join(' → ');
+      let likes = course.likes || 0;
 
       card.innerHTML = `
         <div class="card-thumbnail">${thumbnailHTML}</div>
@@ -47,15 +47,50 @@ try {
           <div class="card-title">${course.name}</div>
           <div class="card-places">${placeSummary}</div>
           <div class="card-actions">
-            <button>❤️ <span>${course.likes || 0}</span></button>
-            <button>💬 <span>${course.comments || 0}</span></button>
-            <button>📤</button>
+            <button class="like-btn" data-id="${course.id}">❤️ <span>${likes}</span></button>
+            <button class="comment-btn" data-id="${course.id}">💬 <span>${course.comments || 0}</span></button>
+            <button class="share-btn" data-id="${course.id}">📤</button>
           </div>
         </div>
       `;
 
-      card.addEventListener('click', function () {
+      // 카드 클릭 시 상세 페이지 이동 (버튼 클릭 제외)
+      card.addEventListener('click', function (e) {
+        if (e.target.closest('.card-actions')) return;
         window.location.href = 'course.html?id=' + course.id;
+      });
+
+      // 좋아요 버튼 (토글)
+      const likeBtn = card.querySelector('.like-btn');
+      const likedKey = 'liked_' + course.id;
+
+      if (localStorage.getItem(likedKey)) {
+        likeBtn.style.color = '#ff4e6a';
+      }
+
+      likeBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const isLiked = localStorage.getItem(likedKey);
+
+        if (isLiked) {
+          likes = Math.max(likes - 1, 0);
+          this.querySelector('span').textContent = likes;
+          this.style.color = '';
+          localStorage.removeItem(likedKey);
+          updateDoc(doc(db, 'courses', course.id), { likes: likes });
+        } else {
+          likes++;
+          this.querySelector('span').textContent = likes;
+          this.style.color = '#ff4e6a';
+          localStorage.setItem(likedKey, 'true');
+          updateDoc(doc(db, 'courses', course.id), { likes: likes });
+        }
+      });
+
+      // 댓글 버튼 → 상세 페이지 댓글 섹션으로 이동
+      card.querySelector('.comment-btn').addEventListener('click', function (e) {
+        e.stopPropagation();
+        window.location.href = 'course.html?id=' + course.id + '#comments';
       });
 
       feedList.appendChild(card);
