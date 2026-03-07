@@ -8,10 +8,23 @@
   <link rel="stylesheet" href="course.css">
 </head>
 <body>
+  <div id="sidebar-overlay"></div>
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <span>💕 데이코스</span>
+      <button id="sidebar-close">✕</button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="feed.html">🏠 피드</a>
+      <a href="create.html">✏️ 코스 만들기</a>
+    </nav>
+    <div id="sidebar-auth"></div>
+  </div>
+
   <header>
+    <button id="menu-btn">☰</button>
+    <span class="page-title">🗺 코스 상세</span>
     <a href="feed.html" class="back-btn">← 뒤로</a>
-    <span>💕 코스 상세</span>
-    <div></div>
   </header>
 
   <div class="course-container">
@@ -97,6 +110,10 @@
   </div>
 
   <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&autoload=false"></script>
-  <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.6.0/kakao.min.js"></script> <script type="module" src="course.js"></script>
+  <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.6.0/kakao.min.js"></script> <script type="module">
+    import { initSidebar } from './sidebar.js';
+    import './course.js';
+    initSidebar();
+  </script>
 </body>
 </html>

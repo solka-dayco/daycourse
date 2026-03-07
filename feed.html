@@ -8,13 +8,23 @@
   <link rel="stylesheet" href="feed.css">
 </head>
 <body>
-  <header>
-    <div></div>
-    <span>💕 데이코스</span>
-    <div id="header-right">
-      <div id="header-user"></div>
-      <a href="create.html" class="create-btn">+ 코스 만들기</a>
+  <div id="sidebar-overlay"></div>
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <span>💕 데이코스</span>
+      <button id="sidebar-close">✕</button>
     </div>
+    <nav class="sidebar-nav">
+      <a href="feed.html">🏠 피드</a>
+      <a href="create.html">✏️ 코스 만들기</a>
+    </nav>
+    <div id="sidebar-auth"></div>
+  </div>
+
+  <header>
+    <button id="menu-btn">☰</button>
+    <span class="page-title">💕 데이코스</span>
+    <a href="create.html" class="header-btn">+ 코스 만들기</a>
   </header>
 
   <!-- 피드 카드 목록 -->
@@ -22,6 +32,10 @@
     <div id="feed-list"></div>
   </div>
 
-  <script type="module" src="feed.js"></script>
+  <script type="module">
+    import { initSidebar } from './sidebar.js';
+    import './feed.js';
+    initSidebar();
+  </script>
 </body>
 </html>

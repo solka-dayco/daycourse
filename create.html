@@ -7,9 +7,22 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div id="sidebar-overlay"></div>
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <span>💕 데이코스</span>
+      <button id="sidebar-close">✕</button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="feed.html">🏠 피드</a>
+      <a href="create.html">✏️ 코스 만들기</a>
+    </nav>
+    <div id="sidebar-auth"></div>
+  </div>
+
   <header>
-    <a href="feed.html" class="back-btn">← 뒤로</a>
-    <span>💕 코스 만들기</span>
+    <button id="menu-btn">☰</button>
+    <span class="page-title">✏️ 코스 만들기</span>
     <div></div>
   </header>
 
@@ -128,6 +141,10 @@
 
   <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&autoload=false&libraries=services"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-  <script type="module" src="app.js"></script>
+  <script type="module">
+    import { initSidebar } from './sidebar.js';
+    import './app.js';
+    initSidebar();
+  </script>
 </body>
 </html>
