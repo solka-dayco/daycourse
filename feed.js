@@ -44,7 +44,7 @@ try {
           <div class="card-places">${placeSummary}</div>
           <div class="card-meta">✍️ ${course.authorNickname || '익명'}</div>
           <div class="card-actions">
-            <button class="like-btn" data-id="${course.id}">❤️ <span>${likes}</span></button>
+            <button class="like-btn" data-id="${course.id}"><span>${likes}</span></button>
             <button class="comment-btn" data-id="${course.id}">💬 <span>${course.comments || 0}</span></button>
             <button class="share-btn" data-id="${course.id}">📤</button>
           </div>
