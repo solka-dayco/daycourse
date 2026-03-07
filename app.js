@@ -288,7 +288,7 @@ kakao.maps.load(function () {
     polyline.setMap(map);
   }
 
-  // ── 사진 업로드 ──────────────────────────────────
+// ── 사진 업로드 ──────────────────────────────────
   let cropTargetNum = null;
   let cropImgEl = null;
   let cropOffsetX = 0;
@@ -301,56 +301,64 @@ kakao.maps.load(function () {
 
   // 사진 선택 버튼 → 갤러리 열기
   document.getElementById('photo-add-btn').addEventListener('click', function () {
-    document.getElementById('photo-input').click();
+    const input = document.getElementById('photo-input');
+    input.removeAttribute('capture');
+    input.click();
   });
 
-  // 다중 사진 선택 처리
+  // 다중 사진 선택 → 순서대로 빈 슬롯에 배치
   document.getElementById('photo-input').addEventListener('change', function (e) {
     const files = Array.from(e.target.files).slice(0, 4);
     if (files.length === 0) return;
 
-    // 빈 슬롯 찾기
-    let slotNums = [];
+    const emptySlots = [];
     [1, 2, 3, 4].forEach(function (num) {
-      const img = document.getElementById('preview' + num);
-      if (img.classList.contains('hidden')) slotNums.push(num);
+      if (document.getElementById('preview' + num).classList.contains('hidden')) {
+        emptySlots.push(num);
+      }
     });
 
-    files.forEach(function (file, index) {
-      if (index >= slotNums.length) return;
-      const targetNum = slotNums[index];
-      openCropWithFile(file, targetNum);
-    });
+    let fileIndex = 0;
 
+    function processNext() {
+      if (fileIndex >= files.length || fileIndex >= emptySlots.length) return;
+      const file = files[fileIndex];
+      const slotNum = emptySlots[fileIndex];
+      fileIndex++;
+
+      openCropWithFile(file, slotNum, processNext);
+    }
+
+    processNext();
     e.target.value = '';
   });
 
-  // 슬롯 클릭 시 개별 교체
+  // 슬롯 클릭 → 사진 있으면 교체, 없으면 사진 선택
   [1, 2, 3, 4].forEach(function (num) {
     document.getElementById('slot' + num).addEventListener('click', function () {
-      const img = document.getElementById('preview' + num);
-      if (!img.classList.contains('hidden')) {
-        replaceSlotNum = num;
-        document.getElementById('photo-replace-input').click();
-      }
+      replaceSlotNum = num;
+      const input = document.getElementById('photo-replace-input');
+      input.removeAttribute('capture');
+      input.click();
     });
   });
 
   document.getElementById('photo-replace-input').addEventListener('change', function (e) {
     const file = e.target.files[0];
     if (!file || !replaceSlotNum) return;
-    openCropWithFile(file, replaceSlotNum);
+    openCropWithFile(file, replaceSlotNum, null);
     replaceSlotNum = null;
     e.target.value = '';
   });
 
   // 파일 → 크롭 팝업 열기
-  function openCropWithFile(file, num) {
+  function openCropWithFile(file, num, callback) {
     const reader = new FileReader();
     reader.onload = function (event) {
       cropTargetNum = num;
       cropImgEl = document.getElementById('crop-image');
       cropImgEl.src = event.target.result;
+      cropImgEl._onCropDone = callback;
 
       cropImgEl.onload = function () {
         const ratio = cropImgEl.naturalWidth / cropImgEl.naturalHeight;
@@ -419,7 +427,6 @@ kakao.maps.load(function () {
     let newX = clientX - cropStartX;
     let newY = clientY - cropStartY;
 
-    // 경계 제한
     newX = Math.min(0, Math.max(newX, -(imgW - CROP_SIZE)));
     newY = Math.min(0, Math.max(newY, -(imgH - CROP_SIZE)));
 
@@ -432,11 +439,11 @@ kakao.maps.load(function () {
   // 크롭 취소
   document.getElementById('crop-cancel').addEventListener('click', function () {
     document.getElementById('crop-modal').classList.add('hidden');
-    document.getElementById('photo' + cropTargetNum).value = '';
     cropTargetNum = null;
+    cropImgEl._onCropDone = null;
   });
 
-  // 크롭 확인 → 정사각형으로 잘라서 미리보기에 적용
+  // 크롭 확인
   document.getElementById('crop-confirm').addEventListener('click', function () {
     const canvas = document.createElement('canvas');
     canvas.width = 400;
@@ -461,7 +468,12 @@ kakao.maps.load(function () {
     slot.querySelector('span').style.display = 'none';
 
     document.getElementById('crop-modal').classList.add('hidden');
+
+    const callback = cropImgEl._onCropDone;
     cropTargetNum = null;
+    cropImgEl._onCropDone = null;
+
+    if (callback) callback();
   });
 
   // ── 사진 뷰어 팝업 ───────────────────────────────
