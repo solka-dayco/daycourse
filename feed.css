@@ -193,3 +193,9 @@ header {
   text-decoration: none;
   font-weight: bold;
 }
+
+.card-meta {
+  font-size: 12px;
+  color: #aaa;
+  margin: 2px 0 6px;
+}
