@@ -26,10 +26,19 @@
     <a href="feed.html" class="page-title">데이코스</a>
   </header>
 
+  <div id="loading-spinner" class="loading-spinner">
+    <div class="spinner"></div>
+  </div>
+
   <div class="course-container">
 
     <!-- 4분할 썸네일 -->
     <div class="detail-thumbnail" id="detail-thumbnail"></div>
+
+    <!-- 삭제 버튼 -->
+    <div class="detail-delete">
+      <button id="delete-btn">삭제</button>
+    </div>
 
     <!-- 코스 제목 + 날짜 + 작성자 -->
     <div class="detail-header">
@@ -48,11 +57,6 @@
     <div class="detail-section">
       <h3>🗺 동선 지도</h3>
       <div id="detail-map"></div>
-    </div>
-
-    <!-- 삭제 버튼 -->
-    <div class="detail-delete">
-      <button id="delete-btn">🗑 게시글 삭제</button>
     </div>
 
     <!-- 좋아요 / 댓글 / 공유 -->
