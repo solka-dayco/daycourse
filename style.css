@@ -21,8 +21,8 @@ header {
 /* ── 전체 컨테이너 ──────────────────────────────── */
 .container {
   position: relative;
-  margin-top: 40px;
-  width: 700px;
+  margin: 40px auto 0;
+  width: 680px;
   max-width: 100%;
   padding: 0 16px;
   box-sizing: border-box;
@@ -276,6 +276,8 @@ header {
   position: absolute;
   top: 0;
   left: 0;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 /* ── 코스 저장 ──────────────────────────────────── */

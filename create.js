@@ -26,8 +26,6 @@ export function initCourse() {
     handle: '.drag-handle',
     onEnd: updateNumbers
   });
-
-  renderSavedList();
 }
 
 function addToCourseList(place) {
