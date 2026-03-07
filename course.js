@@ -282,38 +282,11 @@ try {
     });
   });
 
-  // 카카오톡 공유
-  if (window.Kakao) {
-    if (!Kakao.isInitialized()) {
-      Kakao.init('725e3b5f43c47c651837511245861cc8');
-    }
-
-    document.getElementById('share-kakao-btn').addEventListener('click', function () {
-      const placeSummary = course.places.map(function (p) { return p.name; }).join(' → ');
-
-      Kakao.Share.sendDefault({
-        objectType: 'feed',
-        content: {
-          title: course.name,
-          description: placeSummary,
-          imageUrl: (course.photos && course.photos[0]) ? course.photos[0] : 'https://solka-dayco.github.io/daycourse/og-image.png',
-          link: {
-            mobileWebUrl: window.location.href,
-            webUrl: window.location.href
-          }
-        },
-        buttons: [
-          {
-            title: '코스 보기',
-            link: {
-              mobileWebUrl: window.location.href,
-              webUrl: window.location.href
-            }
-          }
-        ]
-      });
-    });
-  }
+ // 카카오톡 공유 (추후 지원 예정)
+  document.getElementById('share-kakao-btn').addEventListener('click', function () {
+    document.getElementById('share-modal').classList.add('hidden');
+    alert('카카오톡 공유 기능은 준비 중입니다.');
+  });
 
   loadComments();
 
