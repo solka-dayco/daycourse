@@ -37,8 +37,10 @@ export function initSidebar() {
     });
   } else {
     authMenu.innerHTML = `
-      <a href="login.html">로그인</a>
-      <a href="signup.html">회원가입</a>
+      <div class="sidebar-auth-btns">
+        <a href="signup.html" class="sidebar-auth-btn">회원가입</a>
+        <a href="login.html" class="sidebar-auth-btn">로그인</a>
+      </div>
     `;
   }
 }
