@@ -28,17 +28,11 @@ header {
   grid-template-rows: 1fr 1fr;
   gap: 2px;
   width: 100%;
-  height: 360px;
+  aspect-ratio: 1;
   border-radius: 16px;
   overflow: hidden;
   margin-bottom: 20px;
   cursor: pointer;
-}
-
-@media (max-width: 768px) {
-  .detail-thumbnail {
-    height: 260px;
-  }
 }
 
 .detail-thumbnail img {
