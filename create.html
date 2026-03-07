@@ -53,8 +53,8 @@
       <div class="photo-upload-box">
         <p class="photo-upload-title">📷 코스 사진 업로드 (최대 4장)</p>
         <input type="file" id="photo-input" accept="image/*" multiple hidden>
-        <!-- 모바일 갤러리 직접 접근용 -->
-         <button id="photo-add-btn" class="photo-add-btn">📷 사진 선택</button>
+        <input type="file" id="photo-replace-input" accept="image/*" hidden>
+        <button id="photo-add-btn" class="photo-add-btn">📷 사진 선택</button>
         <div class="photo-grid">
           <div class="photo-slot" id="slot1">
             <span>+</span>
@@ -73,45 +73,6 @@
             <img id="preview4" class="hidden">
           </div>
         </div>
-        <!-- 슬롯 클릭 옵션 팝업 -->
-      <div id="slot-options" class="hidden">
-        <div class="slot-options-inner">
-          <button id="slot-option-view">🔍 크게 보기</button>
-          <button id="slot-option-replace">🔄 사진 교체</button>
-          <button id="slot-option-delete">🗑 삭제</button>
-          <button id="slot-option-cancel">취소</button>
-        </div>
-      </div>
-    </div>
-
-      <!-- 크롭 팝업 -->
-      <div id="crop-modal" class="hidden">
-        <div class="crop-modal-inner">
-          <p class="crop-title">사진을 드래그하거나 확대/축소하세요</p>
-        <p class="crop-progress" id="crop-progress"></p>
-          <div class="crop-area">
-            <div class="crop-box">
-              <img id="crop-image">
-            </div>
-          </div>
-          <div class="crop-actions">
-            <button id="crop-cancel">취소</button>
-            <button id="crop-confirm">확인</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 사진 슬라이더 팝업 -->
-      <div id="photo-viewer" class="hidden">
-        <div class="photo-viewer-inner">
-          <button id="viewer-close">✕</button>
-          <button id="viewer-prev">‹</button>
-          <div class="viewer-img-wrap">
-            <img id="viewer-img">
-          </div>
-          <button id="viewer-next">›</button>
-          <div class="viewer-dots" id="viewer-dots"></div>
-        </div>
       </div>
 
       <!-- 코스 이름 입력 + 저장 버튼 -->
@@ -127,6 +88,48 @@
       <ul id="saved-list"></ul>
     </div>
 
+  </div>
+
+  <!-- 슬롯 옵션 팝업 (body 직계) -->
+  <div id="slot-options" class="hidden">
+    <div class="slot-options-inner">
+      <button id="slot-option-view">🔍 크게 보기</button>
+      <button id="slot-option-replace">🔄 사진 교체</button>
+      <button id="slot-option-delete">🗑 삭제</button>
+      <button id="slot-option-cancel">취소</button>
+    </div>
+  </div>
+
+  <!-- 크롭 팝업 (body 직계) -->
+  <div id="crop-modal" class="hidden">
+    <div class="crop-modal-inner">
+      <p class="crop-title">사진을 드래그하거나 확대/축소하세요</p>
+      <p class="crop-progress" id="crop-progress"></p>
+      <div class="crop-area-wrapper" id="crop-area">
+        <div class="crop-box" id="crop-box">
+          <img id="crop-image">
+        </div>
+        <div class="crop-overlay"></div>
+      </div>
+      <p class="crop-hint">🖱 휠 또는 두 손가락으로 확대/축소</p>
+      <div class="crop-actions">
+        <button id="crop-cancel">취소</button>
+        <button id="crop-confirm">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 사진 뷰어 팝업 (body 직계) -->
+  <div id="photo-viewer" class="hidden">
+    <div class="photo-viewer-inner">
+      <button id="viewer-close">✕</button>
+      <button id="viewer-prev">‹</button>
+      <div class="viewer-img-wrap">
+        <img id="viewer-img">
+      </div>
+      <button id="viewer-next">›</button>
+      <div class="viewer-dots" id="viewer-dots"></div>
+    </div>
   </div>
 
   <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&autoload=false&libraries=services"></script>

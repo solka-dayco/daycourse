@@ -306,6 +306,8 @@ kakao.maps.load(function () {
   let pendingIndex = 0;
   const CROP_SIZE = 280;
 
+  const cropArea = document.getElementById('crop-area');
+
   // 사진 선택 버튼 → 갤러리 열기
   document.getElementById('photo-add-btn').addEventListener('click', function () {
     const input = document.getElementById('photo-input');
@@ -313,7 +315,7 @@ kakao.maps.load(function () {
     input.click();
   });
 
-  // 다중 사진 선택 → 순서대로 빈 슬롯에 크롭 팝업
+  // 다중 사진 선택 → 순서대로 빈 슬롯에 크롭
   document.getElementById('photo-input').addEventListener('change', function (e) {
     const files = Array.from(e.target.files).slice(0, 4);
     if (files.length === 0) return;
@@ -343,14 +345,13 @@ kakao.maps.load(function () {
     document.getElementById('slot' + num).addEventListener('click', function () {
       const preview = document.getElementById('preview' + num);
       const hasPhoto = !preview.classList.contains('hidden');
+      replaceSlotNum = num;
 
       if (hasPhoto) {
-        replaceSlotNum = num;
         document.getElementById('slot-options').classList.remove('hidden');
       } else {
-        replaceSlotNum = num;
         pendingFiles = [];
-        pendingSlots = [];
+        pendingSlots = [num];
         pendingIndex = 0;
         const input = document.getElementById('photo-replace-input');
         input.removeAttribute('capture');
@@ -370,13 +371,14 @@ kakao.maps.load(function () {
     const preview = document.getElementById('preview' + replaceSlotNum);
     const startIndex = photos.indexOf(preview.src);
     openViewer(photos, startIndex >= 0 ? startIndex : 0);
+    replaceSlotNum = null;
   });
 
   // 사진 교체
   document.getElementById('slot-option-replace').addEventListener('click', function () {
     document.getElementById('slot-options').classList.add('hidden');
     pendingFiles = [];
-    pendingSlots = [];
+    pendingSlots = [replaceSlotNum];
     pendingIndex = 0;
     const input = document.getElementById('photo-replace-input');
     input.removeAttribute('capture');
@@ -400,7 +402,6 @@ kakao.maps.load(function () {
     replaceSlotNum = null;
   });
 
-  // 배경 클릭 시 닫기
   document.getElementById('slot-options').addEventListener('click', function (e) {
     if (e.target === this) {
       this.classList.add('hidden');
@@ -408,14 +409,12 @@ kakao.maps.load(function () {
     }
   });
 
+  // 교체 파일 선택
   document.getElementById('photo-replace-input').addEventListener('change', function (e) {
     const file = e.target.files[0];
-    if (!file || !replaceSlotNum) return;
+    if (!file) return;
     pendingFiles = [file];
-    pendingSlots = [replaceSlotNum];
-    pendingIndex = 0;
     openNextCrop();
-    replaceSlotNum = null;
     e.target.value = '';
   });
 
@@ -432,7 +431,6 @@ kakao.maps.load(function () {
         const naturalH = cropImgEl.naturalHeight;
         const ratio = naturalW / naturalH;
 
-        // 초기 스케일: 짧은 쪽이 CROP_SIZE 꽉 차도록
         let baseW, baseH;
         if (ratio > 1) {
           baseH = CROP_SIZE;
@@ -442,14 +440,14 @@ kakao.maps.load(function () {
           baseH = Math.round(CROP_SIZE / ratio);
         }
 
+        cropScale = 1;
         cropMinScale = 1;
         cropMaxScale = 3;
-        cropScale = 1;
 
-        cropImgEl.style.width = baseW + 'px';
-        cropImgEl.style.height = baseH + 'px';
         cropImgEl.dataset.baseW = baseW;
         cropImgEl.dataset.baseH = baseH;
+        cropImgEl.style.width = baseW + 'px';
+        cropImgEl.style.height = baseH + 'px';
 
         cropOffsetX = -Math.round((baseW - CROP_SIZE) / 2);
         cropOffsetY = -Math.round((baseH - CROP_SIZE) / 2);
@@ -477,22 +475,18 @@ kakao.maps.load(function () {
     cropImgEl.style.width = w + 'px';
     cropImgEl.style.height = h + 'px';
 
-    // 경계 제한
     cropOffsetX = Math.min(0, Math.max(cropOffsetX, -(w - CROP_SIZE)));
     cropOffsetY = Math.min(0, Math.max(cropOffsetY, -(h - CROP_SIZE)));
 
-    cropImgEl.parentElement.style.left = cropOffsetX + 'px';
-    cropImgEl.parentElement.style.top = cropOffsetY + 'px';
+    document.getElementById('crop-box').style.left = cropOffsetX + 'px';
+    document.getElementById('crop-box').style.top = cropOffsetY + 'px';
   }
 
-  // ── 크롭 드래그 (마우스) ─────────────────────────
-  const cropArea = document.querySelector('.crop-area');
-
+  // ── 마우스 드래그 ────────────────────────────────
   cropArea.addEventListener('mousedown', function (e) {
     isDragging = true;
     cropStartX = e.clientX - cropOffsetX;
     cropStartY = e.clientY - cropOffsetY;
-    cropArea.style.cursor = 'grabbing';
     e.preventDefault();
   });
 
@@ -505,29 +499,31 @@ kakao.maps.load(function () {
 
   document.addEventListener('mouseup', function () {
     isDragging = false;
-    cropArea.style.cursor = 'grab';
   });
 
-  // ── 휠 줌 (데스크탑) ─────────────────────────────
+  // ── 휠 줌 ────────────────────────────────────────
   cropArea.addEventListener('wheel', function (e) {
     e.preventDefault();
+    e.stopPropagation();
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    const centerX = CROP_SIZE / 2;
-    const centerY = CROP_SIZE / 2;
+    const rect = cropArea.getBoundingClientRect();
+    const centerX = e.clientX - rect.left;
+    const centerY = e.clientY - rect.top;
 
     const prevScale = cropScale;
     cropScale = Math.min(cropMaxScale, Math.max(cropMinScale, cropScale + delta));
-
-    // 중심 기준으로 오프셋 조정
     const scaleRatio = cropScale / prevScale;
+
     cropOffsetX = centerX - scaleRatio * (centerX - cropOffsetX);
     cropOffsetY = centerY - scaleRatio * (centerY - cropOffsetY);
 
     applyTransform();
   }, { passive: false });
 
-  // ── 핀치 줌 + 드래그 (모바일) ───────────────────
+  // ── 터치 드래그 + 핀치줌 ────────────────────────
   cropArea.addEventListener('touchstart', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
     if (e.touches.length === 1) {
       isDragging = true;
       lastPinchDist = null;
@@ -537,34 +533,32 @@ kakao.maps.load(function () {
       isDragging = false;
       lastPinchDist = getPinchDist(e.touches);
     }
-    e.preventDefault();
   }, { passive: false });
 
   cropArea.addEventListener('touchmove', function (e) {
     e.preventDefault();
-
+    e.stopPropagation();
     if (e.touches.length === 1 && isDragging) {
       cropOffsetX = e.touches[0].clientX - cropStartX;
       cropOffsetY = e.touches[0].clientY - cropStartY;
       applyTransform();
-
     } else if (e.touches.length === 2) {
       const dist = getPinchDist(e.touches);
       if (lastPinchDist === null) {
         lastPinchDist = dist;
         return;
       }
-
-      const delta = (dist - lastPinchDist) * 0.01;
+      const delta = (dist - lastPinchDist) * 0.008;
       lastPinchDist = dist;
 
-      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - cropArea.getBoundingClientRect().left;
-      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - cropArea.getBoundingClientRect().top;
+      const rect = cropArea.getBoundingClientRect();
+      const midX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
+      const midY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
 
       const prevScale = cropScale;
       cropScale = Math.min(cropMaxScale, Math.max(cropMinScale, cropScale + delta));
-
       const scaleRatio = cropScale / prevScale;
+
       cropOffsetX = midX - scaleRatio * (midX - cropOffsetX);
       cropOffsetY = midY - scaleRatio * (midY - cropOffsetY);
 
@@ -573,6 +567,7 @@ kakao.maps.load(function () {
   }, { passive: false });
 
   cropArea.addEventListener('touchend', function (e) {
+    e.stopPropagation();
     if (e.touches.length < 2) lastPinchDist = null;
     if (e.touches.length === 0) isDragging = false;
   });
@@ -620,7 +615,6 @@ kakao.maps.load(function () {
     cropTargetNum = null;
     cropScale = 1;
 
-    // 다음 사진 크롭
     pendingIndex++;
     if (pendingIndex < pendingFiles.length) {
       setTimeout(openNextCrop, 200);
@@ -628,6 +622,7 @@ kakao.maps.load(function () {
   });
 
   // ── 사진 뷰어 팝업 ───────────────────────────────
+
   let viewerPhotos = [];
   let viewerIndex = 0;
 
