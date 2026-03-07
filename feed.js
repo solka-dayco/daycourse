@@ -1,6 +1,5 @@
 import { db } from './firebase.js';
-import { collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
+import { collection, getDocs, doc as firestoreDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 const feedList = document.getElementById('feed-list');
 feedList.innerHTML = '<p style="color:#aaa; font-size:14px;">불러오는 중...</p>';
 
@@ -77,13 +76,13 @@ try {
           this.querySelector('span').textContent = likes;
           this.style.color = '';
           localStorage.removeItem(likedKey);
-          updateDoc(doc(db, 'courses', course.id), { likes: likes });
+          updateDoc(firestoreDoc(db, 'courses', course.id), { likes: likes });
         } else {
           likes++;
           this.querySelector('span').textContent = likes;
           this.style.color = '#ff4e6a';
           localStorage.setItem(likedKey, 'true');
-          updateDoc(doc(db, 'courses', course.id), { likes: likes });
+          updateDoc(firestoreDoc(db, 'courses', course.id), { likes: likes });
         }
       });
 
