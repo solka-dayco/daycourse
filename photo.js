@@ -349,6 +349,8 @@ function initSlotDragDrop() {
     let touchDragFrom = null;
 
     slot.addEventListener('touchstart', function (e) {
+      // [크롭 충돌 수정] 크롭 팝업 열려있으면 슬롯 터치 무시
+      if (!document.getElementById('crop-modal').classList.contains('hidden')) return;
       const preview = document.getElementById('preview' + num);
       if (preview.classList.contains('hidden')) return;
 
@@ -378,6 +380,8 @@ function initSlotDragDrop() {
     }, { passive: true });
 
     slot.addEventListener('touchmove', function (e) {
+      // [크롭 충돌 수정] 크롭 팝업 열려있으면 슬롯 터치 무시
+      if (!document.getElementById('crop-modal').classList.contains('hidden')) return;
       if (!touchDragFrom) { clearTimeout(slot._touchTimer); return; }
       e.preventDefault();
       const touch = e.touches[0];
@@ -397,6 +401,8 @@ function initSlotDragDrop() {
     }, { passive: false });
 
     slot.addEventListener('touchend', function (e) {
+      // [크롭 충돌 수정] 크롭 팝업 열려있으면 슬롯 터치 무시
+      if (!document.getElementById('crop-modal').classList.contains('hidden')) return;
       clearTimeout(slot._touchTimer);
       if (!touchDragFrom) return;
 
