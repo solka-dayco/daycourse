@@ -581,3 +581,18 @@ header {
   cursor: pointer;
   margin-bottom: 12px;
 }
+
+/* 크롭 진행 표시 */
+.crop-title {
+  font-size: 13px;
+  color: #666;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.crop-progress {
+  text-align: center;
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 8px;
+}

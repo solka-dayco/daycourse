@@ -297,6 +297,13 @@ kakao.maps.load(function () {
   let cropStartY = 0;
   let isDragging = false;
   let replaceSlotNum = null;
+  let cropScale = 1;
+  let cropMinScale = 1;
+  let cropMaxScale = 3;
+  let lastPinchDist = null;
+  let pendingFiles = [];
+  let pendingSlots = [];
+  let pendingIndex = 0;
   const CROP_SIZE = 280;
 
   // 사진 선택 버튼 → 갤러리 열기
@@ -306,7 +313,7 @@ kakao.maps.load(function () {
     input.click();
   });
 
-  // 다중 사진 선택 → 순서대로 빈 슬롯에 배치
+  // 다중 사진 선택 → 순서대로 빈 슬롯에 크롭 팝업
   document.getElementById('photo-input').addEventListener('change', function (e) {
     const files = Array.from(e.target.files).slice(0, 4);
     if (files.length === 0) return;
@@ -318,25 +325,26 @@ kakao.maps.load(function () {
       }
     });
 
-    let fileIndex = 0;
+    pendingFiles = files.slice(0, emptySlots.length);
+    pendingSlots = emptySlots.slice(0, files.length);
+    pendingIndex = 0;
 
-    function processNext() {
-      if (fileIndex >= files.length || fileIndex >= emptySlots.length) return;
-      const file = files[fileIndex];
-      const slotNum = emptySlots[fileIndex];
-      fileIndex++;
-
-      openCropWithFile(file, slotNum, processNext);
-    }
-
-    processNext();
+    openNextCrop();
     e.target.value = '';
   });
 
-  // 슬롯 클릭 → 사진 있으면 교체, 없으면 사진 선택
+  function openNextCrop() {
+    if (pendingIndex >= pendingFiles.length) return;
+    openCropWithFile(pendingFiles[pendingIndex], pendingSlots[pendingIndex]);
+  }
+
+  // 슬롯 클릭 → 개별 교체
   [1, 2, 3, 4].forEach(function (num) {
     document.getElementById('slot' + num).addEventListener('click', function () {
       replaceSlotNum = num;
+      pendingFiles = [];
+      pendingSlots = [];
+      pendingIndex = 0;
       const input = document.getElementById('photo-replace-input');
       input.removeAttribute('capture');
       input.click();
@@ -346,37 +354,56 @@ kakao.maps.load(function () {
   document.getElementById('photo-replace-input').addEventListener('change', function (e) {
     const file = e.target.files[0];
     if (!file || !replaceSlotNum) return;
-    openCropWithFile(file, replaceSlotNum, null);
+    pendingFiles = [file];
+    pendingSlots = [replaceSlotNum];
+    pendingIndex = 0;
+    openNextCrop();
     replaceSlotNum = null;
     e.target.value = '';
   });
 
   // 파일 → 크롭 팝업 열기
-  function openCropWithFile(file, num, callback) {
+  function openCropWithFile(file, num) {
     const reader = new FileReader();
     reader.onload = function (event) {
       cropTargetNum = num;
       cropImgEl = document.getElementById('crop-image');
       cropImgEl.src = event.target.result;
-      cropImgEl._onCropDone = callback;
 
       cropImgEl.onload = function () {
-        const ratio = cropImgEl.naturalWidth / cropImgEl.naturalHeight;
-        let w, h;
-        if (ratio > 1) {
-          h = CROP_SIZE;
-          w = Math.round(CROP_SIZE * ratio);
-        } else {
-          w = CROP_SIZE;
-          h = Math.round(CROP_SIZE / ratio);
-        }
-        cropImgEl.style.width = w + 'px';
-        cropImgEl.style.height = h + 'px';
+        const naturalW = cropImgEl.naturalWidth;
+        const naturalH = cropImgEl.naturalHeight;
+        const ratio = naturalW / naturalH;
 
-        cropOffsetX = -Math.round((w - CROP_SIZE) / 2);
-        cropOffsetY = -Math.round((h - CROP_SIZE) / 2);
-        cropImgEl.parentElement.style.left = cropOffsetX + 'px';
-        cropImgEl.parentElement.style.top = cropOffsetY + 'px';
+        // 초기 스케일: 짧은 쪽이 CROP_SIZE 꽉 차도록
+        let baseW, baseH;
+        if (ratio > 1) {
+          baseH = CROP_SIZE;
+          baseW = Math.round(CROP_SIZE * ratio);
+        } else {
+          baseW = CROP_SIZE;
+          baseH = Math.round(CROP_SIZE / ratio);
+        }
+
+        cropMinScale = 1;
+        cropMaxScale = 3;
+        cropScale = 1;
+
+        cropImgEl.style.width = baseW + 'px';
+        cropImgEl.style.height = baseH + 'px';
+        cropImgEl.dataset.baseW = baseW;
+        cropImgEl.dataset.baseH = baseH;
+
+        cropOffsetX = -Math.round((baseW - CROP_SIZE) / 2);
+        cropOffsetY = -Math.round((baseH - CROP_SIZE) / 2);
+        applyTransform();
+
+        const total = pendingFiles.length;
+        const current = pendingIndex + 1;
+        const progressEl = document.getElementById('crop-progress');
+        if (progressEl) {
+          progressEl.textContent = total > 1 ? current + ' / ' + total : '';
+        }
 
         document.getElementById('crop-modal').classList.remove('hidden');
       };
@@ -384,7 +411,24 @@ kakao.maps.load(function () {
     reader.readAsDataURL(file);
   }
 
-  // 크롭 드래그
+  function applyTransform() {
+    const baseW = parseFloat(cropImgEl.dataset.baseW);
+    const baseH = parseFloat(cropImgEl.dataset.baseH);
+    const w = Math.round(baseW * cropScale);
+    const h = Math.round(baseH * cropScale);
+
+    cropImgEl.style.width = w + 'px';
+    cropImgEl.style.height = h + 'px';
+
+    // 경계 제한
+    cropOffsetX = Math.min(0, Math.max(cropOffsetX, -(w - CROP_SIZE)));
+    cropOffsetY = Math.min(0, Math.max(cropOffsetY, -(h - CROP_SIZE)));
+
+    cropImgEl.parentElement.style.left = cropOffsetX + 'px';
+    cropImgEl.parentElement.style.top = cropOffsetY + 'px';
+  }
+
+  // ── 크롭 드래그 (마우스) ─────────────────────────
   const cropArea = document.querySelector('.crop-area');
 
   cropArea.addEventListener('mousedown', function (e) {
@@ -392,58 +436,106 @@ kakao.maps.load(function () {
     cropStartX = e.clientX - cropOffsetX;
     cropStartY = e.clientY - cropOffsetY;
     cropArea.style.cursor = 'grabbing';
+    e.preventDefault();
   });
-
-  cropArea.addEventListener('touchstart', function (e) {
-    isDragging = true;
-    cropStartX = e.touches[0].clientX - cropOffsetX;
-    cropStartY = e.touches[0].clientY - cropOffsetY;
-  }, { passive: true });
 
   document.addEventListener('mousemove', function (e) {
     if (!isDragging) return;
-    moveCrop(e.clientX, e.clientY);
+    cropOffsetX = e.clientX - cropStartX;
+    cropOffsetY = e.clientY - cropStartY;
+    applyTransform();
   });
-
-  document.addEventListener('touchmove', function (e) {
-    if (!isDragging) return;
-    moveCrop(e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: true });
 
   document.addEventListener('mouseup', function () {
     isDragging = false;
     cropArea.style.cursor = 'grab';
   });
 
-  document.addEventListener('touchend', function () {
-    isDragging = false;
+  // ── 휠 줌 (데스크탑) ─────────────────────────────
+  cropArea.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    const centerX = CROP_SIZE / 2;
+    const centerY = CROP_SIZE / 2;
+
+    const prevScale = cropScale;
+    cropScale = Math.min(cropMaxScale, Math.max(cropMinScale, cropScale + delta));
+
+    // 중심 기준으로 오프셋 조정
+    const scaleRatio = cropScale / prevScale;
+    cropOffsetX = centerX - scaleRatio * (centerX - cropOffsetX);
+    cropOffsetY = centerY - scaleRatio * (centerY - cropOffsetY);
+
+    applyTransform();
+  }, { passive: false });
+
+  // ── 핀치 줌 + 드래그 (모바일) ───────────────────
+  cropArea.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 1) {
+      isDragging = true;
+      lastPinchDist = null;
+      cropStartX = e.touches[0].clientX - cropOffsetX;
+      cropStartY = e.touches[0].clientY - cropOffsetY;
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      lastPinchDist = getPinchDist(e.touches);
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  cropArea.addEventListener('touchmove', function (e) {
+    e.preventDefault();
+
+    if (e.touches.length === 1 && isDragging) {
+      cropOffsetX = e.touches[0].clientX - cropStartX;
+      cropOffsetY = e.touches[0].clientY - cropStartY;
+      applyTransform();
+
+    } else if (e.touches.length === 2) {
+      const dist = getPinchDist(e.touches);
+      if (lastPinchDist === null) {
+        lastPinchDist = dist;
+        return;
+      }
+
+      const delta = (dist - lastPinchDist) * 0.01;
+      lastPinchDist = dist;
+
+      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - cropArea.getBoundingClientRect().left;
+      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - cropArea.getBoundingClientRect().top;
+
+      const prevScale = cropScale;
+      cropScale = Math.min(cropMaxScale, Math.max(cropMinScale, cropScale + delta));
+
+      const scaleRatio = cropScale / prevScale;
+      cropOffsetX = midX - scaleRatio * (midX - cropOffsetX);
+      cropOffsetY = midY - scaleRatio * (midY - cropOffsetY);
+
+      applyTransform();
+    }
+  }, { passive: false });
+
+  cropArea.addEventListener('touchend', function (e) {
+    if (e.touches.length < 2) lastPinchDist = null;
+    if (e.touches.length === 0) isDragging = false;
   });
 
-  function moveCrop(clientX, clientY) {
-    if (!cropImgEl) return;
-    const imgW = cropImgEl.offsetWidth;
-    const imgH = cropImgEl.offsetHeight;
-
-    let newX = clientX - cropStartX;
-    let newY = clientY - cropStartY;
-
-    newX = Math.min(0, Math.max(newX, -(imgW - CROP_SIZE)));
-    newY = Math.min(0, Math.max(newY, -(imgH - CROP_SIZE)));
-
-    cropOffsetX = newX;
-    cropOffsetY = newY;
-    cropImgEl.parentElement.style.left = newX + 'px';
-    cropImgEl.parentElement.style.top = newY + 'px';
+  function getPinchDist(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
   }
 
-  // 크롭 취소
+  // ── 크롭 취소 ────────────────────────────────────
   document.getElementById('crop-cancel').addEventListener('click', function () {
     document.getElementById('crop-modal').classList.add('hidden');
     cropTargetNum = null;
-    cropImgEl._onCropDone = null;
+    pendingFiles = [];
+    pendingSlots = [];
+    pendingIndex = 0;
   });
 
-  // 크롭 확인
+  // ── 크롭 확인 ────────────────────────────────────
   document.getElementById('crop-confirm').addEventListener('click', function () {
     const canvas = document.createElement('canvas');
     canvas.width = 400;
@@ -460,7 +552,7 @@ kakao.maps.load(function () {
 
     ctx.drawImage(cropImgEl, sx, sy, sw, sh, 0, 0, 400, 400);
 
-    const compressed = canvas.toDataURL('image/jpeg', 0.3);
+    const compressed = canvas.toDataURL('image/jpeg', 0.5);
     const preview = document.getElementById('preview' + cropTargetNum);
     const slot = document.getElementById('slot' + cropTargetNum);
     preview.src = compressed;
@@ -468,12 +560,14 @@ kakao.maps.load(function () {
     slot.querySelector('span').style.display = 'none';
 
     document.getElementById('crop-modal').classList.add('hidden');
-
-    const callback = cropImgEl._onCropDone;
     cropTargetNum = null;
-    cropImgEl._onCropDone = null;
+    cropScale = 1;
 
-    if (callback) callback();
+    // 다음 사진 크롭
+    pendingIndex++;
+    if (pendingIndex < pendingFiles.length) {
+      setTimeout(openNextCrop, 200);
+    }
   });
 
   // ── 사진 뷰어 팝업 ───────────────────────────────
