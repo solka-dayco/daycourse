@@ -25,6 +25,7 @@ let viewerIndex = 0;
 
 // ── 드래그 앤 드롭 상태 변수 ─────────────────────
 let dragFromNum = null;
+let isTouching = false;
 
 // ── 초기화 (app.js에서 호출) ─────────────────────
 export function initPhoto() {
@@ -324,6 +325,8 @@ function initSlotDragDrop() {
     slot.setAttribute('draggable', 'true');
 
     slot.addEventListener('dragstart', function (e) {
+      // [모바일 잔상 수정] 터치 중이면 브라우저 기본 드래그 차단
+      if (isTouching) { e.preventDefault(); return; }
       const preview = document.getElementById('preview' + num);
       if (preview.classList.contains('hidden')) { e.preventDefault(); return; }
       dragFromNum = num;
@@ -360,6 +363,7 @@ function initSlotDragDrop() {
     slot.addEventListener('touchstart', function (e) {
       // [크롭 충돌 수정] 크롭 팝업 열려있으면 슬롯 터치 무시
       if (!document.getElementById('crop-modal').classList.contains('hidden')) return;
+      isTouching = true;
       const preview = document.getElementById('preview' + num);
       if (preview.classList.contains('hidden')) return;
 
@@ -430,6 +434,7 @@ function initSlotDragDrop() {
         }
       }
       touchDragFrom = null;
+      isTouching = false;
     });
   });
 }
