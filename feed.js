@@ -32,12 +32,7 @@ try {
   const snapshot = await getDocs(collection(db, 'courses'));
 
   if (snapshot.empty) {
-    feedList.innerHTML = `
-      <div class="empty-feed">
-        <p>아직 저장된 코스가 없습니다 😊</p>
-        <a href="index.html">+ 첫 코스 만들기</a>
-      </div>
-    `;
+    feedList.innerHTML = '';
   } else {
     feedList.innerHTML = '';
 
