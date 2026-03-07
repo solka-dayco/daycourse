@@ -136,7 +136,8 @@ function renderMap(places) {
       position: pos,
       content: content,
       map: map,
-      yAnchor: 1.3
+      xAnchor: 0.5,
+      yAnchor: 0.5
     });
   });
 
