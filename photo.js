@@ -50,7 +50,23 @@ export function initPhoto() {
     });
 
     if (emptySlots.length === 0) {
-      alert('사진 슬롯이 모두 가득 찼습니다.\n기존 사진을 클릭해서 교체하거나 삭제해주세요.');
+      // 슬롯이 모두 찬 경우 → 전체 교체 여부 확인
+      if (!confirm('사진 슬롯이 모두 가득 찼습니다.\n선택한 사진으로 전체 교체할까요?')) {
+        e.target.value = '';
+        return;
+      }
+      // 전체 교체: 모든 슬롯 초기화 후 처음부터 크롭
+      [1, 2, 3, 4].forEach(function (num) {
+        const preview = document.getElementById('preview' + num);
+        const slot = document.getElementById('slot' + num);
+        preview.src = '';
+        preview.classList.add('hidden');
+        slot.querySelector('span').style.display = '';
+      });
+      pendingFiles = files.slice(0, 4);
+      pendingSlots = [1, 2, 3, 4].slice(0, files.length);
+      pendingIndex = 0;
+      openNextCrop();
       e.target.value = '';
       return;
     }
