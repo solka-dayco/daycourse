@@ -322,8 +322,10 @@ function initSlotDragDrop() {
   [1, 2, 3, 4].forEach(function (num) {
     const slot = document.getElementById('slot' + num);
 
-    // 데스크탑
-    slot.setAttribute('draggable', 'true');
+    // 데스크탑 전용 (모바일은 터치 이벤트로 처리)
+    if (!('ontouchstart' in window)) {
+      slot.setAttribute('draggable', 'true');
+    }
 
     slot.addEventListener('dragstart', function (e) {
       // [모바일 잔상 수정] 터치 중 이동이 감지됐을 때만 브라우저 기본 드래그 차단
