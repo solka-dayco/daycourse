@@ -187,11 +187,27 @@ header {
   cursor: pointer;
 }
 
-.login-link {
-  font-size: 13px;
-  color: #ff4e6a;
+#header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+#header-user {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.login-link, .signup-link {
+  font-size: 11px;
+  color: #aaa;
   text-decoration: none;
-  font-weight: bold;
+}
+
+.login-link:hover, .signup-link:hover {
+  color: #ff4e6a;
 }
 
 .card-meta {
