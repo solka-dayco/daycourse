@@ -1,29 +1,6 @@
 import { db } from './firebase.js';
 import { collection, getDocs, doc as firestoreDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// ── 로그인 상태 확인 ──────────────────────────────
-const userId = localStorage.getItem('userId');
-const nickname = localStorage.getItem('nickname');
-const headerUser = document.getElementById('header-user');
-
-if (userId) {
-  headerUser.innerHTML = `
-    <span class="header-nickname">${nickname}</span>
-    <button id="logout-btn" class="logout-btn">로그아웃</button>
-  `;
-  document.getElementById('logout-btn').addEventListener('click', function () {
-    localStorage.removeItem('userId');
-    localStorage.removeItem('username');
-    localStorage.removeItem('nickname');
-    window.location.reload();
-  });
-} else {
-  headerUser.innerHTML = `
-    <a href="login.html" class="login-link">로그인</a>
-    <a href="signup.html" class="signup-link">회원가입</a>
-  `;
-}
-
 // ── 피드 불러오기 ─────────────────────────────────
 const feedList = document.getElementById('feed-list');
 feedList.innerHTML = '<p style="color:#aaa; font-size:14px;">불러오는 중...</p>';

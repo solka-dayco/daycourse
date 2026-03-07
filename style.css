@@ -11,11 +11,160 @@ body {
 /* ── 헤더 ──────────────────────────────────────── */
 header {
   width: 100%;
-  background: #ff4e6a;
-  color: white;
-  padding: 16px 24px;
-  font-size: 18px;
+  display: flex;
+  align-items: center;
+  padding: 14px 20px;
+  gap: 12px;
+  background: white;
+  border-bottom: 1px solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-sizing: border-box;
+}
+
+.page-title {
+  font-size: 17px;
   font-weight: bold;
+  color: #222;
+  flex: 1;
+}
+
+#menu-btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: #333;
+  padding: 4px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* ── 사이드바 오버레이 ───────────────────────────── */
+#sidebar-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.4);
+  z-index: 500;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+
+#sidebar-overlay.show {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ── 사이드바 ────────────────────────────────────── */
+#sidebar {
+  position: fixed;
+  top: 0; left: 0;
+  width: 260px;
+  height: 100%;
+  background: white;
+  z-index: 600;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.12);
+}
+
+#sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.sidebar-header span {
+  font-size: 17px;
+  font-weight: bold;
+  color: #222;
+}
+
+#sidebar-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: #aaa;
+  cursor: pointer;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0;
+  flex: 1;
+}
+
+.sidebar-nav a {
+  padding: 14px 24px;
+  font-size: 15px;
+  color: #333;
+  text-decoration: none;
+  border-bottom: 1px solid #f9f9f9;
+}
+
+.sidebar-nav a:active {
+  background: #fff0f3;
+  color: #ff4e6a;
+}
+
+@media (hover: hover) {
+  .sidebar-nav a:hover {
+    background: #fff0f3;
+    color: #ff4e6a;
+  }
+}
+
+#sidebar-auth {
+  padding: 16px 24px;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#sidebar-auth a {
+  font-size: 14px;
+  color: #888;
+  text-decoration: none;
+  padding: 8px 0;
+}
+
+#sidebar-auth a:active {
+  color: #ff4e6a;
+}
+
+.sidebar-nickname {
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+}
+
+.sidebar-logout {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #888;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidebar-logout:active {
+  border-color: #ff4e6a;
+  color: #ff4e6a;
 }
 
 /* ── 전체 컨테이너 ──────────────────────────────── */
@@ -94,7 +243,7 @@ header {
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
 }
 
-/* ── 내 위치 버튼 (지도 위 우하단) ──────────────── */
+/* ── 내 위치 버튼 ────────────────────────────────── */
 #my-location-btn {
   position: absolute;
   bottom: 16px;
@@ -311,51 +460,6 @@ header {
   background: #111;
 }
 
-/* ── 저장된 코스 목록 ───────────────────────────── */
-.saved-section {
-  background: white;
-  border-radius: 12px;
-  padding: 16px 18px;
-  margin-top: 12px;
-  margin-bottom: 40px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.saved-section h3 {
-  font-size: 15px;
-  margin-bottom: 12px;
-  color: #333;
-}
-
-#saved-list {
-  list-style: none;
-}
-
-#saved-list li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 8px;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 14px;
-}
-
-#saved-list li:last-child {
-  border-bottom: none;
-}
-
-.delete-btn {
-  background: none;
-  border: none;
-  color: #ccc;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.delete-btn:hover {
-  color: #ff4e6a;
-}
-
 /* ── 말풍선 라벨 ────────────────────────────────── */
 .label {
   background: white;
@@ -418,78 +522,6 @@ header {
   position: fixed;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  background: rgba(0,0,0,0.8);
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-#crop-modal.hidden { display: none; }
-
-.crop-modal-inner {
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  width: 320px;
-}
-
-.crop-title {
-  font-size: 13px;
-  color: #666;
-  text-align: center;
-  margin-bottom: 12px;
-}
-
-.crop-area {
-  width: 280px;
-  height: 280px;
-  overflow: hidden;
-  border-radius: 8px;
-  background: #000;
-  position: relative;
-  cursor: grab;
-}
-
-.crop-box {
-  position: absolute;
-  top: 0; left: 0;
-}
-
-.crop-box img {
-  display: block;
-  user-select: none;
-  -webkit-user-drag: none;
-}
-
-.crop-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.crop-actions button {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-#crop-cancel {
-  background: #f0f0f0;
-  color: #666;
-}
-
-#crop-confirm {
-  background: #ff4e6a;
-  color: white;
-}/* ── 크롭 팝업 ──────────────────────────────────── */
-#crop-modal {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
   background: rgba(0,0,0,0.9);
   z-index: 2000;
   display: flex;
@@ -524,7 +556,6 @@ header {
   margin-bottom: 10px;
 }
 
-/* 뷰포트: 고정 크기, 바깥은 잘림 */
 .crop-area-wrapper {
   position: relative;
   width: 280px;
@@ -540,7 +571,6 @@ header {
   cursor: grabbing;
 }
 
-/* 이미지 컨테이너 */
 .crop-box {
   position: absolute;
   top: 0; left: 0;
@@ -556,7 +586,6 @@ header {
   max-width: none;
 }
 
-/* 가이드라인 오버레이 */
 .crop-overlay {
   position: absolute;
   top: 0; left: 0;
@@ -566,7 +595,6 @@ header {
   box-shadow: inset 0 0 0 2px rgba(255,255,255,0.6);
 }
 
-/* 3x3 그리드 라인 */
 .crop-overlay::before {
   content: '';
   position: absolute;
@@ -709,21 +737,6 @@ header {
   margin-bottom: 12px;
 }
 
-/* 크롭 진행 표시 */
-.crop-title {
-  font-size: 13px;
-  color: #666;
-  text-align: center;
-  margin-bottom: 8px;
-}
-
-.crop-progress {
-  text-align: center;
-  font-size: 12px;
-  color: #aaa;
-  margin-bottom: 8px;
-}
-
 /* ── 슬롯 옵션 팝업 ─────────────────────────────── */
 #slot-options {
   position: fixed;
@@ -774,152 +787,4 @@ header {
   background: #fff0f3;
   transform: scale(1.03);
   transition: transform 0.1s;
-}
-
-/* ── 공통 헤더 ──────────────────────────────────── */
-header {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  padding: 16px 20px;
-  gap: 12px;
-  background: none;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.page-title {
-  font-size: 18px;
-  font-weight: bold;
-  color: #222;
-  flex: 1;
-}
-
-#menu-btn {
-  background: none;
-  border: none;
-  font-size: 22px;
-  cursor: pointer;
-  color: #333;
-  padding: 4px;
-  flex-shrink: 0;
-}
-
-/* ── 사이드바 오버레이 ───────────────────────────── */
-#sidebar-overlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.4);
-  z-index: 500;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s;
-}
-
-#sidebar-overlay.show {
-  opacity: 1;
-  pointer-events: all;
-}
-
-/* ── 사이드바 ────────────────────────────────────── */
-#sidebar {
-  position: fixed;
-  top: 0; left: 0;
-  width: 260px;
-  height: 100%;
-  background: white;
-  z-index: 600;
-  transform: translateX(-100%);
-  transition: transform 0.25s ease;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 2px 0 12px rgba(0,0,0,0.12);
-}
-
-#sidebar.open {
-  transform: translateX(0);
-}
-
-.sidebar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 20px 16px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.sidebar-header span {
-  font-size: 17px;
-  font-weight: bold;
-  color: #222;
-}
-
-#sidebar-close {
-  background: none;
-  border: none;
-  font-size: 22px;
-  color: #aaa;
-  cursor: pointer;
-}
-
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  padding: 12px 0;
-  flex: 1;
-}
-
-.sidebar-nav a {
-  padding: 14px 24px;
-  font-size: 15px;
-  color: #333;
-  text-decoration: none;
-  border-bottom: 1px solid #f9f9f9;
-}
-
-.sidebar-nav a:hover {
-  background: #fff0f3;
-  color: #ff4e6a;
-}
-
-#sidebar-auth {
-  padding: 16px 24px;
-  border-top: 1px solid #f0f0f0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-#sidebar-auth a {
-  font-size: 14px;
-  color: #888;
-  text-decoration: none;
-}
-
-#sidebar-auth a:hover {
-  color: #ff4e6a;
-}
-
-.sidebar-nickname {
-  font-size: 14px;
-  font-weight: bold;
-  color: #333;
-}
-
-.sidebar-logout {
-  background: none;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: #888;
-  cursor: pointer;
-  text-align: left;
-}
-
-.sidebar-logout:hover {
-  border-color: #ff4e6a;
-  color: #ff4e6a;
 }
