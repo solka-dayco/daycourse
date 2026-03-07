@@ -50,7 +50,6 @@ try {
   const likeBtn = document.getElementById('like-btn');
   const likedKey = 'liked_' + courseId;
 
-  // 초기 상태 반영
   if (localStorage.getItem(likedKey)) {
     likeBtn.style.color = '#ff4e6a';
   }
@@ -59,7 +58,6 @@ try {
     const isLiked = localStorage.getItem(likedKey);
 
     if (isLiked) {
-      // 좋아요 취소
       const newLikes = Math.max((course.likes || 0) - 1, 0);
       updateDoc(docRef, { likes: newLikes }).then(function () {
         document.getElementById('like-count').textContent = newLikes;
@@ -70,7 +68,6 @@ try {
         console.error('좋아요 취소 오류:', error);
       });
     } else {
-      // 좋아요 추가
       const newLikes = (course.likes || 0) + 1;
       updateDoc(docRef, { likes: newLikes }).then(function () {
         document.getElementById('like-count').textContent = newLikes;
@@ -81,28 +78,6 @@ try {
         console.error('좋아요 오류:', error);
       });
     }
-  });// ── 좋아요 버튼 (중복 방지) ──────────────────────
-  const likeBtn = document.getElementById('like-btn');
-  const likedKey = 'liked_' + courseId;
-
-  if (localStorage.getItem(likedKey)) {
-    likeBtn.style.color = '#ff4e6a';
-    likeBtn.disabled = true;
-  }
-
-  likeBtn.addEventListener('click', function () {
-    if (localStorage.getItem(likedKey)) return;
-
-    const newLikes = (course.likes || 0) + 1;
-    updateDoc(docRef, { likes: newLikes }).then(function () {
-      document.getElementById('like-count').textContent = newLikes;
-      course.likes = newLikes;
-      likeBtn.style.color = '#ff4e6a';
-      likeBtn.disabled = true;
-      localStorage.setItem(likedKey, 'true');
-    }).catch(function (error) {
-      console.error('좋아요 오류:', error);
-    });
   });
 
   // ── 삭제 버튼 ────────────────────────────────────
@@ -169,8 +144,6 @@ try {
   });
 
   // ── 댓글 기능 ────────────────────────────────────
-
-  // 댓글 목록 불러오기
   function loadComments() {
     const commentList = document.getElementById('comment-list');
     commentList.innerHTML = '<li style="color:#aaa; font-size:13px;">불러오는 중...</li>';
@@ -221,7 +194,6 @@ try {
     });
   }
 
-  // 댓글 수 업데이트
   function updateCommentCount(delta) {
     const newCount = (course.comments || 0) + delta;
     course.comments = newCount;
@@ -229,7 +201,6 @@ try {
     updateDoc(docRef, { comments: newCount });
   }
 
-  // 댓글 등록
   document.getElementById('comment-submit').addEventListener('click', function () {
     const nickname = document.getElementById('comment-nickname').value.trim();
     const content = document.getElementById('comment-content').value.trim();
@@ -259,18 +230,15 @@ try {
     });
   });
 
-  // 닉네임 자동 입력
   const savedNickname = localStorage.getItem('nickname');
   if (savedNickname) {
     document.getElementById('comment-nickname').value = savedNickname;
   }
 
-  // 댓글 버튼 클릭 시 댓글 섹션으로 스크롤
   document.getElementById('comment-scroll-btn').addEventListener('click', function () {
     document.getElementById('comments').scrollIntoView({ behavior: 'smooth' });
   });
 
-  // 페이지 로드 시 댓글 불러오기
   loadComments();
 
   // ── 지도 + 동선 ──────────────────────────────────
