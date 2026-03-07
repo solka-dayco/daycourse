@@ -128,12 +128,16 @@ function renderMap(places) {
     const pos = new kakao.maps.LatLng(place.lat, place.lng);
     linePath.push(pos);
 
-    const marker = new kakao.maps.Marker({ position: pos, map: map });
+    const content = document.createElement('div');
+    content.style.cssText = 'width:28px;height:28px;background:#ff4e6a;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.25);';
+    content.textContent = index + 1;
 
-    const infowindow = new kakao.maps.InfoWindow({
-      content: '<div style="padding:4px 8px;font-size:13px;">' + (index + 1) + '. ' + place.name + '</div>'
+    new kakao.maps.CustomOverlay({
+      position: pos,
+      content: content,
+      map: map,
+      yAnchor: 1.3
     });
-    infowindow.open(map, marker);
   });
 
   new kakao.maps.Polyline({
