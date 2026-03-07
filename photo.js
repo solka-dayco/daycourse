@@ -32,8 +32,19 @@ export function initPhoto() {
 
   // 사진 선택 버튼
   document.getElementById('photo-add-btn').addEventListener('click', function () {
+    const filledCount = [1, 2, 3, 4].filter(function (num) {
+      return !document.getElementById('preview' + num).classList.contains('hidden');
+    }).length;
+
+    if (filledCount >= 4) {
+      alert('사진이 모두 가득 찼습니다.\n슬롯을 클릭해서 교체하거나 삭제해주세요.');
+      return;
+    }
+
     const input = document.getElementById('photo-input');
     input.removeAttribute('capture');
+    // 남은 슬롯 수만큼만 선택 가능하도록 제한
+    input.setAttribute('multiple', true);
     input.click();
   });
 
@@ -48,28 +59,6 @@ export function initPhoto() {
         emptySlots.push(num);
       }
     });
-
-    if (emptySlots.length === 0) {
-      // 슬롯이 모두 찬 경우 → 전체 교체 여부 확인
-      if (!confirm('사진 슬롯이 모두 가득 찼습니다.\n선택한 사진으로 전체 교체할까요?')) {
-        e.target.value = '';
-        return;
-      }
-      // 전체 교체: 모든 슬롯 초기화 후 처음부터 크롭
-      [1, 2, 3, 4].forEach(function (num) {
-        const preview = document.getElementById('preview' + num);
-        const slot = document.getElementById('slot' + num);
-        preview.src = '';
-        preview.classList.add('hidden');
-        slot.querySelector('span').style.display = '';
-      });
-      pendingFiles = files.slice(0, 4);
-      pendingSlots = [1, 2, 3, 4].slice(0, files.length);
-      pendingIndex = 0;
-      openNextCrop();
-      e.target.value = '';
-      return;
-    }
 
     pendingFiles = files.slice(0, emptySlots.length);
     pendingSlots = emptySlots.slice(0, files.length);
