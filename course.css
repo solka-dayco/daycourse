@@ -20,9 +20,24 @@ header {
   box-sizing: border-box;
 }
 
+/* 세로 스마트폰 */
 @media (max-width: 480px) {
   .course-container {
     width: 100%;
+  }
+}
+
+/* 가로 스마트폰 / 소형 태블릿 */
+@media (min-width: 481px) and (max-width: 768px) {
+  .course-container {
+    width: 90%;
+  }
+}
+
+/* 태블릿 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .course-container {
+    width: 70%;
   }
 }
 
