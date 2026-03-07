@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="auth.css">
+</head>
+<body>
+  <header>
+    <div></div>
+    <span>💕 데이코스</span>
+    <div></div>
+  </header>
+
+  <div class="auth-container">
+    <h2 class="auth-title">로그인</h2>
+
+    <div class="auth-form">
+      <input type="text" id="login-username" placeholder="아이디" maxlength="20">
+      <input type="password" id="login-password" placeholder="비밀번호" maxlength="30">
+      <button id="login-submit" class="auth-btn">로그인</button>
+      <p class="auth-error hidden" id="login-error"></p>
+    </div>
+
+    <div class="auth-links">
+      <a href="signup.html">회원가입</a>
+      <span>|</span>
+      <a href="find.html">아이디 / 비밀번호 찾기</a>
+    </div>
+
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <script type="module" src="login.js"></script>
+</body>
+</html>

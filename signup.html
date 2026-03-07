@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>회원가입</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="auth.css">
+</head>
+<body>
+  <header>
+    <a href="login.html" class="back-btn">← 뒤로</a>
+    <span>💕 데이코스</span>
+    <div></div>
+  </header>
+
+  <div class="auth-container">
+    <h2 class="auth-title">회원가입</h2>
+
+    <div class="auth-form">
+      <input type="text" id="signup-username" placeholder="아이디 (영문, 숫자 4~20자)" maxlength="20">
+      <input type="text" id="signup-nickname" placeholder="닉네임 (2~10자)" maxlength="10">
+      <input type="password" id="signup-password" placeholder="비밀번호 (6자 이상)" maxlength="30">
+      <input type="password" id="signup-password-confirm" placeholder="비밀번호 확인" maxlength="30">
+      <button id="signup-submit" class="auth-btn">회원가입</button>
+      <p class="auth-error hidden" id="signup-error"></p>
+    </div>
+
+    <div class="auth-links">
+      <a href="login.html">이미 계정이 있으신가요? 로그인</a>
+    </div>
+
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <script type="module" src="signup.js"></script>
+</body>
+</html>

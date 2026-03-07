@@ -19,8 +19,8 @@ if (userId) {
   });
 } else {
   headerUser.innerHTML = `
-    <a href="auth.html" class="login-link">로그인</a>
-    <a href="auth.html" class="signup-link">회원가입</a>
+    <a href="login.html" class="login-link">로그인</a>
+    <a href="signup.html" class="signup-link">회원가입</a>
   `;
 }
 
