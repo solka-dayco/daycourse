@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인 / 회원가입</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="auth.css">
+</head>
+<body>
+  <header>
+    <div></div>
+    <span>💕 데이코스</span>
+    <div></div>
+  </header>
+
+  <div class="auth-container">
+
+    <!-- 탭 -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login">로그인</button>
+      <button class="auth-tab" id="tab-signup">회원가입</button>
+    </div>
+
+    <!-- 로그인 폼 -->
+    <div class="auth-form" id="form-login">
+      <input type="text" id="login-username" placeholder="아이디" maxlength="20">
+      <input type="password" id="login-password" placeholder="비밀번호" maxlength="30">
+      <button id="login-submit" class="auth-btn">로그인</button>
+      <p class="auth-error hidden" id="login-error"></p>
+    </div>
+
+    <!-- 회원가입 폼 -->
+    <div class="auth-form hidden" id="form-signup">
+      <input type="text" id="signup-username" placeholder="아이디 (영문, 숫자 4~20자)" maxlength="20">
+      <input type="text" id="signup-nickname" placeholder="닉네임 (2~10자)" maxlength="10">
+      <input type="password" id="signup-password" placeholder="비밀번호 (6자 이상)" maxlength="30">
+      <input type="password" id="signup-password-confirm" placeholder="비밀번호 확인" maxlength="30">
+      <button id="signup-submit" class="auth-btn">회원가입</button>
+      <p class="auth-error hidden" id="signup-error"></p>
+    </div>
+
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <script type="module" src="auth.js"></script>
+</body>
+</html>

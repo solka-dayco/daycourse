@@ -27,9 +27,10 @@ try {
     }
   }
 
-  // ── 제목 + 날짜 ──────────────────────────────────
+  // ── 제목 + 날짜 + 작성자 ─────────────────────────
   document.getElementById('detail-title').textContent = course.name;
   document.getElementById('detail-date').textContent = course.createdAt;
+  document.getElementById('detail-author').textContent = '✍️ ' + (course.authorNickname || '익명');
 
   // ── 장소 목록 ────────────────────────────────────
   const placeList = document.getElementById('detail-places');
@@ -80,8 +81,24 @@ try {
     }
   });
 
-  // ── 삭제 버튼 ────────────────────────────────────
-  document.getElementById('delete-btn').addEventListener('click', function () {
+  // ── 삭제 버튼 (작성자만 가능) ────────────────────
+  const currentUserId = localStorage.getItem('userId');
+  const deleteBtn = document.getElementById('delete-btn');
+
+  if (course.authorId && course.authorId !== currentUserId) {
+    deleteBtn.style.display = 'none';
+  }
+
+  deleteBtn.addEventListener('click', function () {
+    if (!currentUserId) {
+      alert('로그인이 필요합니다.');
+      window.location.href = 'auth.html';
+      return;
+    }
+    if (course.authorId && course.authorId !== currentUserId) {
+      alert('본인이 작성한 코스만 삭제할 수 있습니다.');
+      return;
+    }
     if (!confirm('이 코스를 삭제할까요?')) return;
 
     deleteDoc(docRef).then(function () {
@@ -159,10 +176,12 @@ try {
         return;
       }
 
+      const myUserId = localStorage.getItem('userId');
+
       snapshot.forEach(function (docSnap) {
         const comment = docSnap.data();
         const id = docSnap.id;
-        const myNickname = localStorage.getItem('nickname') || '';
+        const canDelete = myUserId && comment.authorId === myUserId;
 
         const li = document.createElement('li');
         li.innerHTML = `
@@ -170,7 +189,7 @@ try {
             <span class="comment-nickname">${comment.nickname}</span>
             <span>
               <span class="comment-date">${comment.createdAt}</span>
-              ${comment.nickname === myNickname ? `<button class="comment-delete" data-id="${id}">삭제</button>` : ''}
+              ${canDelete ? `<button class="comment-delete" data-id="${id}">삭제</button>` : ''}
             </span>
           </div>
           <div class="comment-content">${comment.content}</div>
@@ -202,6 +221,12 @@ try {
   }
 
   document.getElementById('comment-submit').addEventListener('click', function () {
+    if (!localStorage.getItem('userId')) {
+      alert('로그인이 필요합니다.');
+      window.location.href = 'auth.html';
+      return;
+    }
+
     const nickname = document.getElementById('comment-nickname').value.trim();
     const content = document.getElementById('comment-content').value.trim();
 
@@ -220,6 +245,7 @@ try {
     addDoc(commentsRef, {
       nickname: nickname,
       content: content,
+      authorId: localStorage.getItem('userId') || null,
       createdAt: new Date().toLocaleDateString('ko-KR') + ' ' + new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
     }).then(function () {
       document.getElementById('comment-content').value = '';

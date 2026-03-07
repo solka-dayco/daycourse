@@ -508,7 +508,9 @@ kakao.maps.load(function () {
       photos: photos,
       likes: 0,
       comments: 0,
-      createdAt: new Date().toLocaleDateString('ko-KR')
+      createdAt: new Date().toLocaleDateString('ko-KR'),
+      authorId: localStorage.getItem('userId') || null,
+      authorNickname: localStorage.getItem('nickname') || '익명'
     };
 
     addDoc(collection(db, 'courses'), courseData).then(function () {
