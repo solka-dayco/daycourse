@@ -43,8 +43,6 @@ export function initPhoto() {
 
     const input = document.getElementById('photo-input');
     input.removeAttribute('capture');
-    // 남은 슬롯 수만큼만 선택 가능하도록 제한
-    input.setAttribute('multiple', true);
     input.click();
   });
 
