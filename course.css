@@ -14,8 +14,7 @@ header {
 
 /* 전체 컨테이너 */
 .course-container {
-  width: 900px;
-  max-width: 50%;
+  width: clamp(320px, 50%, 900px);
   margin: 0 auto;
   padding: 20px 16px 40px;
   box-sizing: border-box;
