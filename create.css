@@ -409,7 +409,7 @@
 }
 .inline-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* ── 지도 내 위치 버튼 ─────────────────────────────── */
+/* 지도 내 위치 버튼 */
 .map-location-btn {
   position: absolute;
   bottom: 12px; right: 12px;
@@ -424,6 +424,4 @@
   z-index: 10;
   transition: box-shadow 0.2s;
 }
-.map-location-btn:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
+.map-location-btn:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.3); }

@@ -8,29 +8,9 @@
   <link rel="stylesheet" href="auth.css"/>
 </head>
 <body>
-<<<<<<< HEAD
   <header class="header">
     <button class="header-menu" id="sidebarToggle">☰</button>
     <span class="header-title" onclick="location.href='main.html'">데이코스</span>
-=======
-  <div id="sidebar-overlay"></div>
-  <div id="sidebar">
-    <div class="sidebar-header">
-      <span>데이코스</span>
-      <button id="sidebar-close">✕</button>
-    </div>
-    <nav class="sidebar-nav">
-      <a href="feed.html">피드</a>
-      <a href="create.html">새 게시물</a>
-    </nav>
-    <div id="sidebar-auth"></div>
-  </div>
-
-  <header>
-    <button id="menu-btn">☰</button>
-    <a href="feed.html" class="page-title">데이코스</a>
-    <div></div>
->>>>>>> d3dafc5f7ca6945a22744ee97e673c4bede88adb
   </header>
 
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -82,7 +62,11 @@
           <span class="field-hint">영문 소문자, 숫자 조합 4~20자</span>
           <span class="field-error" id="errUsername"></span>
         </div>
-        <!-- 닉네임은 가입 후 nickname.html에서 입력 -->
+        <div class="auth-field">
+          <label>닉네임</label>
+          <input type="text" id="signupNickname" placeholder="2~10자"/>
+          <span class="field-error" id="errNickname"></span>
+        </div>
         <div class="auth-field">
           <label>비밀번호</label>
           <input type="password" id="signupPassword" placeholder="6자 이상" autocomplete="new-password"/>
@@ -98,15 +82,6 @@
     </div>
   </div>
 
-<<<<<<< HEAD
   <script type="module" src="login.js"></script>
-=======
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-  <script type="module">
-    import { initSidebar } from './sidebar.js';
-    import './login.js';
-    initSidebar();
-  </script>
->>>>>>> d3dafc5f7ca6945a22744ee97e673c4bede88adb
 </body>
 </html>

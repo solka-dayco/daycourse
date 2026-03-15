@@ -30,18 +30,12 @@ export async function getCurrentUser() {
 /**
  * 카카오 OAuth 로그인
  * redirectTo: 로그인 후 돌아올 URL
- * 이메일 필요없음 옵션 추가
  */
 export async function signInWithKakao(redirectTo = null) {
+  const options = redirectTo ? { redirectTo } : {};
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'kakao',
-    options: {
-      redirectTo: redirectTo ?? undefined,
-      scopes: 'profile_nickname profile_image',
-      queryParams: {
-        scope: 'profile_nickname profile_image',
-      },
-    },
+    options,
   });
   if (error) throw error;
 }

@@ -122,8 +122,6 @@
   box-shadow: var(--shadow);
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s;
-  display: flex;
-  flex-direction: column;
 }
 .feed-card:hover {
   transform: translateY(-2px);
@@ -170,9 +168,6 @@
 /* 카드 본문 */
 .feed-body {
   padding: 10px 12px 12px;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
 }
 
 .feed-course-name {
@@ -210,7 +205,6 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: auto;
 }
 
 .feed-author {

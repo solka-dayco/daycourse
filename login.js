@@ -73,12 +73,11 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
   setErr('errPasswordConfirm', password === confirm ? '' : '비밀번호가 일치하지 않습니다');
   if (!valid) return;
 
-  const nickname = username; // 임시 닉네임 (nickname.html에서 변경)
   const email = `${username}@daycourse.com`;
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { username, nickname } },
+    options: { data: { username } },
   });
   if (error) {
     showMsg(error.message.includes('already') ? '이미 사용 중인 아이디입니다.' : error.message);

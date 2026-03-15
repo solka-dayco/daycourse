@@ -2,7 +2,6 @@
 
 .page-wrap { padding-top: var(--header-h); padding-bottom: 60px; }
 
-<<<<<<< HEAD
 /* ── 캐러셀 래퍼 (흰 배경, 코스목록과 동일 너비) ─────── */
 .carousel-wrap {
   background: white;
@@ -16,46 +15,6 @@
   position: relative;
   width: 100%;
   aspect-ratio: 4/5;
-=======
-/* 전체 컨테이너 */
-.course-container {
-  width: clamp(320px, 50%, 900px);
-  margin: 0 auto;
-  padding: 20px 16px 40px;
-  box-sizing: border-box;
-}
-
-/* 세로 스마트폰 */
-@media (max-width: 480px) {
-  .course-container {
-    width: 100%;
-  }
-}
-
-/* 가로 스마트폰 / 소형 태블릿 */
-@media (min-width: 481px) and (max-width: 768px) {
-  .course-container {
-    width: 90%;
-  }
-}
-
-/* 태블릿 */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .course-container {
-    width: 70%;
-  }
-}
-
-/* 4분할 썸네일 */
-.detail-thumbnail {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: 2px;
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 16px;
->>>>>>> d3dafc5f7ca6945a22744ee97e673c4bede88adb
   overflow: hidden;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   touch-action: pan-y;
@@ -128,7 +87,6 @@
   text-shadow: 0 1px 4px rgba(0,0,0,0.5);
 }
 
-<<<<<<< HEAD
 /* 카운터 */
 .carousel-counter {
   position: absolute;
@@ -192,18 +150,6 @@
 }
 
 .course-meta-top {
-=======
-.thumbnail-cell {
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-.detail-thumbnail .empty-slot {
-  background: #f5f5f5;
->>>>>>> d3dafc5f7ca6945a22744ee97e673c4bede88adb
   display: flex;
   align-items: center;
   gap: 8px;
@@ -233,7 +179,6 @@
   margin-bottom: 6px;
 }
 
-<<<<<<< HEAD
 .course-desc {
   font-size: 13px;
   color: #666;
@@ -245,56 +190,6 @@
   font-size: 12px;
   color: #bbb;
   margin-bottom: 8px;
-=======
-/* 좋아요 / 댓글 / 공유 */
-.detail-actions {
-  display: flex;
-  gap: 12px;
-  background: white;
-  border-radius: 12px;
-  padding: 16px 18px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-
-.detail-actions button {
-  background: none;
-  border: none;
-  font-size: 15px;
-  color: #aaa;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.detail-actions button:hover {
-  color: #ff4e6a;
-}
-
-/* 모바일 대응 */
-@media (max-width: 768px) {
-  .detail-header h2 { font-size: 17px; }
-  #detail-map { height: 220px; }
-}
-
-/* 삭제 버튼 */
-.detail-delete {
-  text-align: right;
-  margin-bottom: 8px;
-}
-
-#delete-btn {
-  background: none;
-  border: none;
-  color: #bbb;
-  font-size: 13px;
-  cursor: pointer;
-  padding: 0;
-}
-
-#delete-btn:hover {
-  color: #ff4e6a;
->>>>>>> d3dafc5f7ca6945a22744ee97e673c4bede88adb
 }
 .course-ref a { color: #bbb; text-decoration: underline; }
 
@@ -335,7 +230,6 @@
   color: #555;
 }
 
-<<<<<<< HEAD
 /* 좋아요 — liked 상태: 배경/테두리 그대로, 하트만 진하게 */
 .course-like-btn.liked {
   background: white;
@@ -355,47 +249,10 @@
   color: #555;
 }
 .ref-count {
-=======
-.comment-item-wrap {
-  padding: 14px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.comment-item-wrap:last-child {
-  border-bottom: none;
-}
-
-.comment-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.comment-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.comment-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.comment-nickname {
-  font-size: 13px;
-  font-weight: bold;
-  color: #333;
-}
-
-.comment-date {
->>>>>>> d3dafc5f7ca6945a22744ee97e673c4bede88adb
   font-size: 11px;
   color: #aaa;
 }
 
-<<<<<<< HEAD
 /* 공유 버튼 */
 .course-share-action-btn:hover {
   border-color: #555;
@@ -412,216 +269,6 @@
 .course-delete-btn {
   background: none;
   border: none;
-=======
-.comment-content {
-  font-size: 14px;
-  color: #444;
-  line-height: 1.5;
-  margin-bottom: 6px;
-  word-break: break-word;
-}
-
-.comment-footer {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.comment-delete-btn {
-  background: none;
-  border: none;
-  color: #bbb;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 0;
-}
-
-.comment-delete-btn:hover {
-  color: #ff4e6a;
-}
-
-/* ── 댓글 좋아요 ────────────────────────────────── */
-.comment-like-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px 0;
-  min-width: 28px;
-  flex-shrink: 0;
-}
-
-.comment-like-icon {
-  font-size: 22px;
-  color: #ddd;
-  transition: color 0.2s;
-}
-
-.comment-like-btn.liked .comment-like-icon {
-  color: #555;
-}
-
-.comment-like-count {
-  font-size: 11px;
-  color: #aaa;
-}
-
-.comment-like-btn.liked .comment-like-count {
-  color: #555;
-}
-
-/* ── 답글 달기 토글 ──────────────────────────────── */
-.comment-reply-toggle {
-  background: none;
-  border: none;
-  color: #aaa;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 0;
-}
-
-.comment-reply-toggle:hover {
-  color: #ff4e6a;
-}
-
-/* ── 답글 입력 ──────────────────────────────────── */
-.reply-input-box {
-  display: flex;
-  gap: 6px;
-  margin-top: 10px;
-}
-
-.reply-input-box.hidden {
-  display: none;
-}
-
-.reply-input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  font-size: 13px;
-  outline: none;
-}
-
-.reply-input:focus {
-  border-color: #ff4e6a;
-}
-
-.reply-submit {
-  background: #ff4e6a;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 14px;
-  font-size: 13px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-/* ── 답글 목록 ──────────────────────────────────── */
-.reply-list {
-  list-style: none;
-  margin-top: 10px;
-  padding-left: 20px;
-  border-left: 2px solid #f0f0f0;
-  width: 100%;
-}
-
-.reply-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid #f8f8f8;
-}
-
-.reply-item:last-child {
-  border-bottom: none;
-}
-
-.reply-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.reply-delete-btn {
-  background: none;
-  border: none;
-  color: #bbb;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 0;
-}
-
-.reply-delete-btn:hover {
-  color: #ff4e6a;
-}
-
-.reply-like-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px 0;
-  min-width: 28px;
-  flex-shrink: 0;
-}
-
-.reply-like-btn.liked .comment-like-icon {
-  color: #555;
-}
-
-.reply-like-btn.liked .comment-like-count {
-  color: #555;
-}
-
-/* ── 로딩 스피너 ─────────────────────────────────── */
-.loading-spinner {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(255,255,255,0.8);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.loading-spinner.hidden {
-  display: none;
-}
-
-.spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid #f0f0f0;
-  border-top: 3px solid #ff4e6a;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* ── 토스트 메시지 ──────────────────────────────── */
-.toast {
-  position: fixed;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0,0,0,0.75);
-  color: white;
-  padding: 10px 20px;
-  border-radius: 20px;
->>>>>>> d3dafc5f7ca6945a22744ee97e673c4bede88adb
   font-size: 13px;
   font-weight: 600;
   color: #bbb;

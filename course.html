@@ -11,34 +11,14 @@
   <script src="https://developers.kakao.com/sdk/js/kakao.min.js" defer></script>
 </head>
 <body>
-<<<<<<< HEAD
   <header class="header">
     <button class="header-menu" id="sidebarToggle">☰</button>
     <span class="header-title" onclick="location.href='main.html'">데이코스</span>
     <div class="header-right"></div>
-=======
-  <div id="sidebar-overlay"></div>
-  <div id="sidebar">
-    <div class="sidebar-header">
-      <span>데이코스</span>
-      <button id="sidebar-close">✕</button>
-    </div>
-    <nav class="sidebar-nav">
-      <a href="feed.html">피드</a>
-      <a href="create.html">새 게시물</a>
-    </nav>
-    <div id="sidebar-auth"></div>
-  </div>
-
-  <header>
-    <button id="menu-btn">☰</button>
-    <a href="feed.html" class="page-title">데이코스</a>
->>>>>>> d3dafc5f7ca6945a22744ee97e673c4bede88adb
   </header>
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
   <nav class="sidebar" id="sidebar"></nav>
 
-<<<<<<< HEAD
   <div class="page-wrap" id="pageWrap">
     <div class="spinner-wrap" id="spinner"><div class="spinner"></div></div>
     <div id="courseContent" style="display:none">
@@ -52,53 +32,6 @@
           <button class="carousel-nav next" id="carouselNext">›</button>
           <div class="carousel-dots" id="carouselDots"></div>
         </div>
-=======
-  <div id="loading-spinner" class="loading-spinner">
-    <div class="spinner"></div>
-  </div>
-
-  <div class="course-container">
-
-    <!-- 4분할 썸네일 -->
-    <div class="detail-thumbnail" id="detail-thumbnail"></div>
-
-    <!-- 삭제 버튼 -->
-    <div class="detail-delete">
-      <button id="delete-btn">삭제</button>
-    </div>
-
-    <!-- 코스 제목 + 날짜 + 작성자 -->
-    <div class="detail-header">
-      <h2 id="detail-title"></h2>
-      <span id="detail-date"></span>
-      <span id="detail-author"></span>
-    </div>
-
-    <!-- 코스 장소 목록 -->
-    <div class="detail-section">
-      <h3>📍 코스 목록</h3>
-      <ul id="detail-places"></ul>
-    </div>
-
-    <!-- 지도 -->
-    <div class="detail-section">
-      <div id="detail-map"></div>
-    </div>
-
-    <!-- 좋아요 / 댓글 / 공유 -->
-    <div class="detail-actions">
-      <button id="like-btn">❤️ <span id="like-count">0</span></button>
-      <button id="comment-scroll-btn">💬 <span id="comment-count">0</span></button>
-      <button id="share-btn">📤 공유</button>
-    </div>
-
-    <!-- 댓글 섹션 -->
-    <div class="detail-section" id="comments">
-      <h3>💬 댓글</h3>
-      <div class="comment-input-box" id="comment-input-area">
-        <input type="text" id="comment-content" placeholder="댓글을 입력하세요" maxlength="100">
-        <button id="comment-submit">등록</button>
->>>>>>> d3dafc5f7ca6945a22744ee97e673c4bede88adb
       </div>
 
       <!-- 코스 헤더 -->
@@ -165,7 +98,6 @@
     </div>
   </div>
 
-<<<<<<< HEAD
   <!-- 전체화면 사진 뷰어 -->
   <div class="photo-viewer" id="photoViewer" style="display:none">
     <button class="photo-viewer-close" id="viewerClose">✕</button>
@@ -188,14 +120,5 @@
 
   <div class="toast" id="toast"></div>
   <script type="module" src="course.js"></script>
-=======
-  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&autoload=false"></script>
-  <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.6.0/kakao.min.js"></script>
-  <script type="module">
-    import { initSidebar } from './sidebar.js';
-    initSidebar();
-    import('./course.js');
-  </script>
->>>>>>> d3dafc5f7ca6945a22744ee97e673c4bede88adb
 </body>
 </html>

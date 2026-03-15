@@ -170,13 +170,11 @@ async function loadFeed(reset) {
 // ── 댓글 수 조회 ─────────────────────────────────────
 async function fetchCommentCount(courseId) {
   try {
-    // 댓글 수
     const { count: commentCount } = await supabase
       .from('comments')
       .select('*', { count: 'exact', head: true })
       .eq('course_id', courseId);
 
-    // 답글 수 (comments → replies join)
     const { data: comments } = await supabase
       .from('comments')
       .select('id')

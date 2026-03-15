@@ -1,4 +1,4 @@
-// nickname.js — 회원가입 후 프로필 설정
+// nickname.js — 카카오 로그인 후 프로필 설정
 import { supabase } from './supabase.js';
 
 // 로그인 안 된 경우 로그인 페이지로
@@ -10,8 +10,11 @@ const input      = document.getElementById('nicknameInput');
 const errEl      = document.getElementById('errNickname');
 const confirmBtn = document.getElementById('confirmBtn');
 
-// 입력창 포커스
-input.focus();
+// 카카오 닉네임 기본값
+const kakaoNickname = session.user.user_metadata?.nickname
+  || session.user.user_metadata?.name || '';
+if (kakaoNickname) input.value = kakaoNickname;
+input.select();
 
 // 성별 버튼 선택
 let selectedGender = null;
