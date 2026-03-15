@@ -241,7 +241,8 @@ function renderCarousel() {
     <div class="carousel-slide" data-idx="${i}">
       <img src="${escHtml(p.photo_url)}" alt="${escHtml(p.name)}" loading="${i === 0 ? 'eager' : 'lazy'}"/>
       <div class="carousel-overlay">
-        <div class="carousel-place-name">${escHtml(p.name)}</div>
+        <span class="carousel-place-name-main">${escHtml(p.name)}</span>
+        ${p.address ? `<span class="carousel-place-name-sub">${escHtml(p.address)}</span>` : ''}
         ${p.comment ? `<div class="carousel-place-comment">${escHtml(p.comment)}</div>` : ''}
       </div>
     </div>

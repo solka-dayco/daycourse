@@ -294,9 +294,12 @@ img { display: block; max-width: 100%; }
 /* ── 피드 카드 ─────────────────────────────────────── */
 .feed-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr); /* 모바일 기본 2열 */
   gap: 10px;
   padding: 0 0 80px;
+}
+@media (min-width: 640px) {
+  .feed-grid { grid-template-columns: repeat(3, 1fr); } /* 데스크탑 3열 */
 }
 
 /* 모든 카드 동일 높이 — 썸네일 고정 + body 고정 */
