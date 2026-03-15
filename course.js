@@ -241,8 +241,16 @@ function renderCarousel() {
     <div class="carousel-slide" data-idx="${i}">
       <img src="${escHtml(p.photo_url)}" alt="${escHtml(p.name)}" loading="${i === 0 ? 'eager' : 'lazy'}"/>
       <div class="carousel-overlay">
-        <span class="carousel-place-name-main">${escHtml(p.name)}</span>
-        ${p.address ? `<span class="carousel-place-name-sub">${escHtml(p.address)}</span>` : ''}
+        ${(() => {
+          // "삼동소바 광주시청점" → 마지막 공백 기준으로 가게명/위치 분리
+          const parts = p.name.trim().split(' ');
+          if (parts.length >= 2) {
+            const loc  = escHtml(parts[parts.length - 1]);
+            const name = escHtml(parts.slice(0, -1).join(' '));
+            return `<span class="carousel-place-name-main">${name}<span class="carousel-place-name-sub"> ${loc}</span></span>`;
+          }
+          return `<span class="carousel-place-name-main">${escHtml(p.name)}</span>`;
+        })()}
         ${p.comment ? `<div class="carousel-place-comment">${escHtml(p.comment)}</div>` : ''}
       </div>
     </div>
