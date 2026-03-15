@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>데이코스 — 데이트 코스 공유</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="main.css"/>
+</head>
+<body>
+  <header class="header">
+    <button class="header-menu" id="sidebarToggle">☰</button>
+    <span class="header-title" onclick="location.href='main.html'">데이코스</span>
+    <div class="header-right">
+      <a href="create.html" class="header-create-btn" id="headerCreateBtn" style="display:none">+ 새 코스</a>
+    </div>
+  </header>
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <div class="page-wrap">
+    <!-- 검색 + 필터 바 -->
+    <div class="feed-toolbar">
+      <div class="feed-search-wrap">
+        <input type="search" id="searchInput" class="feed-search" placeholder="코스명, 장소 검색…"/>
+        <button class="feed-search-btn" id="searchBtn">🔍</button>
+      </div>
+      <button class="filter-toggle-btn" id="filterToggleBtn">필터 ▾</button>
+    </div>
+
+    <div class="filter-panel" id="filterPanel">
+      <div class="filter-row">
+        <label>지역</label>
+        <select id="filterRegionMain">
+          <option value="">전체</option>
+          <option>서울</option><option>경기</option><option>인천</option>
+          <option>부산</option><option>대구</option><option>대전</option>
+          <option>광주</option><option>울산</option><option>세종</option>
+          <option>강원</option><option>충북</option><option>충남</option>
+          <option>전북</option><option>전남</option><option>경북</option>
+          <option>경남</option><option>제주</option>
+        </select>
+        <select id="filterRegionSub" style="display:none"></select>
+      </div>
+      <div class="filter-row">
+        <label>소요시간</label>
+        <div class="filter-chips" id="filterTimeChips">
+          <button class="chip active" data-time="0">전체</button>
+          <button class="chip" data-time="120">2시간 이하</button>
+          <button class="chip" data-time="180">3시간 이하</button>
+          <button class="chip" data-time="240">4시간 이하</button>
+          <button class="chip" data-time="300">5시간 이하</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <label>정렬</label>
+        <div class="filter-chips" id="filterSortChips">
+          <button class="chip active" data-sort="latest">최신순</button>
+          <button class="chip" data-sort="popular">인기순</button>
+          <button class="chip" data-sort="referenced">참조순</button>
+          <button class="chip" data-sort="time_asc">짧은 순</button>
+          <button class="chip" data-sort="time_desc">긴 순</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 피드 그리드 -->
+    <div class="feed-grid" id="feedGrid"></div>
+
+    <div class="spinner-wrap" id="spinner"><div class="spinner"></div></div>
+    <div class="feed-empty" id="feedEmpty" style="display:none">등록된 코스가 없습니다.</div>
+    <div class="feed-load-more" id="loadMoreWrap" style="display:none">
+      <button id="loadMoreBtn" class="load-more-btn">더 보기</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<div id="authMsg" class="auth-msg"></div>
+
+      <div class="auth-field">
+        <label>닉네임 <span style="color:#ff4e6a">*</span></label>
+        <input type="text" id="nicknameInput" placeholder="2~10자 입력" maxlength="10" autocomplete="off"/>
+        <span class="field-hint">나중에 마이페이지에서 변경할 수 있습니다.</span>
+        <span class="field-error" id="errNickname"></span>
+      </div>
+
+      <div class="auth-field">
+        <label>성별 <span style="color:#ff4e6a">*</span></label>
+        <div class="gender-btns">
+          <button class="gender-btn" data-value="male">남성</button>
+          <button class="gender-btn" data-value="female">여성</button>
+          <button class="gender-btn" data-value="other">선택 안함</button>
+        </div>
+        <span class="field-error" id="errGender"></span>
+      </div>
+
+      <div class="auth-field">
+        <label>출생연도 <span style="color:#ff4e6a">*</span></label>
+        <input type="number" id="birthYearInput" placeholder="예: 1998" min="1930" max="2010"/>
+        <span class="field-error" id="errBirthYear"></span>
+      </div>
+
+      <div class="auth-field">
+        <label>사는 지역 <span style="color:#ff4e6a">*</span></label>
+        <select id="regionInput">
+          <option value="">선택해주세요</option>
+          <option>서울</option>
+          <option>경기</option>
+          <option>인천</option>
+          <option>부산</option>
+          <option>대구</option>
+          <option>대전</option>
+          <option>광주</option>
+          <option>울산</option>
+          <option>세종</option>
+          <option>강원</option>
+          <option>충북</option>
+          <option>충남</option>
+          <option>전북</option>
+          <option>전남</option>
+          <option>경북</option>
+          <option>경남</option>
+          <option>제주</option>
+        </select>
+        <span class="field-error" id="errRegion"></span>
+      </div>
+
+      <div class="auth-field" style="margin-top:8px;">
+  <label class="agree-label">
+    <input type="checkbox" id="agreeCheck"/>
+    <span>
+      <a href="privacy.html" target="_blank" style="color:#ff4e6a;">개인정보 수집 및 이용</a>에 동의합니다 <span style="color:#ff4e6a">(필수)</span>
+    </span>
+  </label>
+  <span class="field-error" id="errAgree"></span>
+</div>
+
+<div class="auth-field" style="margin-top:8px;">
+  <label class="agree-label">
+    <input type="checkbox" id="agreeCheck"/>
+    <span>
+      <a href="privacy.html" target="_blank" style="color:#ff4e6a;">개인정보 수집 및 이용</a>에 동의합니다
+      <span style="color:#ff4e6a">(필수)</span>
+    </span>
+  </label>
+  <span class="field-error" id="errAgree"></span>
+</div>
+
+<button class="auth-btn" id="confirmBtn">시작하기</button>

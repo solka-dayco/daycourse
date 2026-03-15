@@ -1,45 +1,237 @@
-.auth-title {
-  font-size: 20px;
-  font-weight: bold;
-  color: #333;
+/* auth.css — 인증 페이지 공통 스타일 */
+
+.auth-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  background: #f5f5f5;
+}
+
+.auth-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.auth-card h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 24px;
   text-align: center;
+}
+
+.auth-tabs {
+  display: flex;
+  border-bottom: 2px solid #eee;
   margin-bottom: 24px;
 }
 
-.auth-links {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 16px;
-  font-size: 13px;
+.auth-tab {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
   color: #aaa;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.2s, border-color 0.2s;
 }
 
-.auth-links a {
-  color: #aaa;
-  text-decoration: none;
-}
-
-.auth-links a:hover {
+.auth-tab.active {
   color: #ff4e6a;
+  border-bottom-color: #ff4e6a;
 }
 
-.auth-links span {
-  color: #ddd;
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
 }
 
-.auth-desc {
+.auth-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+}
+
+.auth-field input {
+  padding: 11px 14px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  background: #fafafa;
+  color: #222;
+}
+
+.auth-field input:focus {
+  border-color: #ff4e6a;
+  background: white;
+}
+
+.auth-field .field-hint {
+  font-size: 11px;
+  color: #aaa;
+}
+
+.auth-field .field-error {
+  font-size: 11px;
+  color: #ff4e6a;
+  display: none;
+}
+
+.auth-field .field-error.show {
+  display: block;
+}
+
+.auth-btn {
+  width: 100%;
+  padding: 13px;
+  background: #ff4e6a;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  margin-top: 8px;
+}
+
+.auth-btn:hover { opacity: 0.88; }
+.auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.auth-kakao-btn {
+  width: 100%;
+  padding: 13px;
+  background: #FEE500;
+  color: #3C1E1E;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.auth-kakao-btn:hover { opacity: 0.88; }
+
+.auth-kakao-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: #ccc;
+  font-size: 12px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #eee;
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: 20px;
   font-size: 13px;
   color: #888;
-  margin-bottom: 4px;
 }
 
-.auth-result {
-  background: #f9f9f9;
+.auth-footer a {
+  color: #ff4e6a;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-msg {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 14px;
+  display: none;
+}
+
+.auth-msg.error {
+  background: #fff0f2;
+  color: #e0002b;
+  border: 1px solid #fcc;
+  display: block;
+}
+
+.auth-msg.success {
+  background: #f0fff4;
+  color: #1a7f37;
+  border: 1px solid #b7f5c8;
+  display: block;
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 28px 20px;
+  }
+}
+
+/* auth.css 맨 아래에 추가 */
+.gender-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.gender-btn {
+  flex: 1;
+  padding: 10px;
+  border: 1.5px solid #e0e0e0;
   border-radius: 10px;
-  padding: 14px 16px;
-  font-size: 14px;
-  color: #333;
-  text-align: center;
-  font-weight: bold;
+  font-size: 13px;
+  font-weight: 600;
+  color: #888;
+  background: white;
+  transition: all 0.15s;
+}
+
+.gender-btn.selected {
+  border-color: #ff4e6a;
+  color: #ff4e6a;
+  background: #fff0f2;
+}
+
+.agree-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: #555;
+  cursor: pointer;
+  line-height: 1.5;
+}
+.agree-label input[type="checkbox"] {
+  margin-top: 3px;
+  accent-color: #ff4e6a;
+  flex-shrink: 0;
 }

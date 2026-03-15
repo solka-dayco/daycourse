@@ -1,102 +1,124 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>코스 상세</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="course.css">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>코스 상세 — 데이코스</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="course.css"/>
+  <script type="text/javascript"
+    src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&libraries=services&autoload=false"></script>
+  <script src="https://developers.kakao.com/sdk/js/kakao.min.js" defer></script>
 </head>
 <body>
-  <header>
-    <a href="feed.html" class="back-btn">← 뒤로</a>
-    <span>💕 코스 상세</span>
-    <div></div>
+  <header class="header">
+    <button class="header-menu" id="sidebarToggle">☰</button>
+    <span class="header-title" onclick="location.href='main.html'">데이코스</span>
+    <div class="header-right"></div>
   </header>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <nav class="sidebar" id="sidebar"></nav>
 
-  <div class="course-container">
+  <div class="page-wrap" id="pageWrap">
+    <div class="spinner-wrap" id="spinner"><div class="spinner"></div></div>
+    <div id="courseContent" style="display:none">
 
-    <!-- 4분할 썸네일 -->
-    <div class="detail-thumbnail" id="detail-thumbnail"></div>
-
-    <!-- 코스 제목 + 날짜 + 작성자 -->
-    <div class="detail-header">
-      <h2 id="detail-title"></h2>
-      <span id="detail-date"></span>
-      <span id="detail-author"></span>
-    </div>
-
-    <!-- 코스 장소 목록 -->
-    <div class="detail-section">
-      <h3>📍 코스 목록</h3>
-      <ul id="detail-places"></ul>
-    </div>
-
-    <!-- 지도 -->
-    <div class="detail-section">
-      <h3>🗺 동선 지도</h3>
-      <div id="detail-map"></div>
-    </div>
-
-    <!-- 삭제 버튼 -->
-    <div class="detail-delete">
-      <button id="delete-btn">🗑 게시글 삭제</button>
-    </div>
-
-    <!-- 좋아요 / 댓글 / 공유 -->
-    <div class="detail-actions">
-      <button id="like-btn">❤️ <span id="like-count">0</span></button>
-      <button id="comment-scroll-btn">💬 <span id="comment-count">0</span></button>
-      <button id="share-btn">📤 공유</button>
-    </div>
-
-    <!-- 댓글 섹션 -->
-    <div class="detail-section" id="comments">
-      <h3>💬 댓글</h3>
-      <div class="comment-input-box" id="comment-input-area">
-        <input type="text" id="comment-content" placeholder="댓글을 입력하세요" maxlength="100">
-        <button id="comment-submit">등록</button>
+      <!-- 캐러셀 -->
+      <div class="carousel-wrap">
+        <div class="carousel" id="carousel">
+          <div class="carousel-track" id="carouselTrack"></div>
+          <div class="carousel-counter" id="carouselCounter"></div>
+          <button class="carousel-nav prev" id="carouselPrev">‹</button>
+          <button class="carousel-nav next" id="carouselNext">›</button>
+          <div class="carousel-dots" id="carouselDots"></div>
+        </div>
       </div>
-      <ul id="comment-list"></ul>
-    </div>
 
-  </div>
+      <!-- 코스 헤더 -->
+      <div class="course-header">
+        <div class="course-meta-top">
+          <span class="course-region" id="courseRegion"></span>
+          <span class="course-time" id="courseTime"></span>
+        </div>
+        <h1 class="course-name" id="courseName"></h1>
+        <p class="course-desc" id="courseDesc"></p>
+        <div class="course-ref" id="courseRef" style="display:none"></div>
+        <div class="course-meta-bottom">
+          <span class="course-author" id="courseAuthor"></span>
+          <span class="course-date" id="courseDate"></span>
+        </div>
 
-  <!-- 토스트 메시지 -->
-  <div id="toast" class="toast hidden">링크가 복사됐습니다! 🔗</div>
-
-  <!-- 공유 팝업 -->
-  <div id="share-modal" class="hidden">
-    <div class="share-modal-inner">
-      <p class="share-title">공유하기</p>
-      <div class="share-options">
-        <button id="share-copy-btn">
-          <div class="share-icon">🔗</div>
-          <span>링크 복사</span>
-        </button>
-        <button id="share-kakao-btn">
-          <div class="share-icon kakao-icon">
-            <img src="https://developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_btn_small.png">
+        <!-- 액션 바: 좋아요 · 댓글 수 · 참조 · 공유 -->
+        <div class="course-actions-row">
+          <button class="course-action-btn course-like-btn" id="likeBtn">
+            🤍 <span id="likeCount">0</span>
+          </button>
+          <button class="course-action-btn course-comment-jump-btn" id="commentJumpBtn">
+            💬 <span id="commentCountBadge">0</span>
+          </button>
+          <button class="course-action-btn course-copy-btn" id="copyBtn">
+            참조 <span class="ref-count" id="refCount"></span>
+          </button>
+          <button class="course-action-btn course-share-action-btn" id="shareActionBtn">
+            공유
+          </button>
+          <div class="course-owner-actions" id="ownerActions" style="display:none">
+            <button class="course-edit-btn" id="editBtn">수정</button>
+            <button class="course-delete-btn" id="deleteBtn">삭제</button>
           </div>
-          <span>카카오톡</span>
-        </button>
+        </div>
       </div>
-      <button id="share-close">닫기</button>
-    </div>
-  </div>
-  <div id="photo-viewer" class="hidden">
-    <div class="photo-viewer-inner">
-      <button id="viewer-close">✕</button>
-      <button id="viewer-prev">‹</button>
-      <div class="viewer-img-wrap">
-        <img id="viewer-img">
+
+      <!-- 타임라인 -->
+      <div class="detail-section">
+        <div class="section-label">📍 장소 타임라인</div>
+        <div class="timeline" id="timeline"></div>
+        <div class="timeline-summary" id="timelineSummary"></div>
       </div>
-      <button id="viewer-next">›</button>
-      <div class="viewer-dots" id="viewer-dots"></div>
+
+      <!-- 동선 지도 -->
+      <div class="detail-section">
+        <div class="section-label">🗺️ 동선 지도</div>
+        <div style="position:relative;">
+          <div id="detailMap" class="detail-map" style="height:300px; border-radius:12px;"></div>
+          <button class="map-location-btn" id="detailMyLocationBtn" title="내 위치">📍</button>
+        </div>
+      </div>
+
+      <!-- 댓글 -->
+      <div class="detail-section" id="commentSection">
+        <div class="section-label">💬 댓글 <span class="comment-total" id="commentTotal"></span></div>
+        <div class="comment-list" id="commentList"></div>
+        <div class="comment-input-wrap">
+          <input type="text" id="commentInput" class="comment-input" placeholder="댓글을 입력하세요…" maxlength="200"/>
+          <button class="comment-submit-btn" id="commentSubmitBtn">등록</button>
+        </div>
+      </div>
+
     </div>
   </div>
 
-  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&autoload=false"></script>
-  <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.6.0/kakao.min.js"></script> <script type="module" src="course.js"></script>
+  <!-- 전체화면 사진 뷰어 -->
+  <div class="photo-viewer" id="photoViewer" style="display:none">
+    <button class="photo-viewer-close" id="viewerClose">✕</button>
+    <span class="photo-viewer-counter" id="viewerCounter"></span>
+    <img class="photo-viewer-img" id="viewerImg" src="" alt=""/>
+    <button class="photo-viewer-nav prev" id="viewerPrev">‹</button>
+    <button class="photo-viewer-nav next" id="viewerNext">›</button>
+    <div class="photo-viewer-dots" id="viewerDots"></div>
+    <!-- 옵션 8: 뷰어 하단 장소명 + 한줄평 -->
+    <div class="viewer-caption" id="viewerCaption"></div>
+  </div>
+
+  <!-- 공유 바텀시트 -->
+  <div class="bottom-sheet-overlay" id="shareOverlay"></div>
+  <div class="bottom-sheet" id="shareSheet">
+    <div class="bottom-sheet-handle"></div>
+    <div class="bottom-sheet-item" id="copyLinkBtn">🔗 링크 복사</div>
+    <div class="bottom-sheet-item" id="kakaoShareBtn">💬 카카오톡 공유</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script type="module" src="course.js"></script>
 </body>
 </html>

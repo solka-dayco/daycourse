@@ -1,139 +1,113 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>코스 만들기</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>코스 만들기 — 데이코스</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="create.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+  <script type="text/javascript"
+    src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&libraries=services&autoload=false"></script>
 </head>
 <body>
-  <header>
-    <a href="feed.html" class="back-btn">← 뒤로</a>
-    <span>💕 코스 만들기</span>
-    <div></div>
+  <header class="header">
+    <button class="header-menu" id="sidebarToggle">☰</button>
+    <span class="header-title" onclick="location.href='main.html'">데이코스</span>
   </header>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <nav class="sidebar" id="sidebar"></nav>
 
-  <div class="container">
+  <div class="page-wrap create-page">
 
-    <!-- 검색창 -->
-    <div class="search-box">
-      <input type="text" id="search-input" placeholder="장소를 검색하세요">
-      <button id="search-btn">검색</button>
+    <!-- 코스 이름 + 소개글 -->
+    <div class="create-section">
+      <input type="text" id="courseName" class="course-name-input" placeholder="코스 이름을 입력하세요" maxlength="40"/>
+      <textarea id="courseDesc" class="course-desc-input" placeholder="코스 소개글 (선택)" maxlength="200" rows="2"></textarea>
     </div>
 
-    <!-- 검색 결과 드롭다운 목록 -->
-    <ul id="search-result"></ul>
-
-    <!-- 지도 + 내 위치 버튼 묶음 -->
-    <div class="map-wrapper">
-      <div id="map"></div>
-      <button id="my-location-btn">📍</button>
-    </div>
-
-    <!-- 매장 정보 미리보기 -->
-    <div id="place-preview" class="hidden">
-      <div class="preview-info">
-        <p id="preview-name"></p>
-        <p id="preview-category"></p>
-        <p id="preview-address"></p>
-        <p id="preview-phone"></p>
-        <a id="preview-link" href="#" target="_blank" class="preview-kakao-btn">
-          카카오맵에서 리뷰/예약 확인 →
-        </a>
+    <!-- 지역 태그 -->
+    <div class="create-section">
+      <div class="section-title">📍 지역 태그 <span class="required">*</span></div>
+      <div class="region-row">
+        <select id="regionMain" class="region-select">
+          <option value="">대분류 선택</option>
+          <option>서울</option><option>경기</option><option>인천</option>
+          <option>부산</option><option>대구</option><option>대전</option>
+          <option>광주</option><option>울산</option><option>세종</option>
+          <option>강원</option><option>충북</option><option>충남</option>
+          <option>전북</option><option>전남</option><option>경북</option>
+          <option>경남</option><option>제주</option>
+        </select>
+        <select id="regionSub" class="region-select" style="display:none">
+          <option value="">세부 선택</option>
+        </select>
       </div>
-      <button id="add-btn">+ 코스에 추가</button>
     </div>
 
-    <!-- 코스 목록 + 저장 -->
-    <div class="course-section">
-      <h3>📍 내 코스</h3>
-      <ul id="course-list"></ul>
+    <!-- 지도 -->
+    <div class="create-section">
+      <div class="map-search-row">
+        <input type="text" id="placeSearch" class="map-search-input" placeholder="장소 검색…"/>
+        <button class="map-search-btn" id="placeSearchBtn">검색</button>
+      </div>
+      <div style="position:relative;">
+        <div id="map" style="height:300px; border-radius:12px; margin-top:8px;"></div>
+        <button class="map-location-btn" id="myLocationBtn" title="내 위치">📍</button>
+      </div>
+      <div id="searchResults" class="search-results"></div>
+    </div>
 
-      <!-- 사진 4장 업로드 -->
-      <div class="photo-upload-box">
-        <p class="photo-upload-title">📷 코스 사진 업로드 (최대 4장)</p>
-        <input type="file" id="photo-input" accept="image/*" multiple hidden>
-        <input type="file" id="photo-replace-input" accept="image/*" hidden>
-        <button id="photo-add-btn" class="photo-add-btn">📷 사진 선택</button>
-        <div class="photo-grid">
-          <div class="photo-slot" id="slot1">
-            <span>+</span>
-            <img id="preview1" class="hidden">
-          </div>
-          <div class="photo-slot" id="slot2">
-            <span>+</span>
-            <img id="preview2" class="hidden">
-          </div>
-          <div class="photo-slot" id="slot3">
-            <span>+</span>
-            <img id="preview3" class="hidden">
-          </div>
-          <div class="photo-slot" id="slot4">
-            <span>+</span>
-            <img id="preview4" class="hidden">
-          </div>
+    <!-- 장소 미리보기 패널 -->
+    <div id="placePreview" class="place-preview" style="display:none">
+      <div class="preview-header">
+        <div>
+          <div class="preview-name" id="previewName"></div>
+          <div class="preview-category" id="previewCategory"></div>
         </div>
+        <button class="preview-close" id="previewClose">✕</button>
       </div>
-
-      <!-- 코스 이름 입력 + 저장 버튼 -->
-      <div class="save-box">
-        <input type="text" id="course-name" placeholder="코스 이름을 입력하세요">
-        <button id="save-btn">저장</button>
-      </div>
+      <div class="preview-address" id="previewAddress"></div>
+      <div class="preview-phone" id="previewPhone"></div>
+      <button class="preview-add-btn" id="previewAddBtn">+ 코스에 추가</button>
     </div>
 
-    <!-- 저장된 코스 목록 -->
-    <div class="saved-section">
-      <h3>💾 저장된 코스</h3>
-      <ul id="saved-list"></ul>
+    <!-- 코스 목록 -->
+    <div class="create-section">
+      <div class="section-title-row">
+        <span class="section-title">🗺️ 코스 목록 <span class="place-count" id="placeCount">0곳</span></span>
+        <button class="inline-save-btn" id="saveBtn">저장하기</button>
+      </div>
+      <div id="placeList" class="place-list"></div>
+      <div class="place-list-empty" id="placeListEmpty">장소를 검색하거나 지도를 클릭해 추가하세요</div>
     </div>
 
   </div>
 
-  <!-- 슬롯 옵션 팝업 (body 직계) -->
-  <div id="slot-options" class="hidden">
-    <div class="slot-options-inner">
-      <button id="slot-option-view">🔍 크게 보기</button>
-      <button id="slot-option-replace">🔄 사진 교체</button>
-      <button id="slot-option-delete">🗑 삭제</button>
-      <button id="slot-option-cancel">취소</button>
+  <!-- 크롭 오버레이 -->
+  <div class="crop-overlay" id="cropOverlay" style="display:none">
+    <div class="crop-canvas-wrap" id="cropWrap">
+      <canvas id="cropCanvas"></canvas>
+      <div class="crop-guide"></div>
+      <div class="crop-border"></div>
+    </div>
+    <div class="crop-actions">
+      <button class="crop-btn cancel" id="cropCancel">취소</button>
+      <button class="crop-btn confirm" id="cropConfirm">확인</button>
     </div>
   </div>
 
-  <!-- 크롭 팝업 (body 직계) -->
-  <div id="crop-modal" class="hidden">
-    <div class="crop-modal-inner">
-      <p class="crop-title">사진을 드래그하거나 확대/축소하세요</p>
-      <p class="crop-progress" id="crop-progress"></p>
-      <div class="crop-area-wrapper" id="crop-area">
-        <div class="crop-box" id="crop-box">
-          <img id="crop-image">
-        </div>
-        <div class="crop-overlay"></div>
-      </div>
-      <p class="crop-hint">🖱 휠 또는 두 손가락으로 확대/축소</p>
-      <div class="crop-actions">
-        <button id="crop-cancel">취소</button>
-        <button id="crop-confirm">확인</button>
-      </div>
+  <!-- 체류/이동 시간 선택 모달 -->
+  <div class="time-modal-overlay" id="timeModalOverlay" style="display:none">
+    <div class="time-modal">
+      <div class="time-modal-title" id="timeModalTitle"></div>
+      <div class="time-modal-chips" id="timeModalChips"></div>
+      <button class="time-modal-close" id="timeModalClose">닫기</button>
     </div>
   </div>
 
-  <!-- 사진 뷰어 팝업 (body 직계) -->
-  <div id="photo-viewer" class="hidden">
-    <div class="photo-viewer-inner">
-      <button id="viewer-close">✕</button>
-      <button id="viewer-prev">‹</button>
-      <div class="viewer-img-wrap">
-        <img id="viewer-img">
-      </div>
-      <button id="viewer-next">›</button>
-      <div class="viewer-dots" id="viewer-dots"></div>
-    </div>
-  </div>
-
-  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&autoload=false&libraries=services"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <div class="toast" id="toast"></div>
   <script type="module" src="app.js"></script>
+  <script type="module" src="create.js"></script>
 </body>
 </html>

@@ -1,56 +1,55 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>아이디 / 비밀번호 찾기</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="auth.css">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>아이디·비밀번호 찾기 — 데이코스</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="auth.css"/>
 </head>
 <body>
-  <header>
-    <a href="login.html" class="back-btn">← 뒤로</a>
-    <span>💕 데이코스</span>
-    <div></div>
+  <header class="header">
+    <button class="header-menu" id="sidebarToggle">☰</button>
+    <span class="header-title" onclick="location.href='main.html'">데이코스</span>
   </header>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <nav class="sidebar" id="sidebar"></nav>
 
-  <div class="auth-container">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <h1>계정 찾기</h1>
+      <div id="authMsg" class="auth-msg"></div>
 
-    <!-- 탭 -->
-    <div class="auth-tabs">
-      <button class="auth-tab active" id="tab-find-id">아이디 찾기</button>
-      <button class="auth-tab" id="tab-find-pw">비밀번호 찾기</button>
-    </div>
+      <div class="auth-tabs">
+        <div class="auth-tab active" data-tab="findId">아이디 찾기</div>
+        <div class="auth-tab" data-tab="findPw">비밀번호 재설정</div>
+      </div>
 
-    <!-- 아이디 찾기 -->
-    <div class="auth-form" id="form-find-id">
-      <p class="auth-desc">가입 시 입력한 닉네임을 입력해주세요.</p>
-      <input type="text" id="find-id-nickname" placeholder="닉네임" maxlength="10">
-      <button id="find-id-submit" class="auth-btn">아이디 찾기</button>
-      <p class="auth-error hidden" id="find-id-error"></p>
-      <div class="auth-result hidden" id="find-id-result"></div>
-    </div>
+      <!-- 아이디 찾기 -->
+      <div class="tab-panel active" id="panel-findId">
+        <div class="auth-field">
+          <label>닉네임</label>
+          <input type="text" id="findNickname" placeholder="가입 시 닉네임 입력"/>
+        </div>
+        <button class="auth-btn" id="findIdBtn">아이디 찾기</button>
+        <div id="foundId" style="margin-top:14px;text-align:center;font-size:14px;color:#333;display:none"></div>
+      </div>
 
-    <!-- 비밀번호 찾기 -->
-    <div class="auth-form hidden" id="form-find-pw">
-      <p class="auth-desc">아이디와 닉네임을 입력해주세요.</p>
-      <input type="text" id="find-pw-username" placeholder="아이디" maxlength="20">
-      <input type="text" id="find-pw-nickname" placeholder="닉네임" maxlength="10">
-      <button id="find-pw-submit" class="auth-btn">확인</button>
-      <p class="auth-error hidden" id="find-pw-error"></p>
-
-      <!-- 새 비밀번호 입력 (확인 후 표시) -->
-      <div class="hidden" id="find-pw-reset">
-        <input type="password" id="new-password" placeholder="새 비밀번호 (6자 이상)" maxlength="30">
-        <input type="password" id="new-password-confirm" placeholder="새 비밀번호 확인" maxlength="30">
-        <button id="reset-pw-submit" class="auth-btn">비밀번호 변경</button>
-        <p class="auth-error hidden" id="reset-pw-error"></p>
+      <!-- 비밀번호 재설정 -->
+      <div class="tab-panel" id="panel-findPw">
+        <p style="font-size:13px;color:#888;margin-bottom:16px;">
+          가입 시 사용한 이메일(아이디@daycourse.internal)로 재설정 링크를 보내드립니다.<br>
+          카카오 로그인 사용자는 카카오에서 직접 비밀번호를 변경해주세요.
+        </p>
+        <div class="auth-field">
+          <label>아이디</label>
+          <input type="text" id="resetUsername" placeholder="아이디 입력"/>
+        </div>
+        <button class="auth-btn" id="resetPwBtn">재설정 링크 보내기</button>
       </div>
     </div>
-
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <script type="module" src="find.js"></script>
 </body>
 </html>
