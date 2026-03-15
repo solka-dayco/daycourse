@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>데이트 코스 피드</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="feed.css">
+</head>
+<body>
+  <div id="sidebar-overlay"></div>
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <span>데이코스</span>
+      <button id="sidebar-close">✕</button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="feed.html">피드</a>
+      <a href="create.html">새 게시물</a>
+    </nav>
+    <div id="sidebar-auth"></div>
+  </div>
+
+  <header>
+    <button id="menu-btn">☰</button>
+    <a href="feed.html" class="page-title">데이코스</a>
+  </header>
+
+  <!-- 피드 카드 목록 -->
+  <div class="feed-container">
+    <div id="feed-list"></div>
+  </div>
+
+  <script type="module">
+    import { initSidebar } from './sidebar.js';
+    import './feed.js';
+    initSidebar();
+  </script>
+</body>
+</html>

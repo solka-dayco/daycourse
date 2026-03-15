@@ -11,9 +11,28 @@
     src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&libraries=services&autoload=false"></script>
 </head>
 <body>
+<<<<<<< HEAD
   <header class="header">
     <button class="header-menu" id="sidebarToggle">☰</button>
     <span class="header-title" onclick="location.href='main.html'">데이코스</span>
+=======
+  <div id="sidebar-overlay"></div>
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <span>데이코스</span>
+      <button id="sidebar-close">✕</button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="feed.html">피드</a>
+      <a href="create.html">새 게시물</a>
+    </nav>
+    <div id="sidebar-auth"></div>
+  </div>
+
+  <header>
+    <button id="menu-btn">☰</button>
+    <a href="feed.html" class="page-title">데이코스</a>
+>>>>>>> d3dafc5f7ca6945a22744ee97e673c4bede88adb
   </header>
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
   <nav class="sidebar" id="sidebar"></nav>
@@ -72,6 +91,7 @@
       <button class="preview-add-btn" id="previewAddBtn">+ 코스에 추가</button>
     </div>
 
+<<<<<<< HEAD
     <!-- 코스 목록 -->
     <div class="create-section">
       <div class="section-title-row">
@@ -82,6 +102,8 @@
       <div class="place-list-empty" id="placeListEmpty">장소를 검색하거나 지도를 클릭해 추가하세요</div>
     </div>
 
+=======
+>>>>>>> d3dafc5f7ca6945a22744ee97e673c4bede88adb
   </div>
 
   <!-- 크롭 오버레이 -->
@@ -106,8 +128,31 @@
     </div>
   </div>
 
+<<<<<<< HEAD
   <div class="toast" id="toast"></div>
   <script type="module" src="app.js"></script>
   <script type="module" src="create.js"></script>
+=======
+  <!-- 사진 뷰어 팝업 (body 직계) -->
+  <div id="photo-viewer" class="hidden">
+    <div class="photo-viewer-inner">
+      <button id="viewer-close">✕</button>
+      <button id="viewer-prev">‹</button>
+      <div class="viewer-img-wrap">
+        <img id="viewer-img">
+      </div>
+      <button id="viewer-next">›</button>
+      <div class="viewer-dots" id="viewer-dots"></div>
+    </div>
+  </div>
+
+  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&autoload=false&libraries=services"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script type="module">
+    import { initSidebar } from './sidebar.js';
+    import './app.js';
+    initSidebar();
+  </script>
+>>>>>>> d3dafc5f7ca6945a22744ee97e673c4bede88adb
 </body>
 </html>
