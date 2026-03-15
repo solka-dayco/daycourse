@@ -1,115 +1,135 @@
-/* create.css — 코스 만들기 페이지 */
+/* create.css — 코스 만들기 (v2 스타일 참고) */
 
 .create-page {
   max-width: 640px;
   margin: 0 auto;
-  padding-bottom: 60px;
+  padding: calc(var(--header-h) + 14px) 14px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.create-section {
-  background: white;
-  border-radius: 14px;
-  padding: 16px;
-  margin: 0 12px 12px;
-  box-shadow: var(--shadow);
+/* ── 카드 공통 ─────────────────────────────────────────── */
+.create-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px 16px;
+  border: 1px solid var(--border);
 }
 
-.section-title {
+.create-card-label {
   font-size: 13px;
   font-weight: 700;
   color: var(--sub);
   margin-bottom: 10px;
 }
+.create-card-label .required { color: var(--primary); }
 
-.section-title .required { color: var(--primary); }
-
-.course-name-input {
+/* ── 코스 이름 + 소개글 ───────────────────────────────── */
+.create-title-input {
   width: 100%;
-  border: none;
-  outline: none;
   font-size: 18px;
   font-weight: 700;
   color: var(--dark);
-  background: transparent;
-  margin-bottom: 8px;
-}
-.course-name-input::placeholder { color: #ccc; }
-
-.course-desc-input {
-  width: 100%;
   border: none;
-  border-top: 1px solid var(--border);
   outline: none;
+  background: transparent;
+  padding: 0;
+}
+.create-title-input::placeholder { color: #ccc; font-weight: 400; }
+
+.create-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 12px 0;
+}
+
+.create-desc-input {
+  width: 100%;
   font-size: 13px;
   color: #555;
+  border: none;
+  outline: none;
   background: transparent;
   resize: none;
-  padding-top: 8px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
-.course-desc-input::placeholder { color: #ccc; }
+.create-desc-input::placeholder { color: #ccc; }
 
-/* 지역 */
-.region-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.region-select {
-  padding: 9px 12px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  font-size: 14px;
-  color: var(--dark);
-  background: white;
-  outline: none;
-  flex: 1;
-  min-width: 120px;
-}
-.region-select:focus { border-color: var(--primary); }
-
-/* 지도 검색 */
-.map-search-row {
+/* ── 지역 ─────────────────────────────────────────────── */
+.create-region-row {
   display: flex;
-  gap: 6px;
-  margin-bottom: 4px;
+  gap: 8px;
 }
 
-.map-search-input {
+.create-select {
   flex: 1;
   padding: 10px 12px;
   border: 1.5px solid var(--border);
   border-radius: 10px;
   font-size: 14px;
+  color: var(--dark);
+  background: #fff;
   outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23aaa' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+  transition: border-color .15s;
 }
-.map-search-input:focus { border-color: var(--primary); }
+.create-select:focus { border-color: var(--primary); }
 
-.map-search-btn {
-  background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  padding: 0 16px;
-  font-size: 14px;
-  font-weight: 700;
+/* ── 지도 카드 ─────────────────────────────────────────── */
+.create-map-card {
+  padding: 14px 14px 0;
+  overflow: hidden;
+  background: var(--bg-card);
 }
 
-.my-location-btn {
-  background: white;
+.create-search-wrap {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.create-search-input {
+  flex: 1;
+  padding: 10px 14px;
   border: 1.5px solid var(--border);
   border-radius: 10px;
-  padding: 0 12px;
-  font-size: 16px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color .15s;
 }
+.create-search-input:focus { border-color: var(--primary); }
 
-/* 검색 결과 드롭다운 */
-.search-results {
+.create-search-btn {
+  padding: 10px 20px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .15s;
+  white-space: nowrap;
+}
+.create-search-btn:hover { opacity: .85; }
+
+.create-search-results {
+  list-style: none;
   border: 1.5px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
-  display: none;
+  margin-bottom: 10px;
   max-height: 200px;
   overflow-y: auto;
-  background: white;
+  background: #fff;
 }
-.search-results.open { display: block; }
 
 .search-result-item {
   display: flex;
@@ -117,86 +137,110 @@
   padding: 10px 14px;
   cursor: pointer;
   border-bottom: 1px solid var(--border);
-  transition: background 0.15s;
+  transition: background .15s;
 }
 .search-result-item:last-child { border-bottom: none; }
 .search-result-item:hover { background: var(--bg); }
+.result-name    { font-size: 14px; font-weight: 600; color: var(--dark); }
+.result-address { font-size: 11px; color: var(--sub); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.result-name { font-size: 14px; font-weight: 600; color: var(--dark); }
-.result-address { font-size: 12px; color: var(--sub); margin-top: 2px; }
-
-/* 장소 미리보기 */
-.place-preview {
-  background: white;
-  border-radius: 14px;
-  padding: 14px 16px;
-  margin: 0 12px 12px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-  border-top: 3px solid var(--primary);
+.create-map {
+  height: 300px;
+  border-radius: 0 0 14px 14px;
+  overflow: hidden;
+  display: block;
 }
 
-.preview-header {
+.map-location-btn {
+  position: absolute;
+  bottom: 12px; right: 12px;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18);
+  font-size: 17px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 10;
+  transition: box-shadow .2s;
+}
+.map-location-btn:hover { box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+
+/* ── 코스 목록 카드 ────────────────────────────────────── */
+.create-list-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 6px;
+  margin-bottom: 12px;
 }
 
-.preview-name { font-size: 16px; font-weight: 700; color: var(--dark); }
-.preview-category { font-size: 12px; color: var(--sub); margin-top: 2px; }
-.preview-address { font-size: 12px; color: var(--sub); margin-bottom: 4px; }
-.preview-phone { font-size: 12px; color: var(--sub); margin-bottom: 10px; }
-
-.preview-close {
-  background: none;
-  border: none;
-  color: #ccc;
-  font-size: 18px;
-  padding: 0 4px;
+.create-place-count {
+  font-size: 12px;
+  color: var(--sub);
+  margin-left: 6px;
+  font-weight: 400;
 }
 
-.preview-add-btn {
-  width: 100%;
-  padding: 11px;
+.create-save-btn {
   background: var(--primary);
-  color: white;
+  color: #fff;
   border: none;
-  border-radius: 10px;
-  font-size: 14px;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-size: 13px;
   font-weight: 700;
+  cursor: pointer;
+  transition: opacity .2s;
 }
+.create-save-btn:hover { opacity: .85; }
+.create-save-btn:disabled { opacity: .45; cursor: not-allowed; }
 
-/* 코스 장소 목록 */
-.place-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.place-list-empty {
+.create-places-empty {
   text-align: center;
   color: #ccc;
   font-size: 13px;
-  padding: 24px 0;
+  padding: 24px 0 8px;
+  display: none;
 }
+.create-places-empty.show { display: block; }
 
-/* 장소 아이템 */
-.place-item {
+.create-total-time {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--sub);
+  padding: 9px 14px;
+  background: var(--bg);
+  border-radius: 8px;
+}
+.create-total-time strong { color: var(--primary); font-weight: 700; }
+
+/* ── 장소 아이템 ───────────────────────────────────────── */
+.create-place-list { list-style: none; }
+
+.create-place-item {
   display: flex;
   flex-direction: column;
   background: var(--bg);
   border-radius: 12px;
-  padding: 0;
-  margin-bottom: 4px;
-  overflow: hidden;
+  margin-bottom: 6px;
   border: 1.5px solid var(--border);
+  overflow: hidden;
 }
 
-.place-item-main {
+.place-main-row {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
+}
+
+.place-travel-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px 0 48px;
+  font-size: 11px;
+  color: var(--sub);
 }
 
 .place-drag-handle {
@@ -206,222 +250,81 @@
   padding: 4px;
   user-select: none;
   touch-action: none;
+  flex-shrink: 0;
 }
+.place-drag-handle:active { cursor: grabbing; }
 
 .place-num {
   width: 26px; height: 26px;
   border-radius: 50%;
   background: var(--primary);
-  color: white;
-  font-size: 12px;
-  font-weight: 700;
+  color: #fff;
+  font-size: 12px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
 
-.place-info {
-  flex: 1;
-  min-width: 0;
-}
+.place-info { flex: 1; min-width: 0; }
+.place-name { font-size: 14px; font-weight: 700; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.place-sub  { font-size: 11px; color: var(--sub); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.place-item-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--dark);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.place-comment-input {
+  width: 100%; border: none; outline: none;
+  font-size: 12px; color: var(--sub); background: transparent;
+  padding: 4px 0; margin-top: 4px;
+  border-bottom: 1px dashed var(--border);
 }
+.place-comment-input::placeholder { color: #ccc; }
+.place-comment-input:focus { border-bottom-color: var(--primary); }
 
-.place-item-sub {
-  font-size: 11px;
-  color: var(--sub);
-  margin-top: 2px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.place-times { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+
+.place-time-btn {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 100px;
+  font-size: 11px; font-weight: 600;
+  color: var(--sub); background: #fff;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
 }
+.place-time-btn.set { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.place-time-btn:hover { border-color: var(--primary); color: var(--primary); }
 
 .place-photo-slot {
   width: 52px; height: 52px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1.5px dashed #ccc;
+  border-radius: 10px; overflow: hidden;
+  border: 1.5px dashed var(--border-dark);
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-  color: #ccc;
-  flex-shrink: 0;
-  background: white;
-  position: relative;
-  transition: border-color 0.2s;
+  font-size: 18px; color: #ccc;
+  flex-shrink: 0; background: #fff; position: relative;
+  transition: border-color .2s;
 }
 .place-photo-slot:hover { border-color: var(--primary); }
 .place-photo-slot img { width: 100%; height: 100%; object-fit: cover; }
-.place-photo-slot input[type="file"] {
-  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
-}
+.place-photo-slot input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
 .place-delete-btn {
-  background: none;
-  border: none;
-  color: #ccc;
-  font-size: 18px;
-  padding: 4px;
-  transition: color 0.2s;
+  color: #ccc; font-size: 18px;
+  padding: 4px; flex-shrink: 0;
+  background: none; border: none; cursor: pointer;
+  transition: color .15s;
 }
-.place-delete-btn:hover { color: var(--primary); }
+.place-delete-btn:hover { color: var(--accent2); }
 
-/* 체류/이동 시간 행 */
-.place-time-row {
-  display: flex;
-  gap: 8px;
-  padding: 6px 12px 10px 48px;
-  flex-wrap: wrap;
+/* ── 시간 모달 칩 ──────────────────────────────────────── */
+.time-chips {
+  display: flex; flex-wrap: wrap;
+  gap: 8px; margin-top: 6px;
 }
-
-.time-btn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
+.time-chip {
+  padding: 8px 14px;
   border: 1.5px solid var(--border);
   border-radius: 100px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--sub);
-  background: white;
-  transition: all 0.15s;
+  font-size: 13px; font-weight: 600;
+  color: var(--sub); background: #fff;
+  cursor: pointer; transition: all .15s;
 }
-.time-btn.set { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
-.time-btn:hover { border-color: var(--primary); color: var(--primary); }
-
-/* 이동 구분선 */
-.place-travel-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 16px 8px 52px;
-}
-.travel-line { width: 2px; height: 20px; background: #ddd; border-radius: 1px; }
-.travel-time-btn {
-  font-size: 11px; color: #bbb;
-  background: none; border: none;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-.travel-time-btn.set { color: var(--primary); font-weight: 600; }
-.travel-time-btn:hover { color: var(--primary); }
-
-/* 한줄평 입력 */
-.place-comment-wrap {
-  padding: 0 12px 10px 48px;
-}
-.place-comment-input {
-  width: 100%;
-  border: none;
-  border-bottom: 1px solid var(--border);
-  outline: none;
-  font-size: 12px;
-  color: #555;
-  background: transparent;
-  padding: 4px 0;
-}
-.place-comment-input::placeholder { color: #ccc; }
-
-/* 헤더 저장 버튼 */
-.header-save-btn {
-  background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: 100px;
-  padding: 7px 18px;
-  font-size: 13px;
-  font-weight: 700;
-  transition: opacity 0.2s;
-}
-.header-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* 체류/이동 시간 모달 */
-.time-modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 400;
-  display: flex; align-items: flex-end;
-}
-.time-modal {
-  background: white;
-  border-radius: 20px 20px 0 0;
-  padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
-}
-.time-modal-title {
-  font-size: 15px; font-weight: 700;
-  margin-bottom: 14px;
-  text-align: center;
-}
-.time-modal-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  margin-bottom: 16px;
-}
-.time-modal-chip {
-  padding: 8px 16px;
-  border: 1.5px solid var(--border);
-  border-radius: 100px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--sub);
-  background: white;
-  transition: all 0.15s;
-}
-.time-modal-chip:hover,
-.time-modal-chip.selected { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
-.time-modal-close {
-  width: 100%;
-  padding: 12px;
-  background: var(--bg);
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--sub);
-}
-
-/* 코스 목록 헤더 행 */
-.section-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-/* 인라인 저장 버튼 */
-.inline-save-btn {
-  background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: 100px;
-  padding: 8px 20px;
-  font-size: 13px;
-  font-weight: 700;
-  transition: opacity 0.2s;
-}
-.inline-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* 지도 내 위치 버튼 */
-.map-location-btn {
-  position: absolute;
-  bottom: 12px; right: 12px;
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  background: white;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  font-size: 18px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  z-index: 10;
-  transition: box-shadow 0.2s;
-}
-.map-location-btn:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+.time-chip.active,
+.time-chip:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }

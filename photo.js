@@ -1,221 +1,251 @@
-// photo.js — 사진 업로드 / 크롭 (4:5) / 압축 → Blob 반환
+// photo.js — 사진 크롭/압축 유틸리티 (v3)
+// 4:5 세로형 크롭 팝업, 드래그/핀치줌/휠줌, WebP 압축
 
-const CROP_RATIO = 4 / 5;   // 4:5 세로형
-const OUTPUT_WIDTH = 800;   // 압축 후 가로 px
-const OUTPUT_QUALITY = 0.82; // WebP 품질
-
-// ── 크롭 상태 ────────────────────────────────────────
-let cropState = {
-  img: null,
-  scale: 1,
-  minScale: 1,
-  offsetX: 0,
-  offsetY: 0,
-  startX: 0,
-  startY: 0,
-  dragging: false,
-  pinchDist: 0,
-  resolve: null,
-  reject: null,
-};
-
-// ── 공개 API ─────────────────────────────────────────
+const OUTPUT_WIDTH   = 800;
+const OUTPUT_QUALITY = 0.82;
+const ASPECT         = 4 / 5; // width / height
 
 /**
- * 파일 선택 → 크롭 UI 열기 → 크롭된 Blob 반환
+ * 이미지 파일을 받아 크롭 팝업 → WebP Blob 반환
  * @param {File} file
- * @returns {Promise<Blob>} WebP Blob
+ * @returns {Promise<Blob>} WebP Blob (~80KB 목표)
  */
-export function cropPhoto(file) {
+export function cropAndCompress(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        cropState.img = img;
-        cropState.resolve = resolve;
-        cropState.reject = reject;
-        openCropOverlay(img);
-      };
-      img.src = e.target.result;
-    };
+    reader.onload = e => openCropModal(e.target.result, resolve, reject);
+    reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
 
-// ── 크롭 UI ──────────────────────────────────────────
-function openCropOverlay(img) {
-  const overlay = document.getElementById('cropOverlay');
-  const wrap    = document.getElementById('cropWrap');
-  const canvas  = document.getElementById('cropCanvas');
-  overlay.style.display = 'flex';
+// ── 크롭 모달 ─────────────────────────────────────────────
 
-  const wrapW = wrap.clientWidth;
-  const wrapH = wrap.clientHeight; // aspect-ratio 4/5
+function openCropModal(dataUrl, resolve, reject) {
+  // 모달 생성
+  const modal = document.createElement('div');
+  modal.id = 'photoCropModal';
+  modal.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,.92);
+    z-index:9999;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    touch-action:none;
+  `;
 
-  // 초기 스케일: 이미지가 크롭 영역을 꽉 채우도록
-  const scaleX = wrapW / img.width;
-  const scaleY = wrapH / img.height;
-  cropState.minScale = Math.max(scaleX, scaleY);
-  cropState.scale = cropState.minScale;
-  cropState.offsetX = (wrapW - img.width * cropState.scale) / 2;
-  cropState.offsetY = (wrapH - img.height * cropState.scale) / 2;
+  modal.innerHTML = `
+    <div style="color:#fff;font-size:14px;font-weight:600;margin-bottom:12px">
+      사진 영역 선택 (4:5 비율)
+    </div>
+    <div id="cropViewport" style="
+      position:relative;overflow:hidden;
+      width:min(90vw,360px);
+      aspect-ratio:4/5;
+      border:2px solid rgba(255,255,255,.6);
+      border-radius:8px;
+      background:#000;
+      cursor:grab;
+    ">
+      <img id="cropImg" src="${dataUrl}" style="
+        position:absolute;
+        transform-origin:center center;
+        user-select:none;
+        -webkit-user-drag:none;
+        max-width:none;
+      "/>
+      <!-- 3x3 가이드 -->
+      <div style="
+        position:absolute;inset:0;
+        display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+        pointer-events:none;
+      ">
+        ${Array.from({length:9}).map((_,i) =>
+          `<div style="border:0.5px solid rgba(255,255,255,.25)"></div>`
+        ).join('')}
+      </div>
+    </div>
+    <div style="color:rgba(255,255,255,.6);font-size:12px;margin-top:10px">
+      드래그로 이동 · 핀치/휠로 확대/축소
+    </div>
+    <div style="display:flex;gap:12px;margin-top:18px">
+      <button id="cropCancel" style="
+        padding:11px 24px;border-radius:8px;border:1.5px solid rgba(255,255,255,.4);
+        background:none;color:#fff;font-size:14px;font-weight:600;cursor:pointer;
+      ">취소</button>
+      <button id="cropConfirm" style="
+        padding:11px 28px;border-radius:8px;border:none;
+        background:#fff;color:#1a1a2e;font-size:14px;font-weight:700;cursor:pointer;
+      ">적용</button>
+    </div>
+  `;
 
-  canvas.width  = wrapW;
-  canvas.height = wrapH;
-  canvas.style.width  = wrapW + 'px';
-  canvas.style.height = wrapH + 'px';
+  document.body.appendChild(modal);
+  document.body.style.overflow = 'hidden';
 
-  drawCrop();
-  attachCropEvents(canvas, wrapW, wrapH);
+  const viewport = modal.querySelector('#cropViewport');
+  const img = modal.querySelector('#cropImg');
+
+  // 이미지 로드 후 초기 위치/크기 설정
+  img.onload = () => initCrop(img, viewport);
+
+  let state = { x: 0, y: 0, scale: 1 };
+
+  function initCrop(imgEl, vp) {
+    const vpW = vp.clientWidth;
+    const vpH = vp.clientHeight;
+    const natW = imgEl.naturalWidth;
+    const natH = imgEl.naturalHeight;
+
+    // 뷰포트를 꽉 채우는 최소 스케일 계산
+    const minScale = Math.max(vpW / natW, vpH / natH);
+    state.scale = minScale;
+    state.x = (vpW - natW * minScale) / 2;
+    state.y = (vpH - natH * minScale) / 2;
+    applyTransform(imgEl, state);
+  }
+
+  function applyTransform(imgEl, s) {
+    imgEl.style.left = `${s.x}px`;
+    imgEl.style.top  = `${s.y}px`;
+    imgEl.style.width  = `${imgEl.naturalWidth * s.scale}px`;
+    imgEl.style.height = `${imgEl.naturalHeight * s.scale}px`;
+    clamp(imgEl, viewport, s);
+  }
+
+  function clamp(imgEl, vp, s) {
+    const vpW = vp.clientWidth;
+    const vpH = vp.clientHeight;
+    const iW  = imgEl.naturalWidth  * s.scale;
+    const iH  = imgEl.naturalHeight * s.scale;
+
+    // 이미지가 뷰포트보다 작아지지 않도록
+    if (iW < vpW) s.x = (vpW - iW) / 2;
+    else {
+      s.x = Math.min(0, Math.max(s.x, vpW - iW));
+    }
+    if (iH < vpH) s.y = (vpH - iH) / 2;
+    else {
+      s.y = Math.min(0, Math.max(s.y, vpH - iH));
+    }
+    imgEl.style.left = `${s.x}px`;
+    imgEl.style.top  = `${s.y}px`;
+  }
+
+  // ── 드래그 (마우스) ─────────────────────────────────────
+  let drag = null;
+  viewport.addEventListener('mousedown', e => {
+    drag = { startX: e.clientX - state.x, startY: e.clientY - state.y };
+    viewport.style.cursor = 'grabbing';
+  });
+  document.addEventListener('mousemove', e => {
+    if (!drag) return;
+    state.x = e.clientX - drag.startX;
+    state.y = e.clientY - drag.startY;
+    applyTransform(img, state);
+  });
+  document.addEventListener('mouseup', () => {
+    drag = null;
+    viewport.style.cursor = 'grab';
+  });
+
+  // ── 터치 드래그 / 핀치줌 ────────────────────────────────
+  let lastTouches = null;
+  viewport.addEventListener('touchstart', e => {
+    e.preventDefault();
+    lastTouches = e.touches;
+  }, { passive: false });
+
+  viewport.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const touches = e.touches;
+
+    if (touches.length === 1 && lastTouches?.length === 1) {
+      // 단일 터치 드래그
+      state.x += touches[0].clientX - lastTouches[0].clientX;
+      state.y += touches[0].clientY - lastTouches[0].clientY;
+      applyTransform(img, state);
+    } else if (touches.length === 2 && lastTouches?.length === 2) {
+      // 핀치줌
+      const curDist  = getTouchDist(touches);
+      const prevDist = getTouchDist(lastTouches);
+      if (prevDist === 0) { lastTouches = touches; return; }
+
+      const ratio    = curDist / prevDist;
+      const minScale = Math.max(viewport.clientWidth / img.naturalWidth, viewport.clientHeight / img.naturalHeight);
+      const newScale = Math.max(minScale, Math.min(state.scale * ratio, minScale * 6));
+
+      // 핀치 중심점 기준 스케일
+      const cx = (touches[0].clientX + touches[1].clientX) / 2 - viewport.getBoundingClientRect().left;
+      const cy = (touches[0].clientY + touches[1].clientY) / 2 - viewport.getBoundingClientRect().top;
+      state.x = cx - (cx - state.x) * (newScale / state.scale);
+      state.y = cy - (cy - state.y) * (newScale / state.scale);
+      state.scale = newScale;
+      applyTransform(img, state);
+    }
+    lastTouches = touches;
+  }, { passive: false });
+
+  viewport.addEventListener('touchend', e => {
+    lastTouches = e.touches.length ? e.touches : null;
+  });
+
+  // ── 휠줌 ────────────────────────────────────────────────
+  viewport.addEventListener('wheel', e => {
+    e.preventDefault();
+    const minScale = Math.max(viewport.clientWidth / img.naturalWidth, viewport.clientHeight / img.naturalHeight);
+    const delta    = e.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = Math.max(minScale, Math.min(state.scale * delta, minScale * 6));
+
+    const rect = viewport.getBoundingClientRect();
+    const cx   = e.clientX - rect.left;
+    const cy   = e.clientY - rect.top;
+    state.x = cx - (cx - state.x) * (newScale / state.scale);
+    state.y = cy - (cy - state.y) * (newScale / state.scale);
+    state.scale = newScale;
+    applyTransform(img, state);
+  }, { passive: false });
+
+  // ── 버튼 ────────────────────────────────────────────────
+  modal.querySelector('#cropCancel').addEventListener('click', () => {
+    cleanup();
+    reject(new Error('취소됨'));
+  });
+
+  modal.querySelector('#cropConfirm').addEventListener('click', () => {
+    const blob = renderCrop(img, viewport, state);
+    cleanup();
+    resolve(blob);
+  });
+
+  function cleanup() {
+    document.body.removeChild(modal);
+    document.body.style.overflow = '';
+  }
 }
 
-function drawCrop() {
-  const canvas = document.getElementById('cropCanvas');
-  if (!canvas) return;
+// ── 실제 크롭 렌더링 → WebP Blob ─────────────────────────
+function renderCrop(img, viewport, state) {
+  const vpW = viewport.clientWidth;
+  const vpH = viewport.clientHeight;
+
+  // 뷰포트 픽셀 → 원본 이미지 픽셀 변환
+  const srcX = (-state.x) / state.scale;
+  const srcY = (-state.y) / state.scale;
+  const srcW = vpW / state.scale;
+  const srcH = vpH / state.scale;
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = OUTPUT_WIDTH;
+  canvas.height = Math.round(OUTPUT_WIDTH / ASPECT);
+
   const ctx = canvas.getContext('2d');
-  const { img, scale, offsetX, offsetY } = cropState;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(img, offsetX, offsetY, img.width * scale, img.height * scale);
+  ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, canvas.width, canvas.height);
+
+  return new Promise(res => canvas.toBlob(res, 'image/webp', OUTPUT_QUALITY));
 }
 
-function clampOffset(wrapW, wrapH) {
-  const { img, scale } = cropState;
-  const imgW = img.width * scale;
-  const imgH = img.height * scale;
-  cropState.offsetX = Math.min(0, Math.max(wrapW - imgW, cropState.offsetX));
-  cropState.offsetY = Math.min(0, Math.max(wrapH - imgH, cropState.offsetY));
-}
-
-function attachCropEvents(canvas, wrapW, wrapH) {
-  // 이전 이벤트 제거를 위해 clone
-  const newCanvas = canvas.cloneNode(true);
-  canvas.parentNode.replaceChild(newCanvas, canvas);
-  // id 재설정
-  newCanvas.id = 'cropCanvas';
-  const c = newCanvas;
-
-  // 마우스 드래그
-  c.addEventListener('mousedown', e => {
-    cropState.dragging = true;
-    cropState.startX = e.clientX - cropState.offsetX;
-    cropState.startY = e.clientY - cropState.offsetY;
-    c.style.cursor = 'grabbing';
-  });
-  window.addEventListener('mousemove', e => {
-    if (!cropState.dragging) return;
-    cropState.offsetX = e.clientX - cropState.startX;
-    cropState.offsetY = e.clientY - cropState.startY;
-    clampOffset(wrapW, wrapH);
-    drawCrop();
-  });
-  window.addEventListener('mouseup', () => {
-    cropState.dragging = false;
-    c.style.cursor = 'grab';
-  });
-
-  // 휠 줌
-  c.addEventListener('wheel', e => {
-    e.preventDefault();
-    const delta = e.deltaY < 0 ? 0.05 : -0.05;
-    const newScale = Math.max(cropState.minScale, cropState.scale + delta);
-    // 중심 기준 줌
-    const cx = wrapW / 2;
-    const cy = wrapH / 2;
-    cropState.offsetX = cx - (cx - cropState.offsetX) * (newScale / cropState.scale);
-    cropState.offsetY = cy - (cy - cropState.offsetY) * (newScale / cropState.scale);
-    cropState.scale = newScale;
-    clampOffset(wrapW, wrapH);
-    drawCrop();
-  }, { passive: false });
-
-  // 터치 드래그 + 핀치줌
-  c.addEventListener('touchstart', e => {
-    if (e.touches.length === 1) {
-      cropState.dragging = true;
-      cropState.startX = e.touches[0].clientX - cropState.offsetX;
-      cropState.startY = e.touches[0].clientY - cropState.offsetY;
-    } else if (e.touches.length === 2) {
-      cropState.dragging = false;
-      cropState.pinchDist = getTouchDist(e.touches);
-    }
-  }, { passive: true });
-
-  c.addEventListener('touchmove', e => {
-    e.preventDefault();
-    if (e.touches.length === 1 && cropState.dragging) {
-      cropState.offsetX = e.touches[0].clientX - cropState.startX;
-      cropState.offsetY = e.touches[0].clientY - cropState.startY;
-      clampOffset(wrapW, wrapH);
-      drawCrop();
-    } else if (e.touches.length === 2) {
-      const dist = getTouchDist(e.touches);
-      const ratio = dist / cropState.pinchDist;
-      const newScale = Math.max(cropState.minScale, cropState.scale * ratio);
-      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - c.getBoundingClientRect().left;
-      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - c.getBoundingClientRect().top;
-      cropState.offsetX = cx - (cx - cropState.offsetX) * (newScale / cropState.scale);
-      cropState.offsetY = cy - (cy - cropState.offsetY) * (newScale / cropState.scale);
-      cropState.scale = newScale;
-      cropState.pinchDist = dist;
-      clampOffset(wrapW, wrapH);
-      drawCrop();
-    }
-  }, { passive: false });
-
-  c.addEventListener('touchend', () => { cropState.dragging = false; });
-}
-
+// ── 유틸 ─────────────────────────────────────────────────
 function getTouchDist(touches) {
   const dx = touches[0].clientX - touches[1].clientX;
   const dy = touches[0].clientY - touches[1].clientY;
-  return Math.sqrt(dx*dx + dy*dy);
-}
-
-// ── 크롭 버튼 초기화 (create.js에서 호출) ────────────
-export function initCropButtons() {
-  document.getElementById('cropConfirm')?.addEventListener('click', finishCrop);
-  document.getElementById('cropCancel')?.addEventListener('click', () => {
-    document.getElementById('cropOverlay').style.display = 'none';
-    cropState.reject?.(new Error('cancelled'));
-    cropState.resolve = null;
-    cropState.reject = null;
-  });
-}
-
-function finishCrop() {
-  const wrap   = document.getElementById('cropWrap');
-  const wrapW  = wrap.clientWidth;
-  const wrapH  = wrap.clientHeight;
-  const canvas = document.getElementById('cropCanvas'); // 클론 후 최신 참조
-
-  // 실제 출력 캔버스 (OUTPUT_WIDTH x OUTPUT_WIDTH/CROP_RATIO)
-  const outW = OUTPUT_WIDTH;
-  const outH = Math.round(OUTPUT_WIDTH / CROP_RATIO);
-  const out  = document.createElement('canvas');
-  out.width  = outW;
-  out.height = outH;
-  const ctx  = out.getContext('2d');
-
-  const { img, scale, offsetX, offsetY } = cropState;
-  // 크롭 영역(wrapW x wrapH)의 왼쪽 상단이 이미지의 어느 좌표인지
-  const srcX = -offsetX / scale;
-  const srcY = -offsetY / scale;
-  const srcW = wrapW / scale;
-  const srcH = wrapH / scale;
-
-  ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
-
-  out.toBlob(blob => {
-    document.getElementById('cropOverlay').style.display = 'none';
-    cropState.resolve?.(blob);
-    cropState.resolve = null;
-    cropState.reject  = null;
-  }, 'image/webp', OUTPUT_QUALITY);
-}
-
-// ── 썸네일 URL ───────────────────────────────────────
-/** Blob → objectURL (미리보기용) */
-export function blobToUrl(blob) {
-  return URL.createObjectURL(blob);
+  return Math.sqrt(dx * dx + dy * dy);
 }

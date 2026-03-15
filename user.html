@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>유저 — 데이코스</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="user.css"/>
+</head>
+<body>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <header class="header">
+    <button class="header-menu" id="sidebarToggle" aria-label="메뉴">☰</button>
+    <a class="header-title" id="headerTitle" href="main.html">데이코스</a>
+    <div class="header-right">
+      <button id="headerCreateBtn" style="display:none" aria-label="코스 만들기">+</button>
+    </div>
+  </header>
+
+  <main class="page-wrap">
+    <!-- 로딩 -->
+    <div class="spinner-wrap" id="spinner"><div class="spinner"></div></div>
+
+    <!-- 유저 프로필 상단 -->
+    <div id="userContent" style="display:none">
+      <div class="user-profile-section">
+        <div class="user-avatar" id="userAvatar"></div>
+        <div class="user-info">
+          <div class="user-nickname" id="userNickname"></div>
+          <div class="user-level" id="userLevel"></div>
+        </div>
+        <div class="user-stats-row">
+          <div class="user-stat">
+            <span class="user-stat-num" id="statCourses">0</span>
+            <span class="user-stat-label">코스</span>
+          </div>
+          <div class="user-stat-divider"></div>
+          <div class="user-stat">
+            <span class="user-stat-num" id="statLikes">0</span>
+            <span class="user-stat-label">좋아요</span>
+          </div>
+          <div class="user-stat-divider"></div>
+          <div class="user-stat">
+            <span class="user-stat-num" id="statRefs">0</span>
+            <span class="user-stat-label">참조</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 탭 -->
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="courses">코스</button>
+        <button class="tab-btn" data-tab="references">참조</button>
+      </div>
+
+      <!-- 코스 그리드 -->
+      <div class="feed-grid" id="userCourseGrid"></div>
+      <div class="spinner-wrap" id="courseSpinner" style="display:none"><div class="spinner"></div></div>
+      <div class="empty-state" id="courseEmpty" style="display:none">
+        <div class="empty-icon">🗺️</div>
+        <p>아직 코스가 없어요</p>
+      </div>
+      <div class="infinite-sentinel" id="courseSentinel"></div>
+
+      <!-- 참조 그리드 -->
+      <div class="feed-grid" id="userRefGrid" style="display:none"></div>
+      <div class="spinner-wrap" id="refSpinner" style="display:none"><div class="spinner"></div></div>
+      <div class="empty-state" id="refEmpty" style="display:none">
+        <div class="empty-icon">🔄</div>
+        <p>참조한 코스가 없어요</p>
+      </div>
+      <div class="infinite-sentinel" id="refSentinel"></div>
+    </div>
+
+    <!-- 에러 -->
+    <div class="empty-state" id="userError" style="display:none">
+      <div class="empty-icon">😅</div>
+      <p>유저를 찾을 수 없습니다</p>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script type="module" src="user.js"></script>
+</body>
+</html>

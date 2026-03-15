@@ -1,132 +1,214 @@
-// map.js — 카카오맵 유틸리티
+// map.js — 카카오맵 공통 유틸리티 (v3)
+// searchMarkers(검색용)와 courseMarkers(코스용) 배열 분리 관리
 
-let map = null;
-let ps = null;
-let searchMarkers = [];
-let courseMarkers = [];
-let polyline = null;
-let myLocationMarker = null;
-let myLat = null;
-let myLng = null;
-
-export function initMap(containerId = 'map') {
+/**
+ * 카카오맵 SDK 로드 후 map 인스턴스 생성
+ * @param {string} containerId
+ * @param {object} options - { lat, lng, level }
+ * @returns {Promise<kakao.maps.Map>}
+ */
+export function createMap(containerId, { lat = 37.5665, lng = 126.9780, level = 5 } = {}) {
   return new Promise(resolve => {
     kakao.maps.load(() => {
       const container = document.getElementById(containerId);
-      map = new kakao.maps.Map(container, {
-        center: new kakao.maps.LatLng(37.5665, 126.9780),
-        level: 5,
-      });
-      ps = new kakao.maps.services.Places();
-      kakao.maps.event.addListener(map, 'click', e => {
-        searchNearby(e.latLng.getLat(), e.latLng.getLng());
+      const map = new kakao.maps.Map(container, {
+        center: new kakao.maps.LatLng(lat, lng),
+        level,
       });
       resolve(map);
     });
   });
 }
 
-export function searchPlaces(keyword, callback) {
-  if (!ps) return;
-  const options = {};
-  if (myLat && myLng) {
-    options.location = new kakao.maps.LatLng(myLat, myLng);
-    options.sort = kakao.maps.services.SortBy.DISTANCE;
-  }
-  ps.keywordSearch(keyword, callback, options);
-}
+// ── 마커 관리 ─────────────────────────────────────────────
 
-const NEARBY_CATEGORIES = ['FD6','CE7','AT4','CT1'];
-let nearbyCallbacks = [];
+/** 검색 결과 마커 배열 */
+let searchMarkers = [];
 
-export function onNearbyResult(callback) {
-  nearbyCallbacks.push(callback);
-}
+/** 코스 장소 마커 배열 */
+let courseMarkers = [];
 
-function searchNearby(lat, lng) {
-  if (!ps) return;
-  let results = [], done = 0;
-  NEARBY_CATEGORIES.forEach(cat => {
-    ps.categorySearch(cat, (data, status) => {
-      if (status === kakao.maps.services.Status.OK) results.push(...data);
-      done++;
-      if (done === NEARBY_CATEGORIES.length) {
-        const near = results.filter(p => getDistance(lat, lng, parseFloat(p.y), parseFloat(p.x)) <= 30);
-        nearbyCallbacks.forEach(cb => cb(near, lat, lng));
-      }
-    }, { location: new kakao.maps.LatLng(lat, lng), radius: 30, sort: kakao.maps.services.SortBy.DISTANCE });
-  });
-}
-
-export function showPlaceMarker(place) {
-  clearSearchMarkers();
-  const pos = new kakao.maps.LatLng(parseFloat(place.y), parseFloat(place.x));
-  const marker = new kakao.maps.Marker({ map, position: pos });
-  const overlay = new kakao.maps.CustomOverlay({
-    map, position: pos, yAnchor: 0,
-    content: `<div style="background:white;border:2px solid #ff4e6a;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#222;box-shadow:0 2px 6px rgba(0,0,0,0.15);white-space:nowrap;transform:translateY(-100%) translateY(-12px);">${place.place_name}</div>`,
-  });
-  searchMarkers.push({ marker, overlay });
-  map.setCenter(pos);
-  map.setLevel(3);
-}
-
+/** 검색 마커 전체 제거 */
 export function clearSearchMarkers() {
-  searchMarkers.forEach(({ marker, overlay }) => { marker.setMap(null); overlay.setMap(null); });
+  searchMarkers.forEach(({ marker, overlay }) => {
+    marker.setMap(null);
+    overlay?.setMap(null);
+  });
   searchMarkers = [];
 }
 
-export function renderCourseOnMap(places) {
-  if (polyline) { polyline.setMap(null); polyline = null; }
-  courseMarkers.forEach(({ marker, overlay }) => {
-    if (marker && marker.setMap) marker.setMap(null);
-    if (overlay && overlay.setMap) overlay.setMap(null);
+/** 코스 마커 전체 제거 */
+export function clearCourseMarkers() {
+  courseMarkers.forEach(({ marker, overlay, polyline }) => {
+    marker?.setMap(null);
+    overlay?.setMap(null);
+    polyline?.setMap(null);
   });
   courseMarkers = [];
-  if (!places.length) return;
+}
 
-  const path = places.map(p => new kakao.maps.LatLng(p.lat, p.lng));
-  polyline = new kakao.maps.Polyline({ map, path, strokeWeight: 3, strokeColor: '#ff4e6a', strokeOpacity: 0.8, strokeStyle: 'solid' });
+/**
+ * 검색 결과 마커 추가
+ * @param {kakao.maps.Map} map
+ * @param {object} place - { lat, lng, name }
+ * @param {function} onClick
+ */
+export function addSearchMarker(map, place, onClick) {
+  const pos = new kakao.maps.LatLng(place.lat, place.lng);
+  const marker = new kakao.maps.Marker({ position: pos, map });
 
-  places.forEach((p, i) => {
-    const overlay = new kakao.maps.CustomOverlay({
-      map,
-      position: new kakao.maps.LatLng(p.lat, p.lng),
-      content: `<div style="position:relative;"><div style="position:absolute;width:26px;height:26px;border-radius:50%;background:#ff4e6a;color:white;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid white;transform:translate(-50%,-50%);">${i + 1}</div></div>`,
-      xAnchor: 0, yAnchor: 0, zIndex: 3,
-    });
-    courseMarkers.push({ marker: { setMap: () => {} }, overlay });
+  kakao.maps.event.addListener(marker, 'click', () => onClick(place));
+
+  searchMarkers.push({ marker, overlay: null });
+  return marker;
+}
+
+/**
+ * 코스 장소 번호 마커 추가 (커스텀 오버레이)
+ * @param {kakao.maps.Map} map
+ * @param {object} place - { lat, lng, name }
+ * @param {number} index - 1부터 시작
+ */
+export function addCourseMarker(map, place, index) {
+  const pos = new kakao.maps.LatLng(place.lat, place.lng);
+
+  const content = document.createElement('div');
+  content.style.cssText = `
+    width: 28px; height: 28px;
+    background: #e8648a; color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    box-shadow: 0 2px 8px rgba(232,100,138,.5);
+    border: 2px solid #fff;
+    cursor: default;
+  `;
+  content.textContent = index;
+
+  const overlay = new kakao.maps.CustomOverlay({
+    position: pos,
+    content,
+    map,
+    yAnchor: 0.5,
+    xAnchor: 0.5,
   });
 
+  courseMarkers.push({ marker: null, overlay });
+  return overlay;
+}
+
+/**
+ * 코스 경로 폴리라인 그리기
+ * @param {kakao.maps.Map} map
+ * @param {Array<{lat, lng}>} places
+ */
+export function drawCoursePolyline(map, places) {
+  if (places.length < 2) return null;
+
+  const path = places.map(p => new kakao.maps.LatLng(p.lat, p.lng));
+  const polyline = new kakao.maps.Polyline({
+    path,
+    strokeWeight: 3,
+    strokeColor: '#e8648a',
+    strokeOpacity: .65,
+    strokeStyle: 'solid',
+    map,
+  });
+
+  courseMarkers.push({ marker: null, overlay: null, polyline });
+  return polyline;
+}
+
+/**
+ * 지도를 주어진 장소들에 맞게 fitBounds
+ * @param {kakao.maps.Map} map
+ * @param {Array<{lat, lng}>} places
+ */
+export function fitMapToBounds(map, places) {
+  if (!places.length) return;
+  if (places.length === 1) {
+    map.setCenter(new kakao.maps.LatLng(places[0].lat, places[0].lng));
+    return;
+  }
   const bounds = new kakao.maps.LatLngBounds();
-  path.forEach(p => bounds.extend(p));
-  map.setBounds(bounds, 40);
+  places.forEach(p => bounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
+  map.setBounds(bounds);
 }
 
-export function initMyLocation(onSuccess) {
-  if (!navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(pos => {
-    myLat = pos.coords.latitude;
-    myLng = pos.coords.longitude;
-    const latlng = new kakao.maps.LatLng(myLat, myLng);
-    if (myLocationMarker) myLocationMarker.setMap(null);
-    myLocationMarker = new kakao.maps.Marker({
-      map, position: latlng,
-      image: new kakao.maps.MarkerImage('https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png', new kakao.maps.Size(24, 35)),
+/**
+ * 장소 정보창 인포윈도우 생성
+ * @param {kakao.maps.Map} map
+ * @param {kakao.maps.Marker} marker
+ * @param {string} content
+ */
+export function showInfoWindow(map, marker, content) {
+  const infoWindow = new kakao.maps.InfoWindow({ content, zIndex: 10 });
+  infoWindow.open(map, marker);
+  return infoWindow;
+}
+
+/**
+ * 키워드로 장소 검색 (카카오맵 Places API)
+ * @param {string} keyword
+ * @param {{ lat?, lng?, radius? }} locationOpts
+ * @returns {Promise<Array>}
+ */
+export function searchPlaces(keyword, { lat, lng, radius = 5000 } = {}) {
+  return new Promise((resolve, reject) => {
+    const ps = new kakao.maps.services.Places();
+    const options = {};
+    if (lat && lng) {
+      options.location = new kakao.maps.LatLng(lat, lng);
+      options.radius = radius;
+      options.sort   = kakao.maps.services.SortBy.DISTANCE;
+    }
+    ps.keywordSearch(keyword, (results, status) => {
+      if (status === kakao.maps.services.Status.OK) {
+        resolve(results);
+      } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
+        resolve([]);
+      } else {
+        reject(new Error('카카오맵 검색 오류: ' + status));
+      }
+    }, options);
+  });
+}
+
+/**
+ * 주변 장소 카테고리 검색 (지도 클릭 시)
+ * @param {number} lat
+ * @param {number} lng
+ * @param {number} radius - 미터
+ * @returns {Promise<Array>}
+ */
+export function searchNearby(lat, lng, radius = 30) {
+  return new Promise((resolve, reject) => {
+    const ps = new kakao.maps.services.Places();
+    ps.categorySearch('CE7', (results, status) => {
+      if (status === kakao.maps.services.Status.OK) resolve(results);
+      else resolve([]);
+    }, {
+      location: new kakao.maps.LatLng(lat, lng),
+      radius,
+      sort: kakao.maps.services.SortBy.DISTANCE,
     });
-    map.setCenter(latlng);
-    if (onSuccess) onSuccess(myLat, myLng);
-  }, () => { alert('위치 권한이 필요합니다.'); });
+  });
 }
 
-export function getDistance(lat1, lng1, lat2, lng2) {
-  const R = 6371000;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-
-export function formatDistance(m) {
-  return m < 1000 ? `${Math.round(m)}m` : `${(m/1000).toFixed(1)}km`;
+/**
+ * 사용자 현재 위치 가져오기
+ * @returns {Promise<{lat, lng}>}
+ */
+export function getCurrentPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation 미지원'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      err => reject(err),
+      { timeout: 8000, maximumAge: 60000 }
+    );
+  });
 }

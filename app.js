@@ -1,9 +1,8 @@
-// app.js — 진입점: 비로그인 시 로그인 페이지로 리다이렉트
-import { getSession } from './db.js';
+// app.js — 로그인 필요 페이지 진입 제어
+// 로그인 필요 페이지의 <script>에서 import './app.js' 로 사용
+import { supabase } from './supabase.js';
 
-(async () => {
-  const session = await getSession();
-  if (!session) {
-    location.replace('login.html');
-  }
-})();
+const { data } = await supabase.auth.getSession();
+if (!data.session) {
+  location.replace('login.html?redirect=' + encodeURIComponent(location.pathname + location.search));
+}

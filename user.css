@@ -1,0 +1,70 @@
+/* user.css — 유저 페이지 */
+
+.user-profile-section {
+  background: #fff;
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.user-avatar {
+  width: 72px; height: 72px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px;
+  font-weight: 700;
+  margin: 0 auto 14px;
+}
+
+.user-info {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.user-nickname {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.user-level {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.user-stats-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+}
+
+.user-stat {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+}
+
+.user-stat-num {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.user-stat-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.user-stat-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--border);
+}

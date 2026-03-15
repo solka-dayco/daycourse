@@ -7,197 +7,148 @@
   <link rel="stylesheet" href="style.css"/>
   <style>
     .privacy-wrap {
-      max-width: 720px;
+      max-width: 640px;
       margin: 0 auto;
-      padding: calc(var(--header-h) + 32px) 20px 60px;
+      padding: calc(var(--header-h) + 20px) 20px 60px;
     }
-    .privacy-wrap h1 {
+    .privacy-title {
       font-size: 22px;
       font-weight: 800;
-      color: var(--dark);
+      color: var(--primary);
       margin-bottom: 8px;
     }
-    .privacy-date {
+    .privacy-updated {
       font-size: 13px;
-      color: var(--sub);
-      margin-bottom: 32px;
+      color: var(--text-muted);
+      margin-bottom: 28px;
     }
-    .privacy-section {
-      margin-bottom: 32px;
-    }
+    .privacy-section { margin-bottom: 28px; }
     .privacy-section h2 {
       font-size: 16px;
       font-weight: 700;
-      color: var(--dark);
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 2px solid var(--primary);
-      display: inline-block;
+      color: var(--text);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
     }
     .privacy-section p,
     .privacy-section li {
       font-size: 14px;
       color: #444;
-      line-height: 1.8;
+      line-height: 1.75;
     }
     .privacy-section ul {
       padding-left: 20px;
-      margin-top: 8px;
+      margin-top: 6px;
     }
-    .privacy-section li {
-      margin-bottom: 4px;
-    }
+    .privacy-section li { margin-bottom: 4px; }
     .privacy-table {
       width: 100%;
       border-collapse: collapse;
       font-size: 13px;
-      margin-top: 12px;
+      margin-top: 10px;
+    }
+    .privacy-table th, .privacy-table td {
+      border: 1px solid var(--border-dark);
+      padding: 8px 10px;
+      text-align: left;
     }
     .privacy-table th {
-      background: #f8f8f8;
-      padding: 10px 12px;
-      text-align: left;
+      background: var(--bg);
       font-weight: 700;
-      color: var(--dark);
-      border: 1px solid var(--border);
+      color: var(--text);
     }
-    .privacy-table td {
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      color: #444;
-      vertical-align: top;
-    }
-    .back-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 24px;
-      font-size: 14px;
-      color: var(--sub);
-      cursor: pointer;
-      background: none;
-      border: none;
-    }
-    .back-btn:hover { color: var(--primary); }
+    .privacy-table td { color: #444; }
   </style>
 </head>
 <body>
   <header class="header">
-    <button class="header-menu" id="sidebarToggle">☰</button>
-    <span class="header-title" onclick="location.href='main.html'">데이코스</span>
+    <button class="header-menu" onclick="history.back()" style="font-size:18px">←</button>
+    <span class="header-title">개인정보처리방침</span>
+    <div class="header-right"></div>
   </header>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
-  <nav class="sidebar" id="sidebar"></nav>
 
   <div class="privacy-wrap">
-    <button class="back-btn" onclick="history.back()">← 뒤로가기</button>
-
-    <h1>개인정보처리방침</h1>
-    <p class="privacy-date">시행일: 2026년 3월 15일</p>
+    <div class="privacy-title">개인정보처리방침</div>
+    <div class="privacy-updated">최종 업데이트: 2026년 3월 15일</div>
 
     <div class="privacy-section">
-      <h2>1. 수집하는 개인정보 항목</h2>
+      <h2>1. 개인정보 수집 항목</h2>
+      <p>데이코스(이하 "서비스")는 서비스 제공을 위해 아래와 같은 개인정보를 수집합니다.</p>
       <table class="privacy-table">
         <thead>
-          <tr>
-            <th>구분</th>
-            <th>수집 항목</th>
-            <th>수집 목적</th>
-            <th>보유 기간</th>
-          </tr>
+          <tr><th>항목</th><th>수집 목적</th><th>필수/선택</th></tr>
         </thead>
         <tbody>
-          <tr>
-            <td>필수</td>
-            <td>아이디, 비밀번호, 닉네임</td>
-            <td>회원 식별 및 서비스 이용</td>
-            <td>회원 탈퇴 시까지</td>
-          </tr>
-          <tr>
-            <td>선택</td>
-            <td>성별, 출생연도, 거주 지역</td>
-            <td>서비스 개선 및 통계 분석</td>
-            <td>회원 탈퇴 시까지</td>
-          </tr>
-          <tr>
-            <td>자동 수집</td>
-            <td>서비스 이용 기록, 접속 로그</td>
-            <td>서비스 품질 개선 및 분석</td>
-            <td>1년</td>
-          </tr>
+          <tr><td>아이디</td><td>계정 식별, 로그인</td><td>필수</td></tr>
+          <tr><td>비밀번호</td><td>계정 보안</td><td>필수</td></tr>
+          <tr><td>닉네임</td><td>서비스 내 사용자 식별</td><td>필수</td></tr>
+          <tr><td>성별</td><td>통계 분석</td><td>선택</td></tr>
+          <tr><td>출생연도</td><td>통계 분석</td><td>선택</td></tr>
+          <tr><td>거주 지역</td><td>통계 분석</td><td>선택</td></tr>
         </tbody>
       </table>
-      <p style="margin-top:10px; font-size:13px; color:#888;">
-        ※ 성별, 출생연도, 거주 지역은 선택 항목으로, 입력하지 않아도 서비스 이용에 제한이 없습니다.
-      </p>
     </div>
 
     <div class="privacy-section">
       <h2>2. 개인정보 수집 방법</h2>
       <ul>
-        <li>회원가입 및 프로필 설정 시 이용자가 직접 입력</li>
-        <li>서비스 이용 과정에서 자동 생성 및 수집 (접속 로그, 이용 기록 등)</li>
+        <li>회원가입 시 직접 입력</li>
+        <li>서비스 이용 과정에서 자동 수집 (행동 로그)</li>
       </ul>
     </div>
 
     <div class="privacy-section">
-      <h2>3. 개인정보의 이용 목적</h2>
+      <h2>3. 개인정보 이용 목적</h2>
       <ul>
-        <li>회원 식별 및 서비스 제공</li>
-        <li>코스 작성, 좋아요, 댓글 등 서비스 기능 제공</li>
-        <li>서비스 이용 통계 분석 및 품질 개선</li>
-        <li>불법 이용 방지 및 서비스 운영 관리</li>
+        <li>서비스 가입 및 관리</li>
+        <li>서비스 이용 통계 분석 (익명화)</li>
+        <li>서비스 개선 및 A/B 테스트</li>
+        <li>부정 이용 방지</li>
       </ul>
     </div>
 
     <div class="privacy-section">
-      <h2>4. 개인정보의 제3자 제공</h2>
-      <p>데이코스는 이용자의 개인정보를 원칙적으로 외부에 제공하지 않습니다. 다만, 아래의 경우는 예외로 합니다.</p>
+      <h2>4. 개인정보 보유 및 이용 기간</h2>
+      <p>회원 탈퇴 시 즉시 삭제합니다. 단, 관련 법령에 따라 일정 기간 보관이 필요한 경우 해당 기간 동안 보관 후 삭제합니다.</p>
+    </div>
+
+    <div class="privacy-section">
+      <h2>5. 개인정보 제3자 제공</h2>
+      <p>서비스는 원칙적으로 수집된 개인정보를 제3자에게 제공하지 않습니다. 다만, 아래의 경우에는 예외로 합니다.</p>
       <ul>
-        <li>이용자가 사전에 동의한 경우</li>
-        <li>법령의 규정에 의거하거나, 수사 목적으로 법령에 정해진 절차와 방법에 따라 수사기관의 요구가 있는 경우</li>
+        <li>사용자가 동의한 경우</li>
+        <li>법령에 따른 의무가 있는 경우</li>
       </ul>
     </div>
 
     <div class="privacy-section">
-      <h2>5. 개인정보의 보유 및 이용 기간</h2>
-      <p>회원 탈퇴 시 개인정보를 즉시 파기합니다. 단, 관계 법령에 의해 보존할 필요가 있는 경우 해당 법령에서 정한 기간 동안 보관합니다.</p>
+      <h2>6. 개인정보 처리 위탁</h2>
+      <p>서비스는 원활한 운영을 위해 아래 업체에 개인정보 처리를 위탁합니다.</p>
+      <table class="privacy-table">
+        <thead>
+          <tr><th>수탁업체</th><th>위탁 업무</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Supabase, Inc.</td><td>데이터베이스 저장, 인증 관리</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="privacy-section">
+      <h2>7. 사용자 권리</h2>
+      <p>사용자는 언제든지 아래 권리를 행사할 수 있습니다.</p>
       <ul>
-        <li>서비스 이용 기록: 1년 (통신비밀보호법)</li>
-        <li>소비자 불만 또는 분쟁 처리에 관한 기록: 3년 (전자상거래법)</li>
+        <li>개인정보 열람, 수정, 삭제 요청</li>
+        <li>회원 탈퇴를 통한 개인정보 전체 삭제</li>
+        <li>서비스 내 프로필 설정을 통한 정보 수정</li>
       </ul>
     </div>
 
     <div class="privacy-section">
-      <h2>6. 이용자의 권리</h2>
-      <p>이용자는 언제든지 다음과 같은 권리를 행사할 수 있습니다.</p>
-      <ul>
-        <li>개인정보 열람 요청</li>
-        <li>개인정보 정정·삭제 요청</li>
-        <li>개인정보 처리 정지 요청</li>
-        <li>회원 탈퇴 (개인정보 전체 삭제)</li>
-      </ul>
-    </div>
-
-    <div class="privacy-section">
-      <h2>7. 개인정보 보호 책임자</h2>
-      <p>개인정보 처리에 관한 업무를 총괄하며, 개인정보와 관련한 이용자의 불만 처리 및 피해 구제를 담당합니다.</p>
-      <ul>
-        <li>서비스명: 데이코스 (DayCourse)</li>
-        <li>문의: 서비스 내 피드백 기능을 통해 문의해주세요</li>
-      </ul>
-    </div>
-
-    <div class="privacy-section">
-      <h2>8. 개인정보처리방침 변경</h2>
-      <p>이 개인정보처리방침은 시행일로부터 적용되며, 법령 및 방침에 따른 변경 내용의 추가, 삭제 및 정정이 있는 경우에는 변경사항의 시행 7일 전부터 서비스 내 공지사항을 통해 고지합니다.</p>
+      <h2>8. 문의</h2>
+      <p>개인정보 관련 문의는 GitHub Issues를 통해 접수해주세요.</p>
     </div>
   </div>
-
-  <script type="module" src="sidebar.js"></script>
-  <script type="module">
-    import { initSidebar } from './sidebar.js';
-    initSidebar();
-  </script>
 </body>
 </html>

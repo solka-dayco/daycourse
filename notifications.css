@@ -1,0 +1,73 @@
+/* notifications.css — 알림 페이지 */
+
+.notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--transition);
+  text-decoration: none;
+  color: inherit;
+}
+.notif-item:hover { background: var(--bg); }
+.notif-item.unread { background: rgba(26,26,46,.03); }
+.notif-item.unread::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 0 2px 2px 0;
+}
+.notif-item { position: relative; }
+
+.notif-icon {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.notif-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+  margin-bottom: 3px;
+}
+.notif-text strong { font-weight: 700; }
+.notif-text .notif-course { color: var(--primary); font-weight: 600; }
+
+.notif-time {
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+.notif-unread-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent2);
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+/* 날짜 그룹 헤더 */
+.notif-date-label {
+  padding: 10px 16px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  letter-spacing: 0.3px;
+}

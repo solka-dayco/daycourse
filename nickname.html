@@ -3,35 +3,74 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>닉네임 설정 — 데이코스</title>
+  <title>프로필 설정 — 데이코스</title>
   <link rel="stylesheet" href="style.css"/>
   <link rel="stylesheet" href="auth.css"/>
 </head>
 <body>
-  <header class="header">
-    <span class="header-title">데이코스</span>
-  </header>
+<div class="auth-page">
+  <div class="auth-logo" onclick="location.href='main.html'">데이코스</div>
 
-  <div class="auth-wrap">
-    <div class="auth-card">
-      <h1>👋 환영합니다!</h1>
-      <p style="text-align:center; font-size:14px; color:#888; margin-bottom:24px;">
-        데이코스에서 사용할 닉네임을 설정해주세요.
-      </p>
+  <div class="auth-card" style="padding:28px 24px">
+    <div class="auth-step-label">STEP 1 / 1</div>
+    <div class="auth-step-title">프로필을 설정해주세요</div>
+    <div class="auth-step-desc">닉네임은 다른 사용자에게 공개됩니다.<br>나머지 정보는 통계 분석에만 사용됩니다.</div>
 
-      <div id="authMsg" class="auth-msg"></div>
+    <div class="auth-msg" id="profileMsg"></div>
 
-      <div class="auth-field">
-        <label>닉네임</label>
-        <input type="text" id="nicknameInput" placeholder="2~10자 입력" maxlength="10" autocomplete="off"/>
-        <span class="field-hint">나중에 마이페이지에서 변경할 수 있습니다.</span>
-        <span class="field-error" id="errNickname"></span>
+    <!-- 닉네임 -->
+    <div class="auth-form-group">
+      <label class="auth-label" for="nicknameInput">닉네임 <span style="color:var(--accent2)">*</span></label>
+      <input
+        type="text"
+        id="nicknameInput"
+        class="auth-input"
+        placeholder="2~16자, 공백 불가"
+        maxlength="16"
+        autocomplete="nickname"
+      />
+      <div class="field-error" id="errNickname"></div>
+    </div>
+
+    <!-- 성별 (선택) -->
+    <div class="auth-form-group">
+      <label class="auth-label">성별 <span style="color:var(--text-light);font-weight:400">선택</span></label>
+      <div class="gender-chips">
+        <button class="gender-chip" data-gender="male">남성</button>
+        <button class="gender-chip" data-gender="female">여성</button>
+        <button class="gender-chip" data-gender="other">기타</button>
       </div>
+    </div>
 
-      <button class="auth-btn" id="confirmBtn">시작하기</button>
+    <!-- 나이 (선택) -->
+    <div class="auth-form-group">
+      <label class="auth-label" for="birthYear">나이 <span style="color:var(--text-light);font-weight:400">선택</span></label>
+      <input type="number" id="birthYear" class="auth-input" placeholder="나이 입력" min="1" max="120"/>
+    </div>
+
+    <!-- 거주 지역 (선택) -->
+    <div class="auth-form-group">
+      <label class="auth-label" for="regionSelect">거주 지역 <span style="color:var(--text-light);font-weight:400">선택</span></label>
+      <select id="regionSelect" class="auth-select">
+        <option value="">선택 안함</option>
+        <option>서울</option><option>경기</option><option>인천</option>
+        <option>부산</option><option>대구</option><option>대전</option>
+        <option>광주</option><option>울산</option><option>세종</option>
+        <option>강원</option><option>충북</option><option>충남</option>
+        <option>전북</option><option>전남</option><option>경북</option>
+        <option>경남</option><option>제주</option>
+        <option>해외</option>
+      </select>
+    </div>
+
+    <button class="auth-btn" id="profileSaveBtn">저장하고 시작하기</button>
+
+    <div class="auth-skip">
+      <button id="skipBtn">나중에 설정할게요</button>
     </div>
   </div>
+</div>
 
-  <script type="module" src="nickname.js"></script>
+<script type="module" src="nickname.js"></script>
 </body>
 </html>

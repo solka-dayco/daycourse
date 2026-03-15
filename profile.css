@@ -1,0 +1,122 @@
+/* profile.css — 마이페이지 */
+
+/* ── 내 정보 섹션 ────────────────────────────────────── */
+.profile-info-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 20px 24px;
+  background: var(--bg-card);
+}
+
+.profile-avatar {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 28px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 14px;
+}
+
+.profile-meta { text-align: center; margin-bottom: 20px; }
+
+.profile-nickname {
+  font-size: 20px; font-weight: 700;
+  color: var(--dark); margin-bottom: 4px;
+}
+
+.profile-level {
+  font-size: 13px; color: var(--sub);
+}
+
+.profile-stats {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 18px;
+}
+
+.profile-stat {
+  flex: 1; text-align: center;
+}
+.profile-stat-num {
+  display: block;
+  font-size: 22px; font-weight: 700;
+  color: var(--dark); line-height: 1.2;
+}
+.profile-stat-label {
+  display: block;
+  font-size: 12px; color: var(--sub);
+  margin-top: 3px;
+}
+.profile-stat-div {
+  width: 1px; height: 32px;
+  background: var(--border);
+}
+
+.profile-public-btn {
+  font-size: 13px;
+  color: var(--sub);
+  border: 1px solid var(--border-dark);
+  border-radius: 20px;
+  padding: 7px 18px;
+  text-decoration: none;
+  transition: border-color .15s, color .15s;
+}
+.profile-public-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ── 구분선 ──────────────────────────────────────────── */
+.profile-divider {
+  height: 8px;
+  background: var(--border);
+}
+
+/* ── 탭 바 ───────────────────────────────────────────── */
+.activity-tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+  position: sticky;
+  top: var(--header-h);
+  z-index: 100;
+}
+
+.activity-tab {
+  flex: 1;
+  padding: 14px 8px;
+  font-size: 14px; font-weight: 600;
+  color: var(--sub);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  text-align: center;
+}
+.activity-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+.activity-tab:hover:not(.active) { color: var(--dark); }
+
+/* ── 패널 ─────────────────────────────────────────────── */
+.activity-panel {
+  padding: 12px 0 0;
+}
+
+/* ── 빈 상태 ──────────────────────────────────────────── */
+.activity-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--sub);
+}
+.activity-empty .empty-icon {
+  font-size: 40px; margin-bottom: 12px;
+}
+.activity-empty p { font-size: 15px; margin-bottom: 6px; }
+.activity-empty small { font-size: 13px; }

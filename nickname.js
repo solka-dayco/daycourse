@@ -1,77 +1,99 @@
-// nickname.js — 카카오 로그인 후 프로필 설정
+// nickname.js — 프로필 설정 (회원가입 직후)
 import { supabase } from './supabase.js';
+import { upsertUserProfile } from './db.js';
 
-// 로그인 안 된 경우 로그인 페이지로
-const { data: { session } } = await supabase.auth.getSession();
-if (!session) location.replace('login.html');
+// ── 로그인 체크 ──────────────────────────────────────────
+const { data: sessionData } = await supabase.auth.getSession();
+if (!sessionData.session) { location.href = 'login.html'; }
+const userId = sessionData.session.user.id;
 
-const msgEl      = document.getElementById('authMsg');
-const input      = document.getElementById('nicknameInput');
-const errEl      = document.getElementById('errNickname');
-const confirmBtn = document.getElementById('confirmBtn');
+// 이미 닉네임 설정된 경우
+const { data: existingUser } = await supabase.from('users').select('id, username, nickname').eq('id', userId).single();
+if (existingUser?.nickname && existingUser.nickname !== existingUser.username) {
+  // 이미 설정한 경우 스킵 가능하지만 재설정도 허용
+}
 
-// 카카오 닉네임 기본값
-const kakaoNickname = session.user.user_metadata?.nickname
-  || session.user.user_metadata?.name || '';
-if (kakaoNickname) input.value = kakaoNickname;
-input.select();
+// 나이 입력 (number input — 1~100)
 
-// 성별 버튼 선택
+// ── 성별 칩 ──────────────────────────────────────────────
 let selectedGender = null;
-document.querySelectorAll('.gender-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.gender-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    selectedGender = btn.dataset.value;
-    document.getElementById('errGender').classList.remove('show');
+document.querySelectorAll('.gender-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.gender-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    selectedGender = chip.dataset.gender;
   });
 });
 
-// 저장
-confirmBtn.addEventListener('click', async () => {
-  const nickname  = input.value.trim();
-  const birthYear = parseInt(document.getElementById('birthYearInput').value);
-  const region    = document.getElementById('regionInput').value;
+// ── 저장 ─────────────────────────────────────────────────
+const saveBtn = document.getElementById('profileSaveBtn');
+const msgEl   = document.getElementById('profileMsg');
 
-  // 유효성 검사
-  let valid = true;
-  function setErr(id, msg) {
-    const el = document.getElementById(id);
-    if (msg) { el.textContent = msg; el.classList.add('show'); valid = false; }
-    else { el.classList.remove('show'); }
+function showMsg(text, type = 'error') {
+  msgEl.textContent = text;
+  msgEl.className = `auth-msg ${type}`;
+}
+
+async function save(skipNickname = false) {
+  const nickname  = document.getElementById('nicknameInput').value.trim();
+  const ageInput = document.getElementById('birthYear').value;
+  // 나이 입력 → birth_year 변환 (매년 자동으로 나이 계산 가능)
+  const birth_year = ageInput ? new Date().getFullYear() - parseInt(ageInput) : undefined;
+  const region    = document.getElementById('regionSelect').value;
+
+  // 닉네임 검증 (skip이 아닐 때만)
+  if (!skipNickname) {
+    const errEl = document.getElementById('errNickname');
+    if (!nickname || nickname.length < 2 || nickname.length > 16 || /\s/.test(nickname)) {
+      errEl.textContent = '닉네임은 공백 없이 2~16자로 입력해주세요';
+      errEl.classList.add('show');
+      document.getElementById('nicknameInput').classList.add('error');
+      return;
+    }
+    errEl.classList.remove('show');
+    document.getElementById('nicknameInput').classList.remove('error');
+
+    // 닉네임 중복 체크
+    const { data: dup } = await supabase
+      .from('users')
+      .select('id')
+      .eq('nickname', nickname)
+      .neq('id', userId)
+      .maybeSingle();
+
+    if (dup) {
+      showMsg('이미 사용 중인 닉네임입니다.');
+      return;
+    }
   }
 
-  setErr('errNickname',  nickname.length < 2 || nickname.length > 10 ? '2~10자로 입력해주세요' : '');
-  setErr('errGender',    !selectedGender ? '성별을 선택해주세요' : '');
-  setErr('errBirthYear', !birthYear || birthYear < 1930 || birthYear > 2010 ? '올바른 출생연도를 입력해주세요' : '');
-  setErr('errRegion',    !region ? '지역을 선택해주세요' : '');
-  setErr('errAgree', !document.getElementById('agreeCheck').checked ? '개인정보 수집에 동의해주세요' : '');
-  if (!valid) return;
-
-  confirmBtn.disabled = true;
-  confirmBtn.textContent = '저장 중…';
+  saveBtn.disabled = true;
+  saveBtn.textContent = '저장 중…';
 
   try {
-    const { error } = await supabase
-      .from('users')
-      .update({
-        nickname,
-        gender:     selectedGender,
-        birth_year: birthYear,
-        region,
-      })
-      .eq('id', session.user.id);
+    const payload = {
+      id:       userId,
+      username: existingUser?.username ?? '',
+      nickname: skipNickname ? (existingUser?.nickname ?? '') : nickname,
+    };
+    if (selectedGender)        payload.gender     = selectedGender;
+    if (birth_year !== undefined) payload.birth_year = birth_year;
+    if (region)         payload.region = region;
 
-    if (error) throw error;
-    location.replace('main.html');
+    await upsertUserProfile(payload);
+    location.href = 'main.html';
   } catch (e) {
-    msgEl.textContent = '저장 중 오류가 발생했습니다: ' + e.message;
-    msgEl.className = 'auth-msg error';
-    confirmBtn.disabled = false;
-    confirmBtn.textContent = '시작하기';
+    showMsg('저장 실패: ' + e.message);
+  } finally {
+    saveBtn.disabled  = false;
+    saveBtn.textContent = '저장하고 시작하기';
   }
-});
+}
 
-input.addEventListener('keydown', e => {
-  if (e.key === 'Enter') confirmBtn.click();
+saveBtn.addEventListener('click', () => save(false));
+
+document.getElementById('skipBtn').addEventListener('click', () => save(true));
+
+document.getElementById('nicknameInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') save(false);
 });

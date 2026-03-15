@@ -6,31 +6,45 @@
   <title>코스 만들기 — 데이코스</title>
   <link rel="stylesheet" href="style.css"/>
   <link rel="stylesheet" href="create.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
   <script type="text/javascript"
-    src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&libraries=services&autoload=false"></script>
+    src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&libraries=services&autoload=false">
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" defer></script>
 </head>
 <body>
   <header class="header">
-    <button class="header-menu" id="sidebarToggle">☰</button>
-    <span class="header-title" onclick="location.href='main.html'">데이코스</span>
+    <button class="header-menu" onclick="history.back()" aria-label="뒤로">←</button>
+    <a class="header-title" href="main.html">데이코스</a>
+    <div class="header-right"></div>
   </header>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
-  <nav class="sidebar" id="sidebar"></nav>
 
-  <div class="page-wrap create-page">
+  <main class="create-page">
 
-    <!-- 코스 이름 + 소개글 -->
-    <div class="create-section">
-      <input type="text" id="courseName" class="course-name-input" placeholder="코스 이름을 입력하세요" maxlength="40"/>
-      <textarea id="courseDesc" class="course-desc-input" placeholder="코스 소개글 (선택)" maxlength="200" rows="2"></textarea>
+    <!-- 1. 코스 이름 + 소개글 -->
+    <div class="create-card">
+      <input
+        type="text"
+        id="courseName"
+        class="create-title-input"
+        placeholder="코스 이름을 입력하세요"
+        maxlength="40"
+        autocomplete="off"
+      />
+      <div class="create-divider"></div>
+      <textarea
+        id="courseDesc"
+        class="create-desc-input"
+        placeholder="코스 소개글 (선택)"
+        maxlength="200"
+        rows="2"
+      ></textarea>
     </div>
 
-    <!-- 지역 태그 -->
-    <div class="create-section">
-      <div class="section-title">📍 지역 태그 <span class="required">*</span></div>
-      <div class="region-row">
-        <select id="regionMain" class="region-select">
+    <!-- 2. 지역 태그 -->
+    <div class="create-card">
+      <div class="create-card-label"> 지역 태그 <span class="required">*</span></div>
+      <div class="create-region-row">
+        <select id="regionMain" class="create-select" aria-label="지역">
           <option value="">대분류 선택</option>
           <option>서울</option><option>경기</option><option>인천</option>
           <option>부산</option><option>대구</option><option>대전</option>
@@ -39,75 +53,85 @@
           <option>전북</option><option>전남</option><option>경북</option>
           <option>경남</option><option>제주</option>
         </select>
-        <select id="regionSub" class="region-select" style="display:none">
-          <option value="">세부 선택</option>
-        </select>
+        <select id="regionSub" class="create-select" style="display:none" aria-label="세부 지역"></select>
       </div>
     </div>
 
-    <!-- 지도 -->
-    <div class="create-section">
-      <div class="map-search-row">
-        <input type="text" id="placeSearch" class="map-search-input" placeholder="장소 검색…"/>
-        <button class="map-search-btn" id="placeSearchBtn">검색</button>
+    <!-- 3. 장소 검색 + 지도 -->
+    <div class="create-card create-map-card">
+      <div class="create-search-wrap">
+        <input
+          type="text"
+          id="searchInput"
+          class="create-search-input"
+          placeholder="장소 검색…"
+          autocomplete="off"
+        />
+        <button class="create-search-btn" id="searchBtn" aria-label="검색">검색</button>
       </div>
-      <div id="searchResults" class="search-results"></div>
-      <div style="position:relative;">
-        <div id="map" style="height:300px; border-radius:12px; margin-top:8px;"></div>
+      <ul class="create-search-results" id="searchResults" style="display:none"></ul>
+      <div style="position:relative">
+        <div id="createMap" class="create-map"></div>
         <button class="map-location-btn" id="myLocationBtn" title="내 위치">📍</button>
       </div>
     </div>
 
-    <!-- 장소 미리보기 패널 -->
-    <div id="placePreview" class="place-preview" style="display:none">
-      <div class="preview-header">
-        <div>
-          <div class="preview-name" id="previewName"></div>
-          <div class="preview-category" id="previewCategory"></div>
-        </div>
-        <button class="preview-close" id="previewClose">✕</button>
+    <!-- 4. 코스 목록 + 저장 버튼 -->
+    <div class="create-card">
+      <div class="create-list-header">
+        <div class="create-card-label"> 코스 목록 <span class="create-place-count" id="placeCount">0곳</span></div>
+        <button class="create-save-btn" id="saveBtn">저장하기</button>
       </div>
-      <div class="preview-address" id="previewAddress"></div>
-      <div class="preview-phone" id="previewPhone"></div>
-      <button class="preview-add-btn" id="previewAddBtn">+ 코스에 추가</button>
-    </div>
-
-    <!-- 코스 목록 -->
-    <div class="create-section">
-      <div class="section-title-row">
-        <span class="section-title">🗺️ 코스 목록 <span class="place-count" id="placeCount">0곳</span></span>
-        <button class="inline-save-btn" id="saveBtn">저장하기</button>
+      <ul class="create-place-list" id="placeList"></ul>
+      <div class="create-places-empty" id="placesEmpty">
+        장소를 검색하거나 지도를 클릭해 추가하세요
       </div>
-      <div id="placeList" class="place-list"></div>
-      <div class="place-list-empty" id="placeListEmpty">장소를 검색하거나 지도를 클릭해 추가하세요</div>
+      <div class="create-total-time" id="totalTimeDisplay" style="display:none">
+        ⏱ 총 소요시간 <strong id="totalTimeText"></strong>
+      </div>
     </div>
 
-  </div>
+  </main>
 
-  <!-- 크롭 오버레이 -->
-  <div class="crop-overlay" id="cropOverlay" style="display:none">
-    <div class="crop-canvas-wrap" id="cropWrap">
-      <canvas id="cropCanvas"></canvas>
-      <div class="crop-guide"></div>
-      <div class="crop-border"></div>
-    </div>
-    <div class="crop-actions">
-      <button class="crop-btn cancel" id="cropCancel">취소</button>
-      <button class="crop-btn confirm" id="cropConfirm">확인</button>
+  <!-- 체류 시간 모달 -->
+  <div class="modal-overlay" id="stayTimeModal">
+    <div class="modal-box">
+      <div class="modal-title" id="stayTimeModalTitle">체류 시간</div>
+      <div class="time-chips" id="stayTimeChips">
+        <button class="time-chip" data-min="10">10분</button>
+        <button class="time-chip" data-min="20">20분</button>
+        <button class="time-chip" data-min="30">30분</button>
+        <button class="time-chip" data-min="60">1시간</button>
+        <button class="time-chip" data-min="90">1시간 30분</button>
+        <button class="time-chip" data-min="120">2시간</button>
+        <button class="time-chip" data-min="150">2시간 30분</button>
+        <button class="time-chip" data-min="180">3시간</button>
+        <button class="time-chip" data-min="240">4시간</button>
+        <button class="time-chip" data-min="300">5시간 이상</button>
+      </div>
     </div>
   </div>
 
-  <!-- 체류/이동 시간 선택 모달 -->
-  <div class="time-modal-overlay" id="timeModalOverlay" style="display:none">
-    <div class="time-modal">
-      <div class="time-modal-title" id="timeModalTitle"></div>
-      <div class="time-modal-chips" id="timeModalChips"></div>
-      <button class="time-modal-close" id="timeModalClose">닫기</button>
+  <!-- 이동 시간 모달 -->
+  <div class="modal-overlay" id="travelTimeModal">
+    <div class="modal-box">
+      <div class="modal-title">이동 시간</div>
+      <div class="time-chips" id="travelTimeChips">
+        <button class="time-chip" data-min="5">5분</button>
+        <button class="time-chip" data-min="10">10분</button>
+        <button class="time-chip" data-min="15">15분</button>
+        <button class="time-chip" data-min="20">20분</button>
+        <button class="time-chip" data-min="30">30분</button>
+        <button class="time-chip" data-min="45">45분</button>
+        <button class="time-chip" data-min="60">1시간</button>
+        <button class="time-chip" data-min="90">1시간 30분</button>
+        <button class="time-chip" data-min="120">2시간</button>
+        <button class="time-chip" data-min="180">3시간 이상</button>
+      </div>
     </div>
   </div>
 
   <div class="toast" id="toast"></div>
-  <script type="module" src="app.js"></script>
   <script type="module" src="create.js"></script>
 </body>
 </html>

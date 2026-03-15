@@ -1,34 +1,161 @@
-// main.js — 피드 페이지
-import { fetchCourses, isCourseLiked, toggleCourseLike, logEvent, getCurrentUser } from './db.js';
+// main.js — 피드 페이지 (v3)
+import {
+  fetchCourses, autocompleteSearch,
+  isCourseLiked, toggleCourseLike,
+  logEvent, getCurrentUser
+} from './db.js';
 import { initSidebar } from './sidebar.js';
 import { supabase } from './supabase.js';
 
 initSidebar();
 logEvent('page_view', 'page', null, { page: 'feed' });
 
-window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
-
-// ── 상태 ─────────────────────────────────────────────
+// ── 상태 ──────────────────────────────────────────────────
+const PAGE_SIZE = 20;
 let state = {
-  keyword: '',
-  regionMain: '',
-  regionSub: '',
-  maxTime: 0,
-  sort: 'latest',
-  page: 0,
-  total: 0,
-  loading: false,
+  keyword: '', regionMain: '', regionSub: '',
+  maxTime: 0, sort: 'latest',
+  page: 0, total: 0,
+  loading: false, allLoaded: false,
 };
-const PAGE_SIZE = 12;
 let currentUser = null;
 
-// ── 로그인 상태 ───────────────────────────────────────
+
+
+// ── 초기화 ─────────────────────────────────────────────────
+const feedGrid       = document.getElementById('feedGrid');
+const spinner        = document.getElementById('spinner');
+const feedEmpty      = document.getElementById('feedEmpty');
+const ptrIndicator   = document.getElementById('ptrIndicator');
+const searchInput    = document.getElementById('searchInput');
+const autocompleteList = document.getElementById('autocompleteList');
+const filterPanel    = document.getElementById('filterPanel');
+const filterBadge    = document.getElementById('filterBadge');
+
 (async () => {
   currentUser = await getCurrentUser();
   if (currentUser) document.getElementById('headerCreateBtn').style.display = '';
+  loadFeed(true);
 })();
 
-// ── 지역 세부 매핑 ─────────────────────────────────────
+// 뒤로가기(BFCache) 시 피드 다시 로드
+window.addEventListener('pageshow', e => {
+  if (e.persisted) {
+    state.page = 0;
+    state.allLoaded = false;
+    feedGrid.innerHTML = '';
+    loadFeed(true);
+  }
+});
+
+// ── 검색 자동완성 ─────────────────────────────────────────
+let acTimer = null;
+let feedSearchTimer = null;
+let acFocusedIdx = -1;
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(acTimer);
+  clearTimeout(feedSearchTimer);
+  const kw = searchInput.value.trim();
+
+  // 자동완성: 2글자 이상, 0.32초 딜레이
+  if (kw.length >= 2) {
+    acTimer = setTimeout(async () => {
+      const results = await autocompleteSearch(kw);
+      showAutocomplete(results, kw);
+    }, 320);
+  } else {
+    hideAutocomplete();
+  }
+
+  // 피드 검색: 입력이 완전히 비었을 때만 자동 초기화
+  if (kw.length === 0) {
+    feedSearchTimer = setTimeout(() => {
+      if (state.keyword !== '') {
+        state.keyword = '';
+        reload();
+      }
+    }, 400);
+  }
+});
+
+searchInput.addEventListener('keydown', e => {
+  const items = autocompleteList.querySelectorAll('.autocomplete-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    acFocusedIdx = Math.min(acFocusedIdx + 1, items.length - 1);
+    updateAcFocus(items);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    acFocusedIdx = Math.max(acFocusedIdx - 1, -1);
+    updateAcFocus(items);
+  } else if (e.key === 'Enter') {
+    if (acFocusedIdx >= 0 && items[acFocusedIdx]) {
+      selectAutocomplete(items[acFocusedIdx].dataset.label);
+    } else {
+      state.keyword = searchInput.value.trim();
+      hideAutocomplete();
+      reload();
+    }
+  } else if (e.key === 'Escape') {
+    hideAutocomplete();
+  }
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) hideAutocomplete();
+});
+
+function showAutocomplete(results, kw) {
+  if (!results.length) { hideAutocomplete(); return; }
+  acFocusedIdx = -1;
+  autocompleteList.innerHTML = results.map(r => `
+    <li class="autocomplete-item" role="option" data-label="${escHtml(r.label)}">
+      <span>${highlightKw(escHtml(r.label), kw)}</span>
+      <span class="autocomplete-item-type">${r.type === 'course' ? '코스' : '장소'}</span>
+    </li>
+  `).join('');
+  autocompleteList.classList.add('show');
+
+  autocompleteList.querySelectorAll('.autocomplete-item').forEach(el => {
+    el.addEventListener('mousedown', e => {
+      e.preventDefault();
+      selectAutocomplete(el.dataset.label);
+    });
+  });
+}
+
+function hideAutocomplete() {
+  autocompleteList.classList.remove('show');
+  autocompleteList.innerHTML = '';
+  acFocusedIdx = -1;
+}
+
+function updateAcFocus(items) {
+  items.forEach((el, i) => el.classList.toggle('focused', i === acFocusedIdx));
+}
+
+function selectAutocomplete(label) {
+  searchInput.value = label;
+  state.keyword = label;
+  hideAutocomplete();
+  reload();
+}
+
+function highlightKw(text, kw) {
+  if (!kw) return text;
+  return text.replace(new RegExp(`(${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
+    '<strong>$1</strong>');
+}
+
+// 검색 버튼
+document.getElementById('searchBtn').addEventListener('click', () => {
+  state.keyword = searchInput.value.trim();
+  hideAutocomplete();
+  reload();
+});
+
+// ── 지역 세부 매핑 ─────────────────────────────────────────
 const REGION_SUB = {
   서울: ['강남','서초','송파','강동','마포','홍대','이태원','용산','종로','중구','성수','건대','혜화','신촌','여의도','강북','노원','기타'],
   경기: ['수원','성남','분당','판교','용인','고양','일산','부천','안양','안산','화성','평택','광주','하남','남양주','의정부','파주','기타'],
@@ -49,15 +176,13 @@ const REGION_SUB = {
   제주: ['제주시','서귀포','기타'],
 };
 
-// ── 필터 UI ───────────────────────────────────────────
+// ── 필터 UI ───────────────────────────────────────────────
 document.getElementById('filterToggleBtn').addEventListener('click', () => {
-  const panel = document.getElementById('filterPanel');
-  const btn = document.getElementById('filterToggleBtn');
-  panel.classList.toggle('open');
-  btn.classList.toggle('active');
+  filterPanel.classList.toggle('open');
+  document.getElementById('filterToggleBtn').classList.toggle('active', filterPanel.classList.contains('open'));
 });
 
-document.getElementById('filterRegionMain').addEventListener('change', function() {
+document.getElementById('filterRegionMain').addEventListener('change', function () {
   state.regionMain = this.value;
   state.regionSub = '';
   const subSel = document.getElementById('filterRegionSub');
@@ -68,11 +193,13 @@ document.getElementById('filterRegionMain').addEventListener('change', function(
   } else {
     subSel.style.display = 'none';
   }
+  updateFilterBadge();
   reload();
 });
 
-document.getElementById('filterRegionSub').addEventListener('change', function() {
+document.getElementById('filterRegionSub').addEventListener('change', function () {
   state.regionSub = this.value;
+  updateFilterBadge();
   reload();
 });
 
@@ -81,6 +208,7 @@ document.querySelectorAll('#filterTimeChips .chip').forEach(btn => {
     document.querySelectorAll('#filterTimeChips .chip').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     state.maxTime = parseInt(btn.dataset.time);
+    updateFilterBadge();
     reload();
   });
 });
@@ -94,71 +222,112 @@ document.querySelectorAll('#filterSortChips .chip').forEach(btn => {
   });
 });
 
-// ── 검색 ─────────────────────────────────────────────
-const searchInput = document.getElementById('searchInput');
-let searchTimer;
-searchInput.addEventListener('input', () => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => {
-    state.keyword = searchInput.value.trim();
-    reload();
-  }, 400);
-});
-document.getElementById('searchBtn').addEventListener('click', () => {
-  state.keyword = searchInput.value.trim();
+document.getElementById('filterResetBtn').addEventListener('click', () => {
+  state.keyword = ''; state.regionMain = ''; state.regionSub = ''; state.maxTime = 0;
+  searchInput.value = '';
+  document.getElementById('filterRegionMain').value = '';
+  document.getElementById('filterRegionSub').style.display = 'none';
+  document.querySelectorAll('#filterTimeChips .chip').forEach((b, i) => b.classList.toggle('active', i === 0));
+  updateFilterBadge();
   reload();
 });
 
-// 더 보기
-document.getElementById('loadMoreBtn').addEventListener('click', () => {
-  state.page += 1;
-  loadFeed(false);
-});
-
-// ── 코어 ─────────────────────────────────────────────
-const feedGrid    = document.getElementById('feedGrid');
-const spinner     = document.getElementById('spinner');
-const feedEmpty   = document.getElementById('feedEmpty');
-const loadMoreWrap = document.getElementById('loadMoreWrap');
-
-function reload() {
-  state.page = 0;
-  feedGrid.innerHTML = '';
-  loadFeed(true);
+function updateFilterBadge() {
+  let count = 0;
+  if (state.regionMain) count++;
+  if (state.maxTime > 0) count++;
+  filterBadge.textContent = count || '';
+  filterBadge.style.display = count ? '' : 'none';
 }
 
-async function loadFeed(reset) {
-  if (state.loading) return;
+// ── Pull to Refresh ───────────────────────────────────────
+let ptrStartY = 0;
+let ptrActive = false;
+const PTR_THRESHOLD = 64;
+
+document.addEventListener('touchstart', e => {
+  if (window.scrollY === 0) {
+    ptrStartY = e.touches[0].clientY;
+    ptrActive = true;
+  }
+}, { passive: true });
+
+document.addEventListener('touchmove', e => {
+  if (!ptrActive) return;
+  const dy = e.touches[0].clientY - ptrStartY;
+  if (dy > 20 && window.scrollY === 0) {
+    ptrIndicator.classList.remove('hidden');
+  }
+}, { passive: true });
+
+document.addEventListener('touchend', async e => {
+  if (!ptrActive) return;
+  ptrActive = false;
+  const dy = e.changedTouches[0].clientY - ptrStartY;
+  if (dy > PTR_THRESHOLD && window.scrollY === 0) {
+    await reload();
+  }
+  setTimeout(() => ptrIndicator.classList.add('hidden'), 400);
+}, { passive: true });
+
+// ── 무한 스크롤 ───────────────────────────────────────────
+const sentinel = document.getElementById('infiniteSentinel');
+const observer = new IntersectionObserver(entries => {
+  if (entries[0].isIntersecting && !state.loading && !state.allLoaded) {
+    loadFeed(false);
+  }
+}, { rootMargin: '200px' });
+
+observer.observe(sentinel);
+
+// ── 코어 ─────────────────────────────────────────────────
+async function reload() {
+  state.page = 0;
+  state.allLoaded = false;
+  feedGrid.innerHTML = '';
+  await loadFeed(true);
+}
+
+async function loadFeed(isFirstPage) {
+  if (state.loading || state.allLoaded) return;
   state.loading = true;
-  spinner.style.display = '';
-  feedEmpty.style.display = 'none';
-  loadMoreWrap.style.display = 'none';
+  if (isFirstPage) { spinner.style.display = ''; feedEmpty.style.display = 'none'; }
 
   try {
     const { courses, total } = await fetchCourses({
-      keyword: state.keyword,
-      regionMain: state.regionMain,
-      regionSub: state.regionSub,
-      maxTime: state.maxTime,
-      sort: state.sort,
-      page: state.page,
-      pageSize: PAGE_SIZE,
+      keyword: state.keyword, regionMain: state.regionMain,
+      regionSub: state.regionSub, maxTime: state.maxTime,
+      sort: state.sort, page: state.page, pageSize: PAGE_SIZE,
     });
     state.total = total;
-
-    if (reset) feedGrid.innerHTML = '';
 
     if (courses.length === 0 && state.page === 0) {
       feedEmpty.style.display = '';
     } else {
-      for (const course of courses) {
-        const card = await buildCard(course);
-        feedGrid.appendChild(card);
+      // 병렬로 좋아요 상태 조회
+      const likedMap = {};
+      if (currentUser && courses.length) {
+        await Promise.all(courses.map(async c => {
+          const { data } = await supabase.from('course_likes').select('course_id')
+            .eq('course_id', c.id).eq('user_id', currentUser.id).maybeSingle();
+          likedMap[c.id] = !!data;
+        }));
       }
+
+      const frag = document.createDocumentFragment();
+      for (const course of courses) {
+        const card = buildCard(course, likedMap[course.id] ?? false);
+        frag.appendChild(card);
+      }
+      feedGrid.appendChild(frag);
     }
 
-    const loaded = (state.page + 1) * PAGE_SIZE;
-    if (loaded < total) loadMoreWrap.style.display = '';
+    if (courses.length < PAGE_SIZE || (state.page + 1) * PAGE_SIZE >= total) {
+      state.allLoaded = true;
+    } else {
+      state.page += 1;
+    }
+
   } catch (e) {
     console.error('피드 로딩 오류:', e);
   } finally {
@@ -167,95 +336,78 @@ async function loadFeed(reset) {
   }
 }
 
-// ── 댓글 수 조회 ─────────────────────────────────────
-async function fetchCommentCount(courseId) {
-  try {
-    const { count: commentCount } = await supabase
-      .from('comments')
-      .select('*', { count: 'exact', head: true })
-      .eq('course_id', courseId);
-
-    const { data: comments } = await supabase
-      .from('comments')
-      .select('id')
-      .eq('course_id', courseId);
-
-    let replyCount = 0;
-    if (comments && comments.length > 0) {
-      const commentIds = comments.map(c => c.id);
-      const { count } = await supabase
-        .from('replies')
-        .select('*', { count: 'exact', head: true })
-        .in('comment_id', commentIds);
-      replyCount = count || 0;
-    }
-
-    return (commentCount || 0) + replyCount;
-  } catch {
-    return 0;
-  }
-}
-
-// ── 카드 빌드 ─────────────────────────────────────────
-async function buildCard(course) {
+// ── 카드 빌드 ─────────────────────────────────────────────
+function buildCard(course, liked) {
   const places = (course.course_places || []).sort((a, b) => a.order_index - b.order_index);
-  const thumbPlace = places.find(p => p.photo_url);
-  const thumbUrl = thumbPlace?.photo_url || '';
+  const thumb = course.thumbnail_url || places.find(p => p.photo_url)?.photo_url || '';
   const pathText = places.map(p => p.name).join(' → ');
   const timeText = formatMinutes(course.total_time);
 
-  let liked = false;
-  if (currentUser) {
-    liked = await isCourseLiked(course.id, currentUser.id);
-  }
-
-  // 댓글 수 조회
-  const commentCount = await fetchCommentCount(course.id);
-
   const card = document.createElement('div');
   card.className = 'feed-card';
+  card.dataset.courseId = course.id;
   card.innerHTML = `
     <div class="feed-thumb">
-      ${thumbUrl
-        ? `<img src="${thumbUrl}" alt="${escHtml(course.name)}" loading="lazy"/>`
+      ${thumb
+        ? `<img src="${escHtml(thumb)}" alt="${escHtml(course.name)}" loading="lazy"/>`
         : `<div class="feed-thumb-placeholder">🗺️</div>`
       }
-      ${course.region_main ? `<span class="feed-region-badge">${escHtml(course.region_main)}${course.region_sub ? ' · ' + course.region_sub : ''}</span>` : ''}
+      ${course.region_main
+        ? `<span class="feed-region-badge">${escHtml(course.region_main)}${course.region_sub ? ' · ' + course.region_sub : ''}</span>`
+        : ''
+      }
     </div>
     <div class="feed-body">
       <div class="feed-course-name">${escHtml(course.name)}</div>
       <div class="feed-places-path">${escHtml(pathText)}</div>
       ${course.description ? `<div class="feed-description">${escHtml(course.description)}</div>` : ''}
       <div class="feed-meta">
-        <span class="feed-author">${escHtml(course.author_nickname)}</span>
+        <span class="feed-author"
+          data-user-id="${escHtml(course.author_id)}"
+          style="cursor:pointer"
+          title="${escHtml(course.author_nickname)}"
+        >${escHtml(course.author_nickname)}</span>
         <div class="feed-actions">
           ${timeText ? `<span class="feed-time-badge">⏱ ${timeText}</span>` : ''}
-          <button class="feed-like-btn ${liked ? 'liked' : ''}" data-id="${course.id}">
+          <button class="feed-like-btn ${liked ? 'liked' : ''}" data-id="${course.id}" aria-label="좋아요">
             <span class="heart">♥</span>
             <span class="like-count">${course.like_count || 0}</span>
           </button>
-          <button class="feed-comment-btn" data-id="${course.id}">
-            💬 <span>${commentCount}</span>
+          <button class="feed-comment-btn" data-id="${course.id}" aria-label="댓글">
+            💬 <span>${course.comment_count || 0}</span>
           </button>
         </div>
       </div>
     </div>
   `;
 
-  // 카드 클릭 → 상세 페이지
+  bindCardEvents(card, course);
+  return card;
+}
+
+function bindCardEvents(card, course) {
+  // 카드 클릭
   card.addEventListener('click', e => {
-    if (e.target.closest('.feed-like-btn') || e.target.closest('.feed-comment-btn')) return;
+    if (e.target.closest('.feed-like-btn') ||
+        e.target.closest('.feed-comment-btn') ||
+        e.target.closest('.feed-author')) return;
     logEvent('course_view', 'course', course.id);
     location.href = `course.html?id=${course.id}`;
   });
 
-  // 댓글 버튼 → 상세 페이지 댓글 섹션
+  // 작성자 클릭 → 유저 페이지
+  card.querySelector('.feed-author')?.addEventListener('click', e => {
+    e.stopPropagation();
+    location.href = `user.html?id=${course.author_id}`;
+  });
+
+  // 댓글 버튼
   card.querySelector('.feed-comment-btn').addEventListener('click', e => {
     e.stopPropagation();
     location.href = `course.html?id=${course.id}#commentSection`;
   });
 
-  // 좋아요 토글
+  // 좋아요
   card.querySelector('.feed-like-btn').addEventListener('click', async e => {
     e.stopPropagation();
     if (!currentUser) { location.href = 'login.html'; return; }
@@ -272,22 +424,16 @@ async function buildCard(course) {
       countEl.textContent = parseInt(countEl.textContent) + (nowLiked ? 1 : -1);
     }
   });
-
-  return card;
 }
 
-// ── 유틸 ─────────────────────────────────────────────
+// ── 유틸 ─────────────────────────────────────────────────
 function escHtml(str) {
   if (!str) return '';
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function formatMinutes(min) {
   if (!min) return '';
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m ? `${h ? h+'시간 ' : ''}${m}분` : `${h}시간`;
+  const h = Math.floor(min / 60), m = min % 60;
+  return m ? `${h ? h + '시간 ' : ''}${m}분` : `${h}시간`;
 }
-
-// ── 초기 로딩 ─────────────────────────────────────────
-loadFeed(true);
