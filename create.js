@@ -40,6 +40,8 @@ let mapInstance = null;
 let pendingStayIdx   = null;  // 체류시간 선택 대기 인덱스
 let pendingTravelIdx = null;  // 이동시간 선택 대기 인덱스
 let sourceCourse = null;      // 수정/참조 원본
+let thumbnailBlob = null;     // 새로 업로드할 썸네일 Blob
+let thumbnailExistingUrl = ''; // 수정 모드 기존 썸네일 URL
 
 const MAX_PLACES = 10;
 const MIN_PLACES = 2;
@@ -65,10 +67,14 @@ if (sourceId && (mode === 'edit' || mode === 'copy')) {
       document.getElementById('courseDesc').value    = sourceCourse.description || '';
       document.getElementById('regionMain').value    = sourceCourse.region_main || '';
       updateRegionSub(sourceCourse.region_main);
-      // regionSub는 updateRegionSub 후 다음 tick에 설정
       setTimeout(() => {
         document.getElementById('regionSub').value = sourceCourse.region_sub || '';
       }, 0);
+      // 기존 썸네일 미리보기
+      if (sourceCourse.thumbnail_url) {
+        thumbnailExistingUrl = sourceCourse.thumbnail_url;
+        setThumbnailPreview(sourceCourse.thumbnail_url);
+      }
     }
     // 장소 목록 복사
     places = (sourceCourse.course_places || []).map(p => ({
@@ -569,6 +575,13 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 
     // 총 소요시간
     const totalTime = places.reduce((s, p) => s + (p.stay_time || 0) + (p.travel_time || 0), 0);
+
+    // 썸네일 업로드
+    let finalThumbnailUrl = thumbnailExistingUrl || '';
+    if (thumbnailBlob) {
+      const thumbPath = `thumbnails/${currentUser.id}/${Date.now()}.webp`;
+      finalThumbnailUrl = await uploadPhoto(thumbnailBlob, thumbPath);
+    }
 
     const courseData = {
       name,

@@ -8,16 +8,16 @@
   --primary-light: #fdeef3;
   --accent:        #d44d72;
   --accent2:       #f43f72;
-  --bg:            #ffffff;   /* 전체 배경 흰색 */
+  --bg:            #ffffff;
   --bg-card:       #ffffff;
-  --bg-section:    #fafafa;   /* 섹션 내부 미묘한 구분 */
+  --bg-section:    #fafafa;
   --dark:          #1a1a1a;
   --sub:           #888888;
   --text:          #1a1a1a;
   --text-muted:    #888888;
   --text-light:    #bbbbbb;
-  --border:        #f0f0f0;   /* 연한 구분선 */
-  --border-dark:   #e0e0e0;   /* 조금 더 진한 구분선 */
+  --border:        #f0f0f0;
+  --border-dark:   #e0e0e0;
   --liked-color:   #e8648a;
   --header-h:      52px;
   --sidebar-w:     280px;
@@ -37,6 +37,7 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
+
 
 
 a { text-decoration: none; color: inherit; }
@@ -299,11 +300,7 @@ img { display: block; max-width: 100%; }
   padding: 0 0 80px;
 }
 @media (min-width: 640px) {
-  .page-wrap {
-    max-width: 50vw;
-    margin: 0 auto;
-  }
-  .feed-grid { grid-template-columns: repeat(3, 1fr); }
+  .feed-grid { grid-template-columns: repeat(3, 1fr); } /* 데스크탑 3열 */
 }
 
 /* 모든 카드 동일 높이 — 썸네일 고정 + body 고정 */
@@ -730,4 +727,45 @@ img { display: block; max-width: 100%; }
 /* ── 반응형 ─────────────────────────────────────────── */
 @media (max-width: 480px) {
   .page-wrap { padding-bottom: 60px; }
+}
+
+/* ── 푸터 ─────────────────────────────────────────────── */
+.site-footer {
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  padding: 28px 20px;
+  text-align: center;
+  color: var(--sub);
+  font-size: 12px;
+  line-height: 2;
+}
+.site-footer .footer-logo {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 6px;
+}
+.site-footer .footer-slogan {
+  font-size: 12px;
+  color: var(--text-light);
+  margin-bottom: 10px;
+}
+.site-footer .footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.site-footer .footer-links a {
+  color: var(--sub);
+  text-decoration: none;
+  font-size: 12px;
+  transition: color .15s;
+}
+.site-footer .footer-links a:hover { color: var(--primary); }
+.site-footer .footer-contact { margin-bottom: 8px; }
+.site-footer .footer-copy {
+  font-size: 11px;
+  color: var(--text-light);
 }

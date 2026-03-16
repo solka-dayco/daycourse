@@ -366,7 +366,7 @@ function renderTimeline() {
             <div class="tl-name">${escHtml(p.name)}</div>
             <div class="tl-sub">${escHtml(p.category || '')}${p.address ? ` · ${escHtml(p.address)}` : ''}</div>
             ${p.comment ? `<div class="tl-comment">"${escHtml(p.comment)}"</div>` : ''}
-            ${p.stay_time ? `<div class="tl-stay">체류 ${formatMinutes(p.stay_time)}</div>` : ''}
+            ${p.stay_time ? `<div class="tl-stay"> ${formatMinutes(p.stay_time)} 소요</div>` : ''}
           </div>
           ${p.photo_url
             ? `<div class="tl-photo" data-name="${escHtml(p.name)}">

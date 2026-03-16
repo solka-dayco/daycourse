@@ -20,8 +20,18 @@
 
   <main class="create-page">
 
-    <!-- 1. 코스 이름 + 소개글 -->
+    <!-- 1. 썸네일 + 코스 이름 + 소개글 -->
     <div class="create-card">
+      <!-- 썸네일 업로드 -->
+      <div class="create-thumbnail-wrap" id="thumbnailWrap">
+        <div class="create-thumbnail-placeholder" id="thumbnailPlaceholder">
+          <span class="create-thumbnail-label">썸네일 영역</span>
+        </div>
+        <img id="thumbnailPreview" class="create-thumbnail-preview" style="display:none"/>
+        <button class="create-thumbnail-remove" id="thumbnailRemoveBtn" style="display:none" aria-label="사진 제거">✕</button>
+        <input type="file" id="thumbnailInput" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"/>
+      </div>
+      <div class="create-divider"></div>
       <input
         type="text"
         id="courseName"
