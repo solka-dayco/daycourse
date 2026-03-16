@@ -223,10 +223,19 @@ async function renderLikeBookmark() {
 function renderCarousel() {
   const places = course.course_places || [];
   const photoPlaces = places.filter(p => p.photo_url);
+  const thumbnail = course.thumbnail_url || null;
   const track   = document.getElementById('carouselTrack');
   const counter = document.getElementById('carouselCounter');
 
-  if (photoPlaces.length === 0) {
+  // 썸네일 + 장소 사진 슬라이드 목록 구성
+  // 썸네일은 맨 앞에 독립 슬라이드로 추가
+  const slides = [];
+  if (thumbnail) {
+    slides.push({ type: 'thumbnail', photo_url: thumbnail, name: course.name, comment: '' });
+  }
+  photoPlaces.forEach(p => slides.push({ type: 'place', ...p }));
+
+  if (slides.length === 0) {
     track.innerHTML = `
       <div class="carousel-slide" style="min-width:100%;display:flex;align-items:center;justify-content:center;">
         <div class="carousel-placeholder"><span>🗺️</span><span>사진 없음</span></div>
@@ -237,12 +246,11 @@ function renderCarousel() {
     return;
   }
 
-  track.innerHTML = photoPlaces.map((p, i) => `
+  track.innerHTML = slides.map((p, i) => `
     <div class="carousel-slide" data-idx="${i}">
       <img src="${escHtml(p.photo_url)}" alt="${escHtml(p.name)}" loading="${i === 0 ? 'eager' : 'lazy'}"/>
       <div class="carousel-overlay">
-        ${(() => {
-          // "삼동소바 광주시청점" → 마지막 공백 기준으로 가게명/위치 분리
+        ${p.type === 'thumbnail' ? '' : (() => {
           const parts = p.name.trim().split(' ');
           if (parts.length >= 2) {
             const loc  = escHtml(parts[parts.length - 1]);
@@ -251,13 +259,13 @@ function renderCarousel() {
           }
           return `<span class="carousel-place-name-main">${escHtml(p.name)}</span>`;
         })()}
-        ${p.comment ? `<div class="carousel-place-comment">${escHtml(p.comment)}</div>` : ''}
+        ${p.type !== 'thumbnail' && p.comment ? `<div class="carousel-place-comment">${escHtml(p.comment)}</div>` : ''}
       </div>
     </div>
   `).join('');
 
   // 전체화면 뷰어
-  const viewerPhotos = photoPlaces;
+  const viewerPhotos = slides;
   let viewerIdx = 0;
   track.querySelectorAll('.carousel-slide').forEach((slide, i) => {
     slide.addEventListener('click', () => openViewer(i, viewerPhotos));
@@ -265,7 +273,7 @@ function renderCarousel() {
 
   // 네비게이션
   let curIdx = 0;
-  const total = photoPlaces.length;
+  const total = slides.length;
 
   function updateCounter() {
     counter.textContent = `${curIdx + 1}/${total}`;
@@ -295,7 +303,7 @@ function renderCarousel() {
 
   // 타임라인 썸네일 클릭 → 캐러셀 이동 연동 (전역 함수)
   window.jumpCarousel = (placeName) => {
-    const idx = photoPlaces.findIndex(p => p.name === placeName);
+    const idx = slides.findIndex(p => p.type !== 'thumbnail' && p.name === placeName);
     if (idx >= 0) {
       goTo(idx);
       document.querySelector('.carousel-wrap')?.scrollIntoView({ behavior: 'smooth' });
@@ -363,10 +371,9 @@ function renderTimeline() {
       <div class="tl-right">
         <div class="tl-place-row">
           <div class="tl-place-info">
-            <div class="tl-name">${escHtml(p.name)}</div>
+            ${p.place_url ? `<a class="tl-name tl-name-link" href="${escHtml(p.place_url)}" target="_blank" rel="noopener">${escHtml(p.name)}</a>` : `<div class="tl-name">${escHtml(p.name)}</div>`}
             <div class="tl-sub">${escHtml(p.category || '')}${p.address ? ` · ${escHtml(p.address)}` : ''}</div>
-            ${p.comment ? `<div class="tl-comment">"${escHtml(p.comment)}"</div>` : ''}
-            ${p.stay_time ? `<div class="tl-stay"> ${formatMinutes(p.stay_time)} 소요</div>` : ''}
+            ${p.stay_time ? `<div class="tl-duration">⏱ ${formatMinutes(p.stay_time)}</div>` : ''}
           </div>
           ${p.photo_url
             ? `<div class="tl-photo" data-name="${escHtml(p.name)}">
@@ -375,6 +382,7 @@ function renderTimeline() {
             : `<div class="tl-photo-empty"></div>`
           }
         </div>
+        ${p.comment ? `<div class="tl-comment">${escHtml(p.comment)}</div>` : ''}
       </div>
     `;
 
@@ -395,8 +403,6 @@ function renderTimeline() {
   setHtml('timelineSummary', `
     <span>총 <strong>${places.length}개</strong> 장소</span>
     <span>총 소요 <strong>${formatMinutes(course.total_time)}</strong></span>
-    ${totalStay   ? `<span>체류 <strong>${formatMinutes(totalStay)}</strong></span>`   : ''}
-    ${totalTravel ? `<span>이동 <strong>${formatMinutes(totalTravel)}</strong></span>` : ''}
   `);
 }
 

@@ -88,7 +88,7 @@ export async function fetchCourses({
       .from('courses')
       .select(
         `id, name, description, region_main, region_sub, total_time,
-         like_count, reference_count,
+         like_count, reference_count, thumbnail_url,
          author_id, author_nickname, created_at,
          course_places(order_index, name, photo_url)`,
         { count: 'exact' }
@@ -178,7 +178,7 @@ export async function fetchCoursesByUser(userId, { page = 0, pageSize = 20, only
     .from('courses')
     .select(
       `id, name, description, region_main, region_sub, total_time,
-       like_count, reference_count,
+       like_count, reference_count, thumbnail_url,
        author_id, author_nickname, created_at,
        parent_course_id, course_places(order_index, name, photo_url)`,
       { count: 'exact' }

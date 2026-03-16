@@ -333,6 +333,7 @@
   position: relative;
   width: 100%;
   aspect-ratio: 4/3;
+  min-height: 180px; /* 모바일 aspect-ratio 미지원 대비 */
   border-radius: 12px;
   overflow: hidden;
   background: var(--bg);

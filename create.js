@@ -109,6 +109,58 @@ function updateRegionSub(main) {
   }
 }
 
+// ── 썸네일 업로드 ────────────────────────────────────────
+(function() {
+  const wrap        = document.getElementById('thumbnailWrap');
+  const input       = document.getElementById('thumbnailInput');
+  const preview     = document.getElementById('thumbnailPreview');
+  const placeholder = document.getElementById('thumbnailPlaceholder');
+  const removeBtn   = document.getElementById('thumbnailRemoveBtn');
+
+  if (!wrap || !input) return;
+
+  // 제거 버튼 — input 클릭 전파 차단 (모바일 포함)
+  removeBtn.addEventListener('mousedown', e => e.stopPropagation());
+  removeBtn.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+  removeBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    e.preventDefault();
+    thumbnailBlob = null;
+    thumbnailExistingUrl = '';
+    preview.style.display = 'none';
+    preview.src = '';
+    placeholder.style.display = '';
+    removeBtn.style.display = 'none';
+    wrap.classList.remove('has-image');
+    input.value = '';
+  });
+
+  // 파일 선택 → 크롭 → 미리보기
+  input.addEventListener('change', async () => {
+    const file = input.files[0];
+    if (!file) return;
+    try {
+      thumbnailBlob = await cropAndCompress(file);
+      setThumbnailPreview(URL.createObjectURL(thumbnailBlob));
+    } catch (e) {
+      if (e.message !== '취소됨') showToast('사진 처리 오류');
+    }
+    input.value = '';
+  });
+})();
+
+function setThumbnailPreview(src) {
+  const preview     = document.getElementById('thumbnailPreview');
+  const placeholder = document.getElementById('thumbnailPlaceholder');
+  const removeBtn   = document.getElementById('thumbnailRemoveBtn');
+  const wrap        = document.getElementById('thumbnailWrap');
+  preview.src = src;
+  preview.style.display = '';
+  placeholder.style.display = 'none';
+  removeBtn.style.display = '';
+  wrap.classList.add('has-image');
+}
+
 // ── 카카오맵 초기화 ───────────────────────────────────────
 kakao.maps.load(async () => {
   let initLat = 37.5665, initLng = 126.9780;
@@ -585,10 +637,11 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 
     const courseData = {
       name,
-      description: desc || null,
-      region_main: regionMain,
-      region_sub:  regionSub || '',
-      total_time:  totalTime,
+      description:   desc || null,
+      region_main:   regionMain,
+      region_sub:    regionSub || '',
+      total_time:    totalTime,
+      thumbnail_url: finalThumbnailUrl || null,
       author_id:       currentUser.id,
       author_nickname: currentUser.nickname,
     };
