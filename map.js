@@ -181,16 +181,41 @@ export function searchPlaces(keyword, { lat, lng, radius = 5000 } = {}) {
  * @param {number} radius - 미터
  * @returns {Promise<Array>}
  */
-export function searchNearby(lat, lng, radius = 30) {
-  return new Promise((resolve, reject) => {
-    const ps = new kakao.maps.services.Places();
-    ps.categorySearch('CE7', (results, status) => {
-      if (status === kakao.maps.services.Status.OK) resolve(results);
-      else resolve([]);
-    }, {
-      location: new kakao.maps.LatLng(lat, lng),
-      radius,
-      sort: kakao.maps.services.SortBy.DISTANCE,
+export function searchNearby(lat, lng, radius = 50) {
+  // 카카오 categorySearch는 한 번에 한 카테고리만 지원
+  // 주요 카테고리 병렬 조회 후 거리순 합산
+  const CATEGORIES = ['FD6','CE7','AT4','AD5','SW8','BK9','PO3','CT1','AG2'];
+  const ps  = new kakao.maps.services.Places();
+  const loc = new kakao.maps.LatLng(lat, lng);
+
+  const searches = CATEGORIES.map(cat =>
+    new Promise(resolve => {
+      ps.categorySearch(cat, (results, status) => {
+        resolve(status === kakao.maps.services.Status.OK ? results : []);
+      }, { location: loc, radius, sort: kakao.maps.services.SortBy.DISTANCE });
+    })
+  );
+
+  return Promise.all(searches).then(arrays => {
+    const seen = new Map();
+    arrays.flat().forEach(r => { if (!seen.has(r.id)) seen.set(r.id, r); });
+    return [...seen.values()].sort((a, b) => parseInt(a.distance) - parseInt(b.distance));
+  });
+}
+
+/** 좌표 → 도로명/지번 주소 변환 */
+export function coordsToAddress(lat, lng) {
+  return new Promise((resolve) => {
+    const geocoder = new kakao.maps.services.Geocoder();
+    geocoder.coord2Address(lng, lat, (result, status) => {
+      if (status === kakao.maps.services.Status.OK) {
+        const addr = result[0].road_address?.address_name
+                  || result[0].address?.address_name
+                  || '';
+        resolve(addr);
+      } else {
+        resolve('');
+      }
     });
   });
 }

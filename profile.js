@@ -11,7 +11,7 @@ logEvent('page_view', 'page', null, { page: 'profile' });
 
 const PAGE_SIZE = 18;
 let myUserId = null;
-let activeTab = 'liked';
+let activeTab = 'myCourse';
 
 const LEVEL_NAMES = ['탐험가', '코스 메이커', '로컬 가이드', '트렌드 세터', '마스터 플래너'];
 
@@ -26,16 +26,18 @@ const sectionState = {
   if (!user) { location.href = 'login.html'; return; }
   myUserId = user.id;
 
-  const stats = await fetchUserStats(user.id);
+  // 통계 (실패해도 계속 진행)
+  let stats = { course_count: 0, total_likes: 0, total_references: 0 };
+  try { stats = await fetchUserStats(user.id); } catch (_) {}
 
   // 내 정보 렌더
   document.getElementById('profileAvatar').textContent   = user.nickname?.[0]?.toUpperCase() ?? '?';
   document.getElementById('profileNickname').textContent = user.nickname;
   const lvIdx = Math.min((user.level || 1) - 1, LEVEL_NAMES.length - 1);
   document.getElementById('profileLevel').textContent    = `Lv${user.level || 1} ${LEVEL_NAMES[lvIdx]}`;
-  document.getElementById('statCourses').textContent     = stats.course_count;
-  document.getElementById('statLikes').textContent       = stats.total_likes;
-  document.getElementById('statRefs').textContent        = stats.total_references;
+  document.getElementById('statCourses').textContent     = stats.course_count ?? 0;
+  document.getElementById('statLikes').textContent       = stats.total_likes ?? 0;
+  document.getElementById('statRefs').textContent        = stats.total_references ?? 0;
   document.getElementById('viewPublicPage').href         = `user.html?id=${user.id}`;
 
   document.getElementById('spinner').style.display = 'none';
@@ -50,8 +52,8 @@ const sectionState = {
     });
   });
 
-  // 첫 탭 로드
-  await loadSection('liked');
+  // 첫 탭 로드 — profileContent 표시 후 실행
+  await loadSection('myCourse');
   setupInfiniteScroll();
 })();
 

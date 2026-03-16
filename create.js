@@ -1,6 +1,6 @@
 // create.js — 코스 만들기 / 수정 / 참조 (v3)
 import { getCurrentUser, createCourse, updateCourse, createReferenceCourse, fetchCourseById, uploadPhoto, logEvent } from './db.js';
-import { createMap, clearSearchMarkers, clearCourseMarkers, addSearchMarker, addCourseMarker, drawCoursePolyline, fitMapToBounds, searchPlaces, getCurrentPosition } from './map.js';
+import { createMap, clearSearchMarkers, clearCourseMarkers, addSearchMarker, addCourseMarker, drawCoursePolyline, fitMapToBounds, searchPlaces, getCurrentPosition, coordsToAddress } from './map.js';
 import { cropAndCompress } from './photo.js';
 
 // ── 인증 체크 ─────────────────────────────────────────────
@@ -45,14 +45,19 @@ const MAX_PLACES = 10;
 const MIN_PLACES = 2;
 
 // ── 페이지 제목 ───────────────────────────────────────────
-if (mode === 'edit') document.getElementById('pageTitle').textContent = '코스 수정';
-if (mode === 'copy') document.getElementById('pageTitle').textContent = '참조 코스 만들기';
+if (mode === 'edit') document.title = '코스 수정 — 데이코스';
+if (mode === 'copy') document.title = '참조 코스 만들기 — 데이코스';
 
 logEvent('course_create_start', 'page', null, { mode: mode || 'new' });
 
 // ── 원본 코스 로드 (수정/참조 모드) ──────────────────────
 if (sourceId && (mode === 'edit' || mode === 'copy')) {
-  sourceCourse = await fetchCourseById(sourceId);
+  try {
+    sourceCourse = await fetchCourseById(sourceId);
+  } catch (e) {
+    console.error('[create] 코스 로드 실패:', e);
+    sourceCourse = null;
+  }
   if (sourceCourse) {
     if (mode === 'edit') {
       // 폼에 기존 데이터 채우기
@@ -60,7 +65,10 @@ if (sourceId && (mode === 'edit' || mode === 'copy')) {
       document.getElementById('courseDesc').value    = sourceCourse.description || '';
       document.getElementById('regionMain').value    = sourceCourse.region_main || '';
       updateRegionSub(sourceCourse.region_main);
-      document.getElementById('regionSub').value     = sourceCourse.region_sub || '';
+      // regionSub는 updateRegionSub 후 다음 tick에 설정
+      setTimeout(() => {
+        document.getElementById('regionSub').value = sourceCourse.region_sub || '';
+      }, 0);
     }
     // 장소 목록 복사
     places = (sourceCourse.course_places || []).map(p => ({
@@ -73,8 +81,8 @@ if (sourceId && (mode === 'edit' || mode === 'copy')) {
       photo_url: mode === 'edit' ? (p.photo_url || '') : '',  // 참조는 사진 미복사
       _photoBlob: null,
     }));
+    // 지도 초기화 이전이라 renderPlaceList만 실행 (updateMap은 kakao.maps.load에서 처리)
     renderPlaceList();
-    updateMap();
     updateTotalTime();
   }
 }
@@ -106,19 +114,28 @@ kakao.maps.load(async () => {
 
   mapInstance = await createMap('createMap', { lat: initLat, lng: initLng, level: 5 });
 
-  // 지도 클릭 → 반경 30m 검색
+  // 지도 클릭 → 반경 50m 검색 + 직접 입력 항상 표시
   kakao.maps.event.addListener(mapInstance, 'click', async e => {
     const lat = e.latLng.getLat();
     const lng = e.latLng.getLng();
     try {
       const { searchNearby } = await import('./map.js');
-      const results = await searchNearby(lat, lng, 30);
-      if (results.length) showSearchResults(results);
+      const [results, addr] = await Promise.all([
+        searchNearby(lat, lng, 50),
+        coordsToAddress(lat, lng),
+      ]);
+      showSearchResults(results, lat, lng, addr);
     } catch (_) {}
   });
 
-  // 수정 모드 지도 업데이트
-  if (places.length) updateMap();
+  // 수정/참조 모드 — 지도 초기화 후 장소 렌더링
+  if (places.length) {
+    renderPlaceList();
+    updateMap();
+    updateTotalTime();
+    // 첫 번째 장소로 지도 이동
+    mapInstance.setCenter(new kakao.maps.LatLng(places[0].lat, places[0].lng));
+  }
 });
 
 // 내 위치 버튼
@@ -151,42 +168,113 @@ async function doSearch() {
   } catch (e) { showToast('검색 오류'); }
 }
 
-function showSearchResults(results) {
+// ── 직접 입력 UI (장소 정보 없을 때) ────────────────────────
+function showManualInput(lat, lng, address) {
   const ul = document.getElementById('searchResults');
-  if (!results.length) {
-    ul.innerHTML = `<li class="search-result-item" style="color:var(--text-light)">검색 결과가 없습니다</li>`;
-    ul.style.display = '';
-    return;
-  }
-
-  ul.innerHTML = results.slice(0, 8).map((r, i) => `
-    <li class="search-result-item" data-idx="${i}">
-      <span class="result-name">${escHtml(r.place_name)}</span>
-      <span class="result-address">${escHtml(r.road_address_name || r.address_name || '')}</span>
+  ul.innerHTML = `
+    <li class="search-result-item manual-input-item">
+      <div style="font-size:12px;color:var(--sub);margin-bottom:8px">
+        📍 ${escHtml(address) || '선택한 위치'} — 장소 정보 없음
+      </div>
+      <input
+        type="text" id="manualPlaceName"
+        class="create-search-input"
+        placeholder="장소 이름을 직접 입력하세요"
+        style="margin-bottom:6px;width:100%"
+        autocomplete="off"
+      />
+      <input
+        type="text" id="manualPlaceCategory"
+        class="create-search-input"
+        placeholder="카테고리 (예: 음식점, 카페)"
+        style="margin-bottom:6px;width:100%"
+        autocomplete="off"
+      />
+      <button id="manualAddBtn" class="create-search-btn" style="width:100%">추가</button>
     </li>
-  `).join('');
+  `;
   ul.style.display = '';
 
-  // 마커 표시
-  clearSearchMarkers();
-  results.slice(0, 8).forEach(r => {
-    addSearchMarker(mapInstance, { lat: parseFloat(r.y), lng: parseFloat(r.x), name: r.place_name }, () => {
-      addPlace(r);
+  document.getElementById('manualAddBtn').addEventListener('click', () => {
+    const name = document.getElementById('manualPlaceName').value.trim();
+    if (!name) { showToast('장소 이름을 입력해주세요'); return; }
+    const category = document.getElementById('manualPlaceCategory').value.trim();
+    addPlace({
+      place_name: name,
+      category_name: category,
+      road_address_name: address,
+      address_name: address,
+      x: String(lng),
+      y: String(lat),
     });
+    ul.style.display = 'none';
+    ul.innerHTML = '';
   });
+}
 
-  // 첫 결과로 지도 이동
-  if (results[0]) {
-    mapInstance.setCenter(new kakao.maps.LatLng(parseFloat(results[0].y), parseFloat(results[0].x)));
+function showSearchResults(results, lat, lng, addr) {
+  const ul = document.getElementById('searchResults');
+  ul.innerHTML = '';
+
+  // 검색 결과 목록
+  if (results.length) {
+    ul.innerHTML = results.slice(0, 8).map((r, i) => `
+      <li class="search-result-item" data-idx="${i}">
+        <span class="result-name">${escHtml(r.place_name)}</span>
+        <span class="result-address">${escHtml(r.road_address_name || r.address_name || '')}</span>
+      </li>
+    `).join('');
+
+    clearSearchMarkers();
+    results.slice(0, 8).forEach(r => {
+      addSearchMarker(mapInstance, { lat: parseFloat(r.y), lng: parseFloat(r.x), name: r.place_name }, () => {
+        addPlace(r);
+        ul.style.display = 'none';
+        ul.innerHTML = '';
+      });
+    });
+
+    ul.querySelectorAll('.search-result-item[data-idx]').forEach(li => {
+      li.addEventListener('click', () => {
+        addPlace(results[parseInt(li.dataset.idx)]);
+        ul.style.display = 'none';
+        ul.innerHTML = '';
+      });
+    });
   }
 
-  // 결과 클릭
-  ul.querySelectorAll('.search-result-item[data-idx]').forEach(li => {
-    li.addEventListener('click', () => {
-      const r = results[parseInt(li.dataset.idx)];
-      addPlace(r);
+  // 직접 입력 항목 — 항상 맨 아래 표시
+  const manualLi = document.createElement('li');
+  manualLi.className = 'search-result-item manual-input-item';
+  manualLi.innerHTML = `
+    <div style="font-size:12px;color:var(--sub);margin-bottom:6px">
+      ${addr ? `📍 ${escHtml(addr)}` : '선택한 위치'} — 직접 입력
+    </div>
+    <input type="text" id="manualPlaceName" class="create-search-input"
+      placeholder="장소 이름" style="margin-bottom:6px;width:100%" autocomplete="off"/>
+    <input type="text" id="manualPlaceCategory" class="create-search-input"
+      placeholder="카테고리 (예: 음식점)" style="margin-bottom:6px;width:100%" autocomplete="off"/>
+    <button id="manualAddBtn" class="create-search-btn" style="width:100%">직접 추가</button>
+  `;
+  ul.appendChild(manualLi);
+
+  document.getElementById('manualAddBtn').addEventListener('click', () => {
+    const name = document.getElementById('manualPlaceName').value.trim();
+    if (!name) { showToast('장소 이름을 입력해주세요'); return; }
+    const category = document.getElementById('manualPlaceCategory').value.trim();
+    addPlace({
+      place_name: name,
+      category_name: category,
+      road_address_name: addr,
+      address_name: addr,
+      x: String(lng),
+      y: String(lat),
     });
+    ul.style.display = 'none';
+    ul.innerHTML = '';
   });
+
+  ul.style.display = '';
 }
 
 // ── 장소 추가 ─────────────────────────────────────────────
