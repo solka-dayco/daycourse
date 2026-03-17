@@ -645,7 +645,8 @@ export async function logEvent(eventName, targetType = 'page', targetId = null, 
       event_name:  eventName,
       target_type: targetType,
       target_id:   targetId,
-      metadata:    { ...metadata, session_id: sessionId },
+      session_id:  sessionId,
+      metadata,
     });
   } catch (_) {}
 }

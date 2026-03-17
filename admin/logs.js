@@ -20,7 +20,7 @@ async function fetchLogs() {
 
   let q = supabase
     .from('event_logs')
-    .select('id, user_id, event_name, target_type, target_id, metadata, created_at')
+    .select('id, user_id, event_name, target_type, target_id, session_id, metadata, created_at')
     .order('created_at', { ascending: false })
     .range(offset, offset + PAGE - 1);
 
@@ -37,15 +37,11 @@ async function fetchLogs() {
   wrap.innerHTML = `
     <table>
       <thead><tr>
-        <th>event_name</th><th>target_type</th><th>target_id</th><th>user_id</th><th>session_id</th><th>생성일</th>
+        <th>event_name</th><th>event_page</th><th>target_type</th><th>user_id</th><th>session_id</th><th>생성일</th>
       </tr></thead>
       <tbody>
         ${data.map(l => {
-          let sid = '-';
-          try {
-            const meta = typeof l.metadata === 'string' ? JSON.parse(l.metadata) : (l.metadata || {});
-            sid = meta.session_id || '-';
-          } catch(_) {}
+          const sid = l.session_id || '-';
           return `
           <tr>
             <td>${escHtml(l.event_name)}</td>
