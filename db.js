@@ -1,4 +1,4 @@
-// db.js — 모든 DB/Storage 접근 로직 (v3)
+// db.js — 모든 DB/Storage 접근 로직 (v4 — session_id 로깅 포함)
 // Supabase 전환 시 이 파일만 수정하면 됩니다.
 
 import { supabase } from './supabase.js';
