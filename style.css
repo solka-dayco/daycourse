@@ -272,7 +272,7 @@ img { display: block; max-width: 100%; }
 .page-wrap {
   padding-top: var(--header-h);
   min-height: 100vh;
-  max-width: 60vw;
+  max-width: 800px;
   margin: 0 auto;
   background: var(--bg);
 }
