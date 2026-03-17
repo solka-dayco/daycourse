@@ -643,10 +643,10 @@ export async function logEvent(eventName, targetType = 'page', targetId = null, 
     await supabase.from('event_logs').insert({
       user_id:     session?.user?.id ?? null,
       event_name:  eventName,
-      target_type: targetType,
-      target_id:   targetId,
+      target_type: targetType || null,
+      target_id:   targetId   || null,
       session_id:  sessionId,
-      metadata,
+      event_page:  metadata   || {},
     });
   } catch (_) {}
 }
