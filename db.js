@@ -648,7 +648,7 @@ export async function logEvent(eventName, targetType = 'page', targetId = null, 
       session_id:  sessionId,
       event_page:  metadata   || {},
     });
-  } catch (_) {}
+  } catch (err) { console.error('[logEvent error]', err); }
 }
 
 // ─── 참조 코스 ───────────────────────────────────────────
