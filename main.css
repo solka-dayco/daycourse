@@ -61,7 +61,8 @@
 }
 
 .filter-toggle-btn {
-  display: flex; align-items: center; gap: 5px;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  line-height: 1;
   padding: 7px 14px; border: 1px solid var(--border-dark);
   border-radius: 100px; font-size: 13px; color: var(--sub);
   background: var(--bg-card); transition: all .15s; flex-shrink: 0;
@@ -120,3 +121,7 @@
   background: none; border: none; cursor: pointer; transition: color .15s;
 }
 .filter-reset-btn:hover { color: var(--accent2); }
+.filter-toggle-btn svg {
+  display: block;
+  margin: auto;
+}

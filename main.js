@@ -5,9 +5,12 @@ import {
   logEvent, getCurrentUser
 } from './db.js';
 import { initSidebar } from './sidebar.js';
+import { initIcons, initSidebarIcons } from './icons.js';
 import { supabase } from './supabase.js';
 
 initSidebar();
+initIcons();
+initSidebarIcons();
 logEvent('page_view', 'page', null, { page: 'feed' });
 
 // ── 상태 ──────────────────────────────────────────────────
@@ -374,7 +377,7 @@ function buildCard(course, liked) {
             <span class="like-count">${course.like_count || 0}</span>
           </button>
           <button class="feed-comment-btn" data-id="${course.id}" aria-label="댓글">
-            💬 <span>${course.comment_count || 0}</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> <span>${course.comment_count || 0}</span>
           </button>
         </div>
       </div>

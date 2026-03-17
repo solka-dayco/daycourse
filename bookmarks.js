@@ -1,8 +1,11 @@
 // bookmarks.js — 북마크 페이지 (v3)
 import { getCurrentUser, fetchBookmarkedCourses, toggleBookmark, isCourseLiked, toggleCourseLike, logEvent } from './db.js';
 import { initSidebar } from './sidebar.js';
+import { initIcons, initSidebarIcons } from './icons.js';
 
 initSidebar();
+initIcons();
+initSidebarIcons();
 logEvent('page_view', 'page', null, { page: 'bookmarks' });
 
 const PAGE_SIZE = 20;

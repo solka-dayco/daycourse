@@ -9,6 +9,7 @@ import {
   onCourseDeleted, logEvent, submitReport,
 } from './db.js';
 import { initSidebar } from './sidebar.js';
+import { initIcons, initSidebarIcons } from './icons.js';
 import { supabase } from './supabase.js';
 
 // ── 안전한 DOM 헬퍼 ──────────────────────────────────────
@@ -33,6 +34,7 @@ function on(id, ev, fn) {
 }
 
 initSidebar();
+initSidebarIcons();
 
 // ── 파라미터 ──────────────────────────────────────────────
 const params   = new URLSearchParams(location.search);
@@ -79,6 +81,9 @@ const commentSubmitBtn = document.getElementById('commentSubmitBtn');
   spinner.style.display = 'none';
   courseContent.style.display = '';
 
+  // 아이콘 초기화 — DOM이 보인 후 실행
+  initIcons();
+
   // 지도는 courseContent가 보인 후 초기화 — display:none 상태에서 초기화하면 크기 0으로 깨짐
   renderMap();
 
@@ -97,7 +102,7 @@ function renderCourseHeader() {
   if (course.region_main) {
     setText('courseRegion', course.region_main + (course.region_sub ? ` · ${course.region_sub}` : ''));
   }
-  setText('courseTime', formatMinutes(course.total_time) ? `⏱ ${formatMinutes(course.total_time)}` : '');
+  setText('courseTime', formatMinutes(course.total_time) || '');
   setText('courseName',  course.name);
   setText('courseDesc',  course.description || '');
   setText('courseDate',  relativeTime(course.created_at));
@@ -119,7 +124,7 @@ function renderCourseHeader() {
   }
 
   // 참조 수
-  setText('refCount', course.reference_count > 0 ? course.reference_count : '');
+  setText('refCount', course.reference_count ?? 0);
 
   // 댓글 수 뱃지
   setText('commentCountBadge', course.comment_count || 0);
@@ -373,7 +378,7 @@ function renderTimeline() {
           <div class="tl-place-info">
             ${p.place_url ? `<a class="tl-name tl-name-link" href="${escHtml(p.place_url)}" target="_blank" rel="noopener">${escHtml(p.name)}</a>` : `<div class="tl-name">${escHtml(p.name)}</div>`}
             <div class="tl-sub">${escHtml(p.category || '')}${p.address ? ` · ${escHtml(p.address)}` : ''}</div>
-            ${p.stay_time ? `<div class="tl-duration">⏱ ${formatMinutes(p.stay_time)}</div>` : ''}
+            ${p.stay_time ? `<div class="tl-duration">${formatMinutes(p.stay_time)}</div>` : ''}
           </div>
           ${p.photo_url
             ? `<div class="tl-photo" data-name="${escHtml(p.name)}">
@@ -533,6 +538,8 @@ async function renderComments() {
     const total = comments.reduce((s, c) => s + 1 + (c.replies?.length || 0), 0);
     setText('commentTotal', total > 0 ? `${total}개` : '');
     setText('commentCountBadge', course.comment_count || 0);
+    const ccLabel2 = document.querySelector('.comment-count-label');
+    if (ccLabel2) ccLabel2.textContent = course.comment_count || 0;
 
     comments.forEach(c => list.appendChild(buildCommentEl(c)));
   } catch (e) { console.error(e); list.innerHTML = ''; }
@@ -545,6 +552,12 @@ function buildCommentEl(c) {
   const item = document.createElement('div');
   item.className = 'comment-item';
   item.dataset.id = c.id;
+
+  // 삭제된 댓글
+  if (c.is_deleted) {
+    item.innerHTML = `<div class="comment-body" style="color:#bbb;font-style:italic">삭제된 댓글입니다.</div>`;
+    return item;
+  }
 
   const likeCount = (c.comment_likes || []).length;
   const isLiked   = currentUser ? (c.comment_likes || []).some(l => l.user_id === currentUser.id) : false;
@@ -720,8 +733,10 @@ async function submitComment() {
     list.prepend(buildCommentEl(comment));
 
     // 뱃지 카운트 즉시 반영
+    const ccLabel3 = document.querySelector('.comment-count-label');
     const badge = document.getElementById('commentCountBadge');
     badge.textContent = parseInt(badge.textContent || '0') + 1;
+    if (ccLabel3) ccLabel3.textContent = badge.textContent;
 
     logEvent('comment_create', 'course', courseId);
   } catch (e) { showToast('댓글 등록 실패'); }

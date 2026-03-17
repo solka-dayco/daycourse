@@ -1,8 +1,11 @@
 // user.js — 유저 페이지 (v3)
 import { fetchUserById, fetchUserStats, fetchCoursesByUser, logEvent, getCurrentUser } from './db.js';
 import { initSidebar } from './sidebar.js';
+import { initIcons, initSidebarIcons } from './icons.js';
 
 initSidebar();
+initIcons();
+initSidebarIcons();
 
 const params = new URLSearchParams(location.search);
 const userId = params.get('id');
@@ -32,7 +35,6 @@ let userId_ = null;
     if (!user) { showError(); return; }
 
     document.title = `${user.nickname} — 데이코스`;
-    document.getElementById('headerTitle').textContent = user.nickname;
     document.getElementById('userAvatar').textContent = user.nickname[0]?.toUpperCase() ?? '?';
     document.getElementById('userNickname').textContent = user.nickname;
 

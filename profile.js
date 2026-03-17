@@ -5,8 +5,11 @@ import {
   logEvent,
 } from './db.js';
 import { initSidebar } from './sidebar.js';
+import { initIcons, initSidebarIcons } from './icons.js';
 
 initSidebar();
+initIcons();
+initSidebarIcons();
 logEvent('page_view', 'page', null, { page: 'profile' });
 
 const PAGE_SIZE = 18;

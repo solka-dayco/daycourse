@@ -1,5 +1,6 @@
 // admin.js — 어드민 메인 컨트롤러
 import { supabase } from '../supabase.js';
+import { initAdminIcons } from '../icons.js';
 import { loadDashboard }  from './dashboard.js';
 import { loadReports }    from './reports.js';
 import { loadCourses }    from './courses.js';
@@ -106,6 +107,7 @@ export function switchPanel(name) {
 
   // 첫 패널 로드
   switchPanel('dashboard');
+  initAdminIcons();
 })();
 
 // window에 노출 (다른 모듈에서 사용)

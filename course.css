@@ -60,18 +60,18 @@
 }
 /* 장소명: 가게명(큰) + 위치(작게) — JS에서 분리 렌더링 필요 */
 .carousel-place-name-main {
-  font-size: clamp(44px, 4.5vw, 18px);
+  font-size: clamp(24px, 6.5vw, 44px);
   font-weight: 800; color: white;
   text-shadow: 0 2px 8px rgba(0,0,0,.5);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   display: block;
 }
 .carousel-place-name-sub {
-  font-size: clamp(10px, 4.5vw, 24px);
-  font-weight: 400; color: rgba(255, 255, 255, 1);
+  font-size: clamp(16px, 2.5vw, 20px);
+  font-weight: 400; color: rgba(255,255,255,1);
   text-shadow: 0 1px 4px rgba(0,0,0,.4);
   display: inline;
-  margin-left: 4px;
+  margin-left: 6px;
 }
 .carousel-place-comment {
   font-size: clamp(12px, 3.4vw, 22px);
@@ -153,8 +153,17 @@
 
 .ref-count { font-size: 11px; color: #aaa; }
 
-.course-report-btn { color: #ccc; }
-.course-report-btn:hover { color: var(--accent2); border-color: var(--accent2); }
+.course-report-btn {
+  background: none;
+  border: none;
+  color: #ccc;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: auto;
+  padding: 6px 4px;
+  transition: color .15s;
+}
+.course-report-btn:hover { color: var(--accent2); }
 
 .course-owner-actions {
   width: 100%; display: flex; gap: 8px;
@@ -177,7 +186,13 @@
 /* ── 타임라인 ──────────────────────────────────────────── */
 .timeline { display: flex; flex-direction: column; }
 
-.tl-item { display: flex; gap: 12px; position: relative; }
+.tl-item {
+  display: flex; gap: 12px; position: relative;
+  padding-bottom: 16px;
+  border-bottom: none;
+  margin-bottom: 4px;
+}
+.tl-item:last-child { border-bottom: none; }
 .tl-item:not(:last-child) .tl-line {
   position: absolute; left: 11px; top: 24px; bottom: -28px;
   width: 2px; background: #e0e0e0; z-index: 0;
@@ -188,9 +203,28 @@
 .tl-place-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .tl-place-info { flex: 1; min-width: 0; }
 .tl-name { font-size: 14px; font-weight: 700; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl-name-link {
+  font-size: 14px; font-weight: 700; color: var(--primary);
+  text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: block;
+}
+.tl-name-link:hover { text-decoration: underline; }
 .tl-sub { font-size: 11px; color: var(--sub); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tl-comment { font-size: 12px; color: #888; font-style: italic; margin-top: 4px; }
+.tl-comment {
+  font-size: 13px; color: #666; font-style: italic;
+  margin: 10px 0 2px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  line-height: 1.6;
+}
 .tl-stay { font-size: 11px; color: var(--sub); white-space: nowrap; margin-top: 2px; }
+.tl-duration {
+  font-size: 10px; color: var(--sub);
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: none;
+  display: inline-block;
+}
 .tl-photo { width: 58px; height: 58px; border-radius: 10px; overflow: hidden; flex-shrink: 0; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.1); transition: transform .2s; }
 .tl-photo:hover { transform: scale(1.05); }
 .tl-photo img { width: 100%; height: 100%; object-fit: cover; }
@@ -271,3 +305,17 @@
 
 .heart { color: #ccc; font-size: 14px; transition: color .2s; }
 .course-like-btn.liked .heart, .feed-like-btn.liked .heart { color: #333; }
+/* ── 댓글 헤더 정렬 ──────────────────────────────────── */
+.comment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.comment-sort-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

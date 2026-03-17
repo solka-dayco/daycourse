@@ -1,8 +1,11 @@
 // notifications.js — 알림 페이지 (v3)
 import { getCurrentUser, fetchNotifications, markNotificationsRead, logEvent } from './db.js';
 import { initSidebar } from './sidebar.js';
+import { initIcons, initSidebarIcons } from './icons.js';
 
 initSidebar();
+initIcons();
+initSidebarIcons();
 logEvent('page_view', 'page', null, { page: 'notifications' });
 
 const PAGE_SIZE = 30;
