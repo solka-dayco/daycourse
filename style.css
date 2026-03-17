@@ -21,7 +21,7 @@
   --liked-color:   #e8648a;
   --header-h:      52px;
   --sidebar-w:     280px;
-  --radius:        0px;
+  --radius:        14px;
   --radius-sm:     10px;
   --shadow-sm:     0 1px 3px rgba(0,0,0,.06);
   --shadow:        0 2px 12px rgba(0,0,0,.08);
@@ -272,7 +272,8 @@ img { display: block; max-width: 100%; }
 .page-wrap {
   padding-top: var(--header-h);
   min-height: 100vh;
-  max-width: 800px;
+  width: 100%;
+  max-width: 640px;
   margin: 0 auto;
   background: var(--bg);
 }
