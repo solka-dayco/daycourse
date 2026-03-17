@@ -36,8 +36,9 @@ const sectionState = {
   // 내 정보 렌더
   document.getElementById('profileAvatar').textContent   = user.nickname?.[0]?.toUpperCase() ?? '?';
   document.getElementById('profileNickname').textContent = user.nickname;
-  const lvIdx = Math.min((user.level || 1) - 1, LEVEL_NAMES.length - 1);
-  document.getElementById('profileLevel').textContent    = `Lv${user.level || 1} ${LEVEL_NAMES[lvIdx]}`;
+  // const lvIdx = Math.min((user.level || 1) - 1, LEVEL_NAMES.length - 1);
+  // document.getElementById('profileLevel').textContent = `Lv${user.level || 1} ${LEVEL_NAMES[lvIdx]}`;
+  document.getElementById('profileLevel').style.display = 'none';
   document.getElementById('statCourses').textContent     = stats.course_count ?? 0;
   document.getElementById('statLikes').textContent       = stats.total_likes ?? 0;
   document.getElementById('statRefs').textContent        = stats.total_references ?? 0;

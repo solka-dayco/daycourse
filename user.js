@@ -35,12 +35,13 @@ let userId_ = null;
     if (!user) { showError(); return; }
 
     document.title = `${user.nickname} — 데이코스`;
+    document.getElementById('headerTitle').textContent = user.nickname;
     document.getElementById('userAvatar').textContent = user.nickname[0]?.toUpperCase() ?? '?';
     document.getElementById('userNickname').textContent = user.nickname;
 
-    const levelIdx = Math.min((user.level || 1) - 1, LEVEL_NAMES.length - 1);
-    document.getElementById('userLevel').textContent =
-      `Lv${user.level || 1} ${LEVEL_NAMES[levelIdx]}`;
+    // const levelIdx = Math.min((user.level || 1) - 1, LEVEL_NAMES.length - 1);
+    // document.getElementById('userLevel').textContent = `Lv${user.level || 1} ${LEVEL_NAMES[levelIdx]}`;
+    document.getElementById('userLevel').style.display = 'none';
 
     document.getElementById('statCourses').textContent = stats.course_count;
     document.getElementById('statLikes').textContent   = stats.total_likes;
