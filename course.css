@@ -139,16 +139,18 @@
 }
 
 .course-action-btn {
-  display: flex; align-items: center; gap: 5px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
   padding: 7px 12px; border: 1.5px solid var(--border); border-radius: 100px;
   font-size: 13px; font-weight: 600; color: #888; background: white;
   transition: border-color .18s, color .18s, background .18s; white-space: nowrap;
+  min-height: 36px;
+  box-sizing: border-box;
 }
 .course-action-btn:hover { border-color: #555; color: #555; }
 
 .course-like-btn.liked { color: var(--liked-color); border-color: var(--border); background: white; }
 
-.course-bookmark-btn { font-size: 15px; padding: 7px 10px; }
+.course-bookmark-btn { font-size: 15px; padding: 7px 12px; }
 .course-bookmark-btn.bookmarked { color: var(--primary); border-color: var(--primary); background: var(--primary-light); }
 
 .ref-count { font-size: 11px; color: #aaa; }
