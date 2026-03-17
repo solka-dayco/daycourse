@@ -1,10 +1,12 @@
 // nickname.js — 프로필 설정 (회원가입 직후)
 import { supabase } from './supabase.js';
-import { upsertUserProfile } from './db.js';
+import { upsertUserProfile, logEvent } from './db.js';
 
 // ── 로그인 체크 ──────────────────────────────────────────
 const { data: sessionData } = await supabase.auth.getSession();
 if (!sessionData.session) { location.href = 'login.html'; }
+
+logEvent('page_view', 'page', null, { page: 'nickname_setup' });
 const userId = sessionData.session.user.id;
 
 // 이미 닉네임 설정된 경우
@@ -81,6 +83,7 @@ async function save(skipNickname = false) {
     if (region)         payload.region = region;
 
     await upsertUserProfile(payload);
+    await logEvent('profile_setup_complete', 'user', null, { nickname });
     location.href = 'main.html';
   } catch (e) {
     showMsg('저장 실패: ' + e.message);

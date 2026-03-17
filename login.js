@@ -1,6 +1,6 @@
 // login.js — 로그인 / 회원가입 (v3)
 import { supabase } from './supabase.js';
-import { upsertUserProfile } from './db.js';
+import { upsertUserProfile, logEvent } from './db.js';
 
 // ── 이미 로그인된 경우 리다이렉트 ────────────────────────
 (async () => {
@@ -24,17 +24,20 @@ document.querySelectorAll('.auth-tab').forEach(tab => {
 });
 
 // hash로 탭 선택
+logEvent('page_view', 'page', null, { page: 'login' });
+
 if (location.hash === '#signup') {
   document.querySelectorAll('.auth-tab')[1]?.click();
 }
 
 // ── 비밀번호 표시 토글 ────────────────────────────────────
 document.querySelectorAll('.toggle-password').forEach(btn => {
+  btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
   btn.addEventListener('click', () => {
     const input = document.getElementById(btn.dataset.target);
     const isText = input.type === 'text';
     input.type = isText ? 'password' : 'text';
-    btn.textContent = isText ? '👁' : '🙈';
+    btn.innerHTML = isText ? `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>` : `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
   });
 });
 
