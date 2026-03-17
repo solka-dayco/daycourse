@@ -157,10 +157,15 @@ export function searchPlaces(keyword, { lat, lng, radius = 5000 } = {}) {
   return new Promise((resolve, reject) => {
     const ps = new kakao.maps.services.Places();
     const options = {};
-    if (lat && lng) {
+    if (lat && lng && radius > 0) {
+      // 현위치 기준 거리순 (반경 제한 있을 때만)
       options.location = new kakao.maps.LatLng(lat, lng);
       options.radius = radius;
       options.sort   = kakao.maps.services.SortBy.DISTANCE;
+    } else if (lat && lng) {
+      // 현위치 기준 정렬만 (반경 제한 없음 — 전국 검색)
+      options.location = new kakao.maps.LatLng(lat, lng);
+      options.sort     = kakao.maps.services.SortBy.DISTANCE;
     }
     ps.keywordSearch(keyword, (results, status) => {
       if (status === kakao.maps.services.Status.OK) {

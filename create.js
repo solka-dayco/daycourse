@@ -182,7 +182,7 @@ kakao.maps.load(async () => {
         searchNearby(lat, lng, 50),
         coordsToAddress(lat, lng),
       ]);
-      showSearchResults(results, lat, lng, addr);
+      showMapClickResults(results, lat, lng, addr);
     } catch (_) {}
   });
 
@@ -191,9 +191,12 @@ kakao.maps.load(async () => {
     renderPlaceList();
     updateMap();
     updateTotalTime();
-    // 첫 번째 장소로 지도 이동
     mapInstance.setCenter(new kakao.maps.LatLng(places[0].lat, places[0].lng));
   }
+
+  // 검색 이벤트 — kakao.maps.load 완료 후 등록
+  searchBtn.addEventListener('click', doSearch);
+  searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
 });
 
 // 내 위치 버튼
@@ -212,18 +215,27 @@ const searchBtn   = document.getElementById('searchBtn');
 
 searchInput.addEventListener('input', () => {
   clearTimeout(searchTimer);
+  if (!searchInput.value.trim()) {
+    const ul = document.getElementById('searchResults');
+    ul.style.display = 'none';
+    ul.innerHTML = '';
+    if (mapInstance) clearSearchMarkers();
+    return;
+  }
   searchTimer = setTimeout(doSearch, 400);
 });
-searchBtn.addEventListener('click', doSearch);
-searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
 
 async function doSearch() {
   const keyword = searchInput.value.trim();
   if (!keyword) return;
+  if (typeof kakao === 'undefined' || !kakao.maps || !kakao.maps.services) {
+    showToast('지도 로딩 중입니다. 잠시 후 다시 시도해주세요.'); return;
+  }
   try {
-    const results = await searchPlaces(keyword, myLat && myLng ? { lat: myLat, lng: myLng } : {});
-    showSearchResults(results);
-  } catch (e) { showToast('검색 오류'); }
+    // 현위치 있으면 거리순 정렬, 없으면 정확도순 — radius 제한 없이 전국 검색
+    const results = await searchPlaces(keyword, myLat && myLng ? { lat: myLat, lng: myLng, radius: 0 } : {});
+    showKeywordResults(results);
+  } catch (e) { showToast('검색 오류: ' + e.message); }
 }
 
 // ── 직접 입력 UI (장소 정보 없을 때) ────────────────────────
@@ -270,11 +282,51 @@ function showManualInput(lat, lng, address) {
   });
 }
 
-function showSearchResults(results, lat, lng, addr) {
+// ── 직접 검색 결과 표시 (키워드 검색) ───────────────────
+function showKeywordResults(results) {
   const ul = document.getElementById('searchResults');
   ul.innerHTML = '';
 
-  // 검색 결과 목록
+  if (!results.length) {
+    ul.innerHTML = '<li class="search-result-item" style="color:var(--sub);font-size:13px">검색 결과가 없습니다</li>';
+    ul.style.display = '';
+    return;
+  }
+
+  ul.innerHTML = results.slice(0, 10).map((r, i) => `
+    <li class="search-result-item" data-idx="${i}">
+      <span class="result-name">${escHtml(r.place_name)}</span>
+      <span class="result-address">${escHtml(r.road_address_name || r.address_name || '')}</span>
+    </li>
+  `).join('');
+
+  if (mapInstance) {
+    clearSearchMarkers();
+    results.slice(0, 10).forEach(r => {
+      addSearchMarker(mapInstance, { lat: parseFloat(r.y), lng: parseFloat(r.x), name: r.place_name }, () => {
+        addPlace(r);
+        ul.style.display = 'none';
+        ul.innerHTML = '';
+      });
+    });
+  }
+
+  ul.querySelectorAll('.search-result-item[data-idx]').forEach(li => {
+    li.addEventListener('click', () => {
+      addPlace(results[parseInt(li.dataset.idx)]);
+      ul.style.display = 'none';
+      ul.innerHTML = '';
+    });
+  });
+
+  ul.style.display = '';
+}
+
+// ── 지도 클릭 결과 표시 (주변 검색 + 직접입력) ───────────
+function showMapClickResults(results, lat, lng, addr) {
+  const ul = document.getElementById('searchResults');
+  ul.innerHTML = '';
+
   if (results.length) {
     ul.innerHTML = results.slice(0, 8).map((r, i) => `
       <li class="search-result-item" data-idx="${i}">
@@ -283,14 +335,16 @@ function showSearchResults(results, lat, lng, addr) {
       </li>
     `).join('');
 
-    clearSearchMarkers();
-    results.slice(0, 8).forEach(r => {
-      addSearchMarker(mapInstance, { lat: parseFloat(r.y), lng: parseFloat(r.x), name: r.place_name }, () => {
-        addPlace(r);
-        ul.style.display = 'none';
-        ul.innerHTML = '';
+    if (mapInstance) {
+      clearSearchMarkers();
+      results.slice(0, 8).forEach(r => {
+        addSearchMarker(mapInstance, { lat: parseFloat(r.y), lng: parseFloat(r.x), name: r.place_name }, () => {
+          addPlace(r);
+          ul.style.display = 'none';
+          ul.innerHTML = '';
+        });
       });
-    });
+    }
 
     ul.querySelectorAll('.search-result-item[data-idx]').forEach(li => {
       li.addEventListener('click', () => {
@@ -301,9 +355,10 @@ function showSearchResults(results, lat, lng, addr) {
     });
   }
 
-  // 직접 입력 항목 — 항상 맨 아래 표시
+  // 직접 입력 항목 — 지도 클릭 시에만 표시
   const manualLi = document.createElement('li');
   manualLi.className = 'search-result-item manual-input-item';
+  manualLi.style.cssText = 'position:sticky;bottom:0;background:#fff;border-top:1px solid var(--border)';
   manualLi.innerHTML = `
     <div style="font-size:12px;color:var(--sub);margin-bottom:6px">
       ${addr ? `📍 ${escHtml(addr)}` : '선택한 위치'} — 직접 입력
@@ -325,8 +380,8 @@ function showSearchResults(results, lat, lng, addr) {
       category_name: category,
       road_address_name: addr,
       address_name: addr,
-      x: String(lng),
-      y: String(lat),
+      x: String(lng ?? ''),
+      y: String(lat ?? ''),
     });
     ul.style.display = 'none';
     ul.innerHTML = '';
@@ -582,8 +637,9 @@ function updateTotalTime() {
 
 // ── 지도 업데이트 ─────────────────────────────────────────
 function updateMap() {
-  if (!mapInstance || !places.length) return;
+  if (!mapInstance) return;
   clearCourseMarkers();
+  if (!places.length) return;
   places.forEach((p, i) => addCourseMarker(mapInstance, p, i + 1));
   if (places.length > 1) drawCoursePolyline(mapInstance, places);
   fitMapToBounds(mapInstance, places);
