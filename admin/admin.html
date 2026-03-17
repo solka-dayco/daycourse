@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin — 데이코스</title>
+  <link rel="stylesheet" href="admin.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- 사이드바 -->
+<aside class="admin-sidebar">
+  <div class="admin-sidebar-logo">
+    데이코스
+    <span>Admin Panel</span>
+  </div>
+  <nav class="admin-nav">
+    <button class="admin-nav-item active" data-panel="dashboard">
+      <span class="admin-nav-icon">📊</span> Dashboard
+    </button>
+    <button class="admin-nav-item" data-panel="reports">
+      <span class="admin-nav-icon">🚨</span> Reports
+      <span id="pendingBadge" style="margin-left:auto;background:#e53935;color:#fff;font-size:10px;padding:1px 6px;border-radius:100px;display:none"></span>
+    </button>
+    <button class="admin-nav-item" data-panel="courses">
+      <span class="admin-nav-icon">🗺️</span> Courses
+    </button>
+    <button class="admin-nav-item" data-panel="comments">
+      <span class="admin-nav-icon">💬</span> Comments
+    </button>
+    <button class="admin-nav-item" data-panel="users">
+      <span class="admin-nav-icon">👥</span> Users
+    </button>
+    <button class="admin-nav-item" data-panel="logs">
+      <span class="admin-nav-icon">📋</span> Logs
+    </button>
+  </nav>
+  <div class="admin-sidebar-bottom">
+    <button class="admin-logout-btn" id="logoutBtn">로그아웃</button>
+  </div>
+</aside>
+
+<!-- 메인 -->
+<div class="admin-main">
+  <div class="admin-topbar" id="topbarTitle">Dashboard</div>
+  <div class="admin-content">
+
+    <!-- Dashboard -->
+    <div class="admin-panel active" id="panel-dashboard">
+      <div class="summary-cards" id="summaryCards">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+      <div class="admin-table-wrap" style="margin-bottom:20px">
+        <div class="admin-table-header">
+          <span class="admin-table-title">추이 (최근 14일)</span>
+          <select class="admin-filter-select" id="trendDays">
+            <option value="7">7일</option>
+            <option value="14" selected>14일</option>
+            <option value="30">30일</option>
+          </select>
+        </div>
+        <div style="padding:20px">
+          <canvas id="trendChart" height="80"></canvas>
+        </div>
+      </div>
+      <div class="admin-table-wrap" style="margin-bottom:20px">
+        <div class="admin-table-header">
+          <span class="admin-table-title">오늘 활동</span>
+        </div>
+        <div style="padding:20px;max-width:320px;margin:0 auto">
+          <canvas id="donutChart"></canvas>
+        </div>
+      </div>
+      <div class="admin-table-wrap">
+        <div class="admin-table-header">
+          <span class="admin-table-title">최근 신고</span>
+          <button class="btn btn-outline btn-sm" onclick="switchPanel('reports')">전체 보기</button>
+        </div>
+        <div id="dashRecentReports"><div class="admin-empty">로딩 중…</div></div>
+      </div>
+    </div>
+
+    <!-- Reports -->
+    <div class="admin-panel" id="panel-reports">
+      <div class="admin-table-wrap">
+        <div class="admin-table-header">
+          <span class="admin-table-title">신고 목록</span>
+          <select class="admin-filter-select" id="reportStatusFilter">
+            <option value="">전체</option>
+            <option value="pending" selected>Pending</option>
+            <option value="resolved">Resolved</option>
+          </select>
+        </div>
+        <div id="reportsTableWrap"><div class="spinner-wrap"><div class="spinner"></div></div></div>
+      </div>
+      <div id="reportDetailWrap"></div>
+    </div>
+
+    <!-- Courses -->
+    <div class="admin-panel" id="panel-courses">
+      <div class="admin-table-wrap">
+        <div class="admin-table-header">
+          <span class="admin-table-title">코스 목록</span>
+          <input class="admin-search" id="courseSearch" placeholder="코스명 검색…" autocomplete="off"/>
+        </div>
+        <div id="coursesTableWrap"><div class="spinner-wrap"><div class="spinner"></div></div></div>
+        <div class="admin-pagination" id="coursesPagination"></div>
+      </div>
+    </div>
+
+    <!-- Comments -->
+    <div class="admin-panel" id="panel-comments">
+      <div class="admin-table-wrap">
+        <div class="admin-table-header">
+          <span class="admin-table-title">댓글 목록</span>
+        </div>
+        <div id="commentsTableWrap"><div class="spinner-wrap"><div class="spinner"></div></div></div>
+        <div class="admin-pagination" id="commentsPagination"></div>
+      </div>
+    </div>
+
+    <!-- Users -->
+    <div class="admin-panel" id="panel-users">
+      <div class="admin-table-wrap">
+        <div class="admin-table-header">
+          <span class="admin-table-title">사용자 목록</span>
+        </div>
+        <div id="usersTableWrap"><div class="spinner-wrap"><div class="spinner"></div></div></div>
+        <div class="admin-pagination" id="usersPagination"></div>
+      </div>
+    </div>
+
+    <!-- Logs -->
+    <div class="admin-panel" id="panel-logs">
+      <div class="admin-table-wrap">
+        <div class="admin-table-header">
+          <span class="admin-table-title">이벤트 로그</span>
+          <input class="admin-search" id="logSearch" placeholder="event_name 검색…" autocomplete="off"/>
+        </div>
+        <div id="logsTableWrap"><div class="spinner-wrap"><div class="spinner"></div></div></div>
+        <div class="admin-pagination" id="logsPagination"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay hidden" id="confirmModal">
+  <div class="modal-box">
+    <div class="modal-title" id="confirmTitle"></div>
+    <div class="modal-desc"  id="confirmDesc"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="confirmCancel">취소</button>
+      <button class="btn btn-danger"  id="confirmOk">확인</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="admin.js"></script>
+</body>
+</html>
