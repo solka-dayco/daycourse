@@ -21,7 +21,7 @@
   --liked-color:   #e8648a;
   --header-h:      52px;
   --sidebar-w:     280px;
-  --radius:        14px;
+  --radius:        0px;
   --radius-sm:     10px;
   --shadow-sm:     0 1px 3px rgba(0,0,0,.06);
   --shadow:        0 2px 12px rgba(0,0,0,.08);
@@ -273,9 +273,14 @@ img { display: block; max-width: 100%; }
   padding-top: var(--header-h);
   min-height: 100vh;
   width: 100%;
-  max-width: 640px;
+  max-width: 100%;
   margin: 0 auto;
   background: var(--bg);
+}
+@media (min-width: 768px) {
+  .page-wrap {
+    max-width: 65vw;
+  }
 }
 
 .section-label {
@@ -296,12 +301,15 @@ img { display: block; max-width: 100%; }
 /* ── 피드 카드 ─────────────────────────────────────── */
 .feed-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr); /* 모바일 기본 2열 */
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
-  padding: 0 0 80px;
+  padding: 0 10px 80px;
 }
-@media (min-width: 640px) {
-  .feed-grid { grid-template-columns: repeat(3, 1fr); } /* 데스크탑 3열 */
+@media (min-width: 768px) {
+  .feed-grid {
+    grid-template-columns: repeat(3, 1fr);
+    padding: 0 0 80px;
+  }
 }
 
 /* 모든 카드 동일 높이 — 썸네일 고정 + body 고정 */
