@@ -92,7 +92,8 @@ export async function fetchCourses({
          author_id, author_nickname, created_at,
          course_places(order_index, name, photo_url)`,
         { count: 'exact' }
-      );
+      )
+      .neq('is_deleted', true);
 
     if (regionMain) query = query.eq('region_main', regionMain);
     if (regionSub)  query = query.eq('region_sub', regionSub);
@@ -184,6 +185,7 @@ export async function fetchCoursesByUser(userId, { page = 0, pageSize = 20, only
       { count: 'exact' }
     )
     .eq('author_id', userId)
+    .eq('is_deleted', false)
     .order('created_at', { ascending: false });
 
   if (onlyReferenced) {
@@ -583,10 +585,20 @@ export async function fetchActivityMyCourses(userId, { page = 0, pageSize = 20 }
 // ─── 신고 ─────────────────────────────────────────────────
 
 export async function submitReport({ reporterUserId, targetType, targetId, reason }) {
+  // 중복 신고 방지
+  const { data: existing } = await supabase
+    .from('reports')
+    .select('id')
+    .eq('reporter_user_id', reporterUserId)
+    .eq('target_type', targetType)
+    .eq('target_id', String(targetId))
+    .maybeSingle();
+  if (existing) throw new Error('이미 신고한 콘텐츠입니다');
+
   const { error } = await supabase.from('reports').insert({
     reporter_user_id: reporterUserId,
     target_type: targetType,
-    target_id: targetId,
+    target_id:   String(targetId),
     reason,
   });
   if (error) throw error;
@@ -609,15 +621,31 @@ export async function deletePhoto(path) {
 
 // ─── 행동 로그 ────────────────────────────────────────────
 
+function getOrCreateSessionId() {
+  const KEY = 'dc_session_id';
+  let sid = localStorage.getItem(KEY);
+  if (!sid) {
+    sid = crypto.randomUUID();
+    localStorage.setItem(KEY, sid);
+  }
+  return sid;
+}
+
 export async function logEvent(eventName, targetType = 'page', targetId = null, metadata = {}) {
   try {
     const session = await getSession();
+    if (session?.user?.id) {
+      const { data: u } = await supabase
+        .from('users').select('role').eq('id', session.user.id).single();
+      if (u?.role === 'admin') return;
+    }
+    const sessionId = getOrCreateSessionId();
     await supabase.from('event_logs').insert({
-      user_id:    session?.user?.id ?? null,
-      event_name: eventName,
+      user_id:     session?.user?.id ?? null,
+      event_name:  eventName,
       target_type: targetType,
-      target_id:  targetId,
-      metadata,
+      target_id:   targetId,
+      metadata:    { ...metadata, session_id: sessionId },
     });
   } catch (_) {}
 }

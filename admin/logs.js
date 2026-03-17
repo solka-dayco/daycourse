@@ -41,7 +41,11 @@ async function fetchLogs() {
       </tr></thead>
       <tbody>
         ${data.map(l => {
-          const sid = l.metadata?.session_id || '-';
+          let sid = '-';
+          try {
+            const meta = typeof l.metadata === 'string' ? JSON.parse(l.metadata) : (l.metadata || {});
+            sid = meta.session_id || '-';
+          } catch(_) {}
           return `
           <tr>
             <td>${escHtml(l.event_name)}</td>
