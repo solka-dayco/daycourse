@@ -193,7 +193,7 @@
   background: white; padding: 18px 16px; margin-top: 10px;
   max-width: 640px; margin-left: auto; margin-right: auto;
 }
-.section-label { font-size: 13px; font-weight: 700; color: var(--sub); margin-bottom: 14px; letter-spacing: .2px; }
+.section-label {font-size: 13px; font-weight: 700; color: var(--sub); margin-bottom: 0px; letter-spacing: .2px; }
 
 /* ── 타임라인 ──────────────────────────────────────────── */
 .timeline { display: flex; flex-direction: column; }
