@@ -50,12 +50,17 @@ const MIN_PLACES = 2;
 if (mode === 'edit') document.title = '코스 수정 — 데이코스';
 if (mode === 'copy') document.title = '참조 코스 만들기 — 데이코스';
 
+// descCountEl 미리 선언 (수정 모드 로드 시 사용)
+const courseDescEl = document.getElementById('courseDesc');
+const descCountEl  = document.getElementById('descCount');
+
 logEvent('course_create_start', 'page', null, { mode: mode || 'new' });
 
 // ── 원본 코스 로드 (수정/참조 모드) ──────────────────────
 if (sourceId && (mode === 'edit' || mode === 'copy')) {
   try {
     sourceCourse = await fetchCourseById(sourceId);
+    console.log('[create] 코스 로드 성공:', sourceCourse?.id, '장소수:', sourceCourse?.course_places?.length);
   } catch (e) {
     console.error('[create] 코스 로드 실패:', e);
     sourceCourse = null;
@@ -65,6 +70,7 @@ if (sourceId && (mode === 'edit' || mode === 'copy')) {
       // 폼에 기존 데이터 채우기
       document.getElementById('courseName').value    = sourceCourse.name || '';
       document.getElementById('courseDesc').value    = sourceCourse.description || '';
+      if (descCountEl) descCountEl.textContent = (sourceCourse.description || '').length;
       document.getElementById('regionMain').value    = sourceCourse.region_main || '';
       updateRegionSub(sourceCourse.region_main);
       setTimeout(() => {
@@ -94,6 +100,14 @@ if (sourceId && (mode === 'edit' || mode === 'copy')) {
 }
 
 // ── 지역 선택 ─────────────────────────────────────────────
+// 소개글 글자수 카운터
+if (courseDescEl && descCountEl) {
+  courseDescEl.addEventListener('input', () => {
+    descCountEl.textContent = courseDescEl.value.length;
+  });
+  descCountEl.textContent = courseDescEl.value.length;
+}
+
 document.getElementById('regionMain').addEventListener('change', function () {
   updateRegionSub(this.value);
 });
@@ -243,8 +257,15 @@ async function doSearch() {
     showToast('지도 로딩 중입니다. 잠시 후 다시 시도해주세요.'); return;
   }
   try {
-    // 현위치 있으면 거리순 정렬, 없으면 정확도순 — radius 제한 없이 전국 검색
-    const results = await searchPlaces(keyword, myLat && myLng ? { lat: myLat, lng: myLng, radius: 0 } : {});
+    // 지도 중심 기준 거리순 정렬 — radius 제한 없이 전국 검색
+    let searchCenter = {};
+    if (mapInstance) {
+      const center = mapInstance.getCenter();
+      searchCenter = { lat: center.getLat(), lng: center.getLng(), radius: 0 };
+    } else if (myLat && myLng) {
+      searchCenter = { lat: myLat, lng: myLng, radius: 0 };
+    }
+    const results = await searchPlaces(keyword, searchCenter);
     showKeywordResults(results);
   } catch (e) { showToast('검색 오류: ' + e.message); }
 }
@@ -375,7 +396,12 @@ function showMapClickResults(results, lat, lng, addr) {
 
       // 지도 마커
       if (mapInstance) {
-        addSearchMarker(mapInstance, { lat: parseFloat(r.y), lng: parseFloat(r.x), name: r.place_name }, () => {
+        addSearchMarker(mapInstance, {
+          lat: parseFloat(r.y), lng: parseFloat(r.x),
+          name: r.place_name,
+          road_address_name: r.road_address_name || '',
+          address_name: r.address_name || '',
+        }, () => {
           addPlace(r);
           kul2.style.display = 'none';
           kul2.innerHTML = '';
@@ -502,14 +528,17 @@ function renderPlaceList() {
         <div class="place-info">
           <div class="place-name">${escHtml(p.name)}</div>
           <div class="place-sub">${escHtml(p.category)}${p.address ? ` · ${escHtml(p.address)}` : ''}</div>
-          <input
-            type="text"
-            class="place-comment-input"
-            placeholder="한줄평 (선택)"
-            value="${escHtml(p.comment)}"
-            maxlength="50"
-            data-idx="${i}"
-          />
+          <div style="position:relative">
+            <input
+              type="text"
+              class="place-comment-input"
+              placeholder="한줄평 (선택, 최대 100자)"
+              value="${escHtml(p.comment)}"
+              maxlength="100"
+              data-idx="${i}"
+            />
+            <span class="place-comment-count" data-idx="${i}" style="position:absolute;right:0;bottom:-14px;font-size:10px;color:#ccc">${(p.comment||'').length}/100</span>
+          </div>
           <div class="place-times">
             <button class="place-time-btn ${p.stay_time ? 'set' : ''}" data-type="stay" data-idx="${i}">
               🕐 ${stayLabel}
@@ -577,8 +606,11 @@ function renderPlaceList() {
 function bindPlaceListEvents(ul) {
   // 한줄평
   ul.querySelectorAll('.place-comment-input').forEach(input => {
+    const idx = parseInt(input.dataset.idx);
+    const countEl = ul.querySelector(`.place-comment-count[data-idx="${idx}"]`);
     input.addEventListener('input', () => {
-      places[parseInt(input.dataset.idx)].comment = input.value;
+      places[idx].comment = input.value;
+      if (countEl) countEl.textContent = `${input.value.length}/100`;
     });
   });
 

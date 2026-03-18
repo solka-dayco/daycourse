@@ -43,9 +43,12 @@
 /*캐러셀 음영*/
 .carousel-overlay {
   position: absolute; bottom: 0; left: 0; right: 0;
-  padding: 380px 20px 42px;
+  padding: 120px 16px 20px;
   background: linear-gradient(transparent, rgba(0,0,0,0.55));
   pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 /*캐러셀 텍스트 — vw 기반 반응형 (줄바꿈 방지) */
 .carousel-place-name {
@@ -60,25 +63,31 @@
 }
 /* 장소명: 가게명(큰) + 위치(작게) — JS에서 분리 렌더링 필요 */
 .carousel-place-name-main {
-  font-size: clamp(24px, 6.5vw, 44px);
+  font-size: clamp(16px, 4.5vw, 26px);
   font-weight: 800; color: white;
   text-shadow: 0 2px 8px rgba(0,0,0,.5);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   display: block;
+  margin-bottom: 4px;
 }
 .carousel-place-name-sub {
-  font-size: clamp(16px, 2.5vw, 20px);
-  font-weight: 400; color: rgba(255,255,255,1);
+  font-size: clamp(12px, 2vw, 16px);
+  font-weight: 400; color: rgba(255,255,255,.9);
   text-shadow: 0 1px 4px rgba(0,0,0,.4);
   display: inline;
-  margin-left: 6px;
+  margin-left: 4px;
 }
 .carousel-place-comment {
-  font-size: clamp(12px, 3.4vw, 22px);
+  font-size: clamp(11px, 2.8vw, 15px);
   color: rgba(255,255,255,.85);
   font-style: italic;
   text-shadow: 0 1px 4px rgba(0,0,0,.5);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.5;
+  word-break: break-all;
 }
 
 .carousel-counter {
@@ -91,12 +100,13 @@
 
 .carousel-nav {
   position: absolute; top: 50%; transform: translateY(-50%);
-  background: rgba(255,255,255,.18); border: 1.5px solid rgba(255,255,255,.3);
+  background: rgba(0,0,0,.35); border: 1.5px solid rgba(255,255,255,.25);
   color: white; font-size: 28px; width: 44px; height: 44px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  backdrop-filter: blur(8px); transition: background .2s, transform .2s;
+  backdrop-filter: blur(6px); transition: background .2s, transform .2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
 }
-.carousel-nav:hover { background: rgba(255,255,255,.32); transform: translateY(-50%) scale(1.06); }
+.carousel-nav:hover { background: rgba(0,0,0,.55); transform: translateY(-50%) scale(1.06); }
 .carousel-nav.prev { left: 10px; }
 .carousel-nav.next { right: 10px; }
 

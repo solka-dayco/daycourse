@@ -28,9 +28,10 @@ let courseMarkers = [];
 
 /** 검색 마커 전체 제거 */
 export function clearSearchMarkers() {
-  searchMarkers.forEach(({ marker, overlay }) => {
-    marker.setMap(null);
+  searchMarkers.forEach(({ marker, overlay, tooltip }) => {
+    marker?.setMap(null);
     overlay?.setMap(null);
+    tooltip?.setMap(null);
   });
   searchMarkers = [];
 }
@@ -46,18 +47,82 @@ export function clearCourseMarkers() {
 }
 
 /**
- * 검색 결과 마커 추가
+ * 검색 결과 마커 추가 — 클릭 시 툴팁 표시, 툴팁 내 추가 버튼으로 코스 저장
  * @param {kakao.maps.Map} map
- * @param {object} place - { lat, lng, name }
- * @param {function} onClick
+ * @param {object} place - { lat, lng, name, address? }
+ * @param {function} onAdd - 추가 버튼 클릭 시 호출
  */
-export function addSearchMarker(map, place, onClick) {
+export function addSearchMarker(map, place, onAdd) {
   const pos = new kakao.maps.LatLng(place.lat, place.lng);
   const marker = new kakao.maps.Marker({ position: pos, map });
 
-  kakao.maps.event.addListener(marker, 'click', () => onClick(place));
+  // 툴팁 오버레이 생성
+  const tooltipEl = document.createElement('div');
+  tooltipEl.style.cssText = `
+    background: #fff;
+    border: 1.5px solid #e8648a;
+    border-radius: 10px;
+    padding: 10px 12px;
+    min-width: 160px;
+    max-width: 220px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+    font-family: inherit;
+    position: relative;
+    margin-bottom: 8px;
+    cursor: default;
+  `;
+  const address = place.road_address_name || place.address_name || place.address || '';
+  tooltipEl.innerHTML = `
+    <div style="font-size:13px;font-weight:700;color:#222;margin-bottom:4px;word-break:keep-all">${place.name}</div>
+    ${address ? `<div style="font-size:11px;color:#888;margin-bottom:8px;word-break:keep-all">${address}</div>` : ''}
+    <button style="
+      width:100%;padding:7px 0;
+      background:#e8648a;color:#fff;
+      border:none;border-radius:7px;
+      font-size:13px;font-weight:700;cursor:pointer;
+    ">코스에 추가</button>
+    <div style="
+      position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);
+      width:12px;height:12px;background:#fff;
+      border-right:1.5px solid #e8648a;border-bottom:1.5px solid #e8648a;
+      transform:translateX(-50%) rotate(45deg);
+    "></div>
+  `;
 
-  searchMarkers.push({ marker, overlay: null });
+  const tooltip = new kakao.maps.CustomOverlay({
+    position: pos,
+    content: tooltipEl,
+    map: null,
+    yAnchor: 1.25,
+    xAnchor: 0.5,
+    zIndex: 10,
+  });
+
+  // 추가 버튼 이벤트
+  tooltipEl.querySelector('button').addEventListener('click', (e) => {
+    e.stopPropagation();
+    tooltip.setMap(null);
+    onAdd(place);
+  });
+
+  // 마커 클릭 → 툴팁 토글
+  kakao.maps.event.addListener(marker, 'click', () => {
+    // 같은 마커 재클릭 시 닫기
+    if (tooltip.getMap()) {
+      tooltip.setMap(null);
+    } else {
+      // 다른 툴팁 모두 닫기
+      searchMarkers.forEach(m => m.tooltip?.setMap(null));
+      tooltip.setMap(map);
+    }
+  });
+
+  // 지도 클릭 시 툴팁 닫기
+  kakao.maps.event.addListener(map, 'click', () => {
+    tooltip.setMap(null);
+  });
+
+  searchMarkers.push({ marker, overlay: null, tooltip });
   return marker;
 }
 
