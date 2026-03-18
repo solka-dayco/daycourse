@@ -1,6 +1,12 @@
 /* style.css — 데이코스 공통 스타일 (v3) */
 
 /* ── 리셋 & 기본 ──────────────────────────────────────── */
+@font-face {
+  font-family: 'SchoolSafetyRoundedSmile';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-5@1.0/HakgyoansimDunggeunmisoTTF-R.woff2') format('woff2');
+  font-weight: normal;
+  font-display: swap;
+}
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -31,7 +37,7 @@
 
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+  font-family: -apple-system, 'Pretendard', BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
@@ -72,7 +78,8 @@ img { display: block; max-width: 100%; }
 .header-title {
   flex: 1;
   text-align: left;
-  font-size: 17px;
+  font-family: 'SchoolSafetyRoundedSmile';
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.3px;
   cursor: pointer;
@@ -372,7 +379,7 @@ img { display: block; max-width: 100%; }
 }
 
 .feed-course-name {
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--dark);
   margin-bottom: 3px;
@@ -383,7 +390,7 @@ img { display: block; max-width: 100%; }
 }
 
 .feed-places-path {
-  font-size: 10px;
+  font-size: 14px;
   color: var(--sub);
   white-space: nowrap;
   overflow: hidden;
@@ -393,13 +400,14 @@ img { display: block; max-width: 100%; }
 
 /* 설명글: 1줄로 잘리면 ... 처리 */
 .feed-description {
-  font-size: 10px;
+  font-size: 14px;
   color: var(--sub);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-bottom: 6px;
   line-height: 1.4;
+  font-style:italic;
 }
 
 .feed-meta {
