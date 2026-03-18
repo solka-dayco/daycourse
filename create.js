@@ -46,6 +46,63 @@ let thumbnailExistingUrl = ''; // 수정 모드 기존 썸네일 URL
 const MAX_PLACES = 10;
 const MIN_PLACES = 2;
 
+let draftTimer;
+let _draftEnabled = false;
+let _isSaved = false;
+
+function scheduleDraft() {
+  if (!_draftEnabled) return;
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(saveDraft, 800);
+}
+
+// ── 뒤로가기 임시저장 팝업 ────────────────────────────────
+function hasDirtyContent() {
+  const name = document.getElementById('courseName')?.value || '';
+  return (name || places.length > 0) && !_isSaved;
+}
+
+// ── 임시저장 모달 (커스텀 UI) ────────────────────────────
+// 탭 닫기/새로고침 시 자동 임시저장
+window.addEventListener('beforeunload', () => {
+  if (hasDirtyContent()) saveDraft();
+});
+
+// ── 임시저장 버튼 ─────────────────────────────────────────
+document.getElementById('draftSaveBtn')?.addEventListener('click', () => {
+  saveDraft();
+  const btn = document.getElementById('draftSaveBtn');
+  if (btn) {
+    btn.textContent = '저장됨 ✓';
+    btn.classList.add('saved');
+    setTimeout(() => {
+      btn.textContent = '임시저장';
+      btn.classList.remove('saved');
+    }, 2000);
+  }
+});
+
+// ── 임시저장 ───────────────────────────────────────────────
+const DRAFT_KEY = mode === 'edit' ? `dc_draft_edit_${sourceId}`
+                : mode === 'copy' ? `dc_draft_copy_${sourceId}`
+                : 'dc_draft_new';
+
+function saveDraft() {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({
+      courseName:          document.getElementById('courseName')?.value || '',
+      courseDesc:          document.getElementById('courseDesc')?.value || '',
+      regionMain:          document.getElementById('regionMain')?.value || '',
+      regionSub:           document.getElementById('regionSub')?.value  || '',
+      places:              places.map(p => ({ ...p, _photoBlob: null })),
+      thumbnailExistingUrl,
+      savedAt:             Date.now(),
+    }));
+  } catch(_) {}
+}
+function loadDraft()  { try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch(_) { return null; } }
+function clearDraft() { localStorage.removeItem(DRAFT_KEY); }
+
 // ── 페이지 제목 ───────────────────────────────────────────
 if (mode === 'edit') document.title = '코스 수정 — 데이코스';
 if (mode === 'copy') document.title = '참조 코스 만들기 — 데이코스';
@@ -55,6 +112,36 @@ const courseDescEl = document.getElementById('courseDesc');
 const descCountEl  = document.getElementById('descCount');
 
 logEvent('course_create_start', 'page', null, { mode: mode || 'new' });
+
+// ── 임시저장 복원 (신규 모드만) ────────────────────────────
+if (!sourceId) {
+  const draft = loadDraft();
+  if (draft?.places?.length || draft?.courseName) {
+    const ago = Math.round((Date.now() - (draft.savedAt || 0)) / 60000);
+    if (confirm(`${ago}분 전 임시저장된 작성 중인 코스가 있습니다.\n복원할까요?`)) {
+      document.getElementById('courseName').value = draft.courseName || '';
+      document.getElementById('courseDesc').value  = draft.courseDesc  || '';
+      if (descCountEl) descCountEl.textContent = (draft.courseDesc || '').length;
+      if (draft.regionMain) {
+        document.getElementById('regionMain').value = draft.regionMain;
+        updateRegionSub(draft.regionMain);
+        setTimeout(() => {
+          document.getElementById('regionSub').value = draft.regionSub || '';
+        }, 50);
+      }
+      places = draft.places || [];
+      thumbnailExistingUrl = draft.thumbnailExistingUrl || '';
+      if (thumbnailExistingUrl) setThumbnailPreview(thumbnailExistingUrl);
+      renderPlaceList();
+      updateTotalTime();
+    } else {
+      clearDraft();
+    }
+  }
+}
+
+// 신규 모드: 복원 여부 확인 후 자동저장 활성화
+if (!sourceId) _draftEnabled = true;
 
 // ── 원본 코스 로드 (수정/참조 모드) ──────────────────────
 if (sourceId && (mode === 'edit' || mode === 'copy')) {
@@ -66,6 +153,8 @@ if (sourceId && (mode === 'edit' || mode === 'copy')) {
     sourceCourse = null;
   }
   if (sourceCourse) {
+    // 수정/인용 모드는 원본 데이터 우선 — draft는 무시
+    clearDraft();
     if (mode === 'edit') {
       // 폼에 기존 데이터 채우기
       document.getElementById('courseName').value    = sourceCourse.name || '';
@@ -98,6 +187,8 @@ if (sourceId && (mode === 'edit' || mode === 'copy')) {
     updateTotalTime();
   }
 }
+// 수정/인용 모드: 원본 로드 완료 후 자동저장 활성화
+if (sourceId) _draftEnabled = true;
 
 // ── 지역 선택 ─────────────────────────────────────────────
 // 소개글 글자수 카운터
@@ -108,8 +199,14 @@ if (courseDescEl && descCountEl) {
   descCountEl.textContent = courseDescEl.value.length;
 }
 
+// ── 자동저장 트리거 ────────────────────────────────────────
+
+document.getElementById('courseName')?.addEventListener('input', scheduleDraft);
+document.getElementById('courseDesc')?.addEventListener('input', scheduleDraft);
+
 document.getElementById('regionMain').addEventListener('change', function () {
   updateRegionSub(this.value);
+  scheduleDraft();
 });
 
 function updateRegionSub(main) {
@@ -601,6 +698,7 @@ function renderPlaceList() {
       },
     });
   }
+  scheduleDraft();
 }
 
 function bindPlaceListEvents(ul) {
@@ -815,6 +913,8 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
       logEvent('course_create_complete', 'course', courseId);
     }
 
+    clearDraft();
+    _isSaved = true;
     location.href = `course.html?id=${courseId}`;
   } catch (e) {
     console.error(e);

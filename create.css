@@ -404,3 +404,19 @@
   margin: 0;
   padding: 0;
 }
+
+/* ── 임시저장 버튼 (헤더) ────────────────────────────────── */
+.draft-save-btn {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sub);
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  white-space: nowrap;
+}
+.draft-save-btn:hover { color: var(--primary); border-color: var(--primary); }
+.draft-save-btn.saved { color: var(--primary); border-color: var(--primary); }
