@@ -165,25 +165,36 @@ function setThumbnailPreview(src) {
 kakao.maps.load(async () => {
   let initLat = 37.5665, initLng = 126.9780;
   try {
-    const pos = await getCurrentPosition();
+    // 모바일 호환: 위치 권한 없거나 느릴 경우 3초 내 기본값으로 폴백
+    const pos = await Promise.race([
+      getCurrentPosition(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+    ]);
     myLat = pos.lat; myLng = pos.lng;
     initLat = myLat; initLng = myLng;
   } catch (_) {}
 
   mapInstance = await createMap('createMap', { lat: initLat, lng: initLng, level: 5 });
+  
+  // 모바일에서 지도 컨테이너 크기 재계산 강제
+  if (mapInstance) {
+    setTimeout(() => kakao.maps.event.trigger(mapInstance, 'resize'), 100);
+  }
 
   // 지도 클릭 → 반경 50m 검색 + 직접 입력 항상 표시
   kakao.maps.event.addListener(mapInstance, 'click', async e => {
     const lat = e.latLng.getLat();
     const lng = e.latLng.getLng();
+    let results = [], addr = '';
     try {
       const { searchNearby } = await import('./map.js');
-      const [results, addr] = await Promise.all([
+      [results, addr] = await Promise.all([
         searchNearby(lat, lng, 50),
         coordsToAddress(lat, lng),
       ]);
-      showMapClickResults(results, lat, lng, addr);
     } catch (_) {}
+    // 결과 없어도 직접입력 UI는 항상 표시
+    showMapClickResults(results, lat, lng, addr);
   });
 
   // 수정/참조 모드 — 지도 초기화 후 장소 렌더링
@@ -216,7 +227,7 @@ const searchBtn   = document.getElementById('searchBtn');
 searchInput.addEventListener('input', () => {
   clearTimeout(searchTimer);
   if (!searchInput.value.trim()) {
-    const ul = document.getElementById('searchResults');
+    const ul = document.getElementById('keywordResults');
     ul.style.display = 'none';
     ul.innerHTML = '';
     if (mapInstance) clearSearchMarkers();
@@ -240,42 +251,36 @@ async function doSearch() {
 
 // ── 직접 입력 UI (장소 정보 없을 때) ────────────────────────
 function showManualInput(lat, lng, address) {
-  const ul = document.getElementById('searchResults');
-  ul.innerHTML = `
-    <li class="search-result-item manual-input-item">
-      <div style="font-size:12px;color:var(--sub);margin-bottom:8px">
-        📍 ${escHtml(address) || '선택한 위치'} — 장소 정보 없음
-      </div>
-      <input
-        type="text" id="manualPlaceName"
-        class="create-search-input"
-        placeholder="장소 이름을 직접 입력하세요"
-        style="margin-bottom:6px;width:100%"
-        autocomplete="off"
-      />
-      <input
-        type="text" id="manualPlaceCategory"
-        class="create-search-input"
-        placeholder="카테고리 (예: 음식점, 카페)"
-        style="margin-bottom:6px;width:100%"
-        autocomplete="off"
-      />
-      <button id="manualAddBtn" class="create-search-btn" style="width:100%">추가</button>
-    </li>
+  const ul = document.getElementById('mapClickResults');
+  ul.innerHTML = '';
+
+  const li = document.createElement('li');
+  li.className = 'search-result-item manual-input-item';
+  li.style.cursor = 'default';
+  li.innerHTML = `
+    <div style="font-size:12px;color:var(--sub);margin-bottom:8px">
+      📍 ${escHtml(address) || '선택한 위치'} — 장소 정보 없음
+    </div>
+    <input type="text" id="manualPlaceName" class="create-search-input"
+      placeholder="장소 이름을 직접 입력하세요"
+      style="margin-bottom:6px;width:100%" autocomplete="off"/>
+    ${buildCategorySelect()}
+    <button id="manualAddBtn" class="create-search-btn" style="width:100%;margin-top:4px">추가</button>
   `;
+  ul.appendChild(li);
   ul.style.display = '';
 
-  document.getElementById('manualAddBtn').addEventListener('click', () => {
-    const name = document.getElementById('manualPlaceName').value.trim();
+  li.querySelector('#manualAddBtn').addEventListener('click', () => {
+    const name = (li.querySelector('#manualPlaceName')?.value || '').trim();
     if (!name) { showToast('장소 이름을 입력해주세요'); return; }
-    const category = document.getElementById('manualPlaceCategory').value.trim();
+    const category = li.querySelector('#manualPlaceCategory')?.value || '';
     addPlace({
       place_name: name,
       category_name: category,
-      road_address_name: address,
-      address_name: address,
-      x: String(lng),
-      y: String(lat),
+      road_address_name: address || '',
+      address_name: address || '',
+      x: lat != null ? String(lng) : '',
+      y: lat != null ? String(lat) : '',
     });
     ul.style.display = 'none';
     ul.innerHTML = '';
@@ -284,7 +289,7 @@ function showManualInput(lat, lng, address) {
 
 // ── 직접 검색 결과 표시 (키워드 검색) ───────────────────
 function showKeywordResults(results) {
-  const ul = document.getElementById('searchResults');
+  const ul = document.getElementById('keywordResults');
   ul.innerHTML = '';
 
   if (!results.length) {
@@ -319,75 +324,109 @@ function showKeywordResults(results) {
     });
   });
 
-  ul.style.display = '';
+  ul.style.display = 'block';
+  ul.style.zIndex = '9999';
+  console.log('[showMapClickResults] ul display after:', ul.style.display, 'children:', ul.children.length);
 }
 
 // ── 지도 클릭 결과 표시 (주변 검색 + 직접입력) ───────────
-function showMapClickResults(results, lat, lng, addr) {
-  const ul = document.getElementById('searchResults');
-  ul.innerHTML = '';
+// 카카오맵 카테고리 목록
+const KAKAO_CATEGORIES = [
+  '음식점', '카페', '술집', '베이커리', '패스트푸드',
+  '쇼핑', '마트/편의점', '문화시설', '관광명소', '숙박',
+  '병원', '약국', '은행', '공공기관', '교통',
+  '스포츠', '레저', '공원', '학교', '기타'
+];
 
-  if (results.length) {
-    ul.innerHTML = results.slice(0, 8).map((r, i) => `
-      <li class="search-result-item" data-idx="${i}">
+function buildCategorySelect(selectedVal = '') {
+  return `<select id="manualPlaceCategory" class="create-select" style="margin-bottom:6px;width:100%;padding:10px 12px">
+    <option value="">카테고리 선택</option>
+    ${KAKAO_CATEGORIES.map(c => `<option value="${c}"${selectedVal === c ? ' selected' : ''}>${c}</option>`).join('')}
+  </select>`;
+}
+
+function showMapClickResults(results, lat, lng, addr) {
+  // 키워드 결과 숨김
+  const kul = document.getElementById('keywordResults');
+  if (kul) { kul.style.display = 'none'; kul.innerHTML = ''; }
+
+  // 기존 마커 제거
+  if (mapInstance) clearSearchMarkers();
+
+  // ── 1. 검색 결과 → keywordResults (오버레이)
+  const kul2 = document.getElementById('keywordResults');
+  if (kul2) {
+    kul2.innerHTML = '';
+    const slice = results.slice(0, 8);
+    slice.forEach((r) => {
+      const li = document.createElement('li');
+      li.className = 'search-result-item';
+      li.innerHTML = `
         <span class="result-name">${escHtml(r.place_name)}</span>
         <span class="result-address">${escHtml(r.road_address_name || r.address_name || '')}</span>
-      </li>
-    `).join('');
+      `;
+      li.addEventListener('click', () => {
+        addPlace(r);
+        kul2.style.display = 'none';
+        kul2.innerHTML = '';
+        if (mapInstance) clearSearchMarkers();
+      });
+      kul2.appendChild(li);
 
-    if (mapInstance) {
-      clearSearchMarkers();
-      results.slice(0, 8).forEach(r => {
+      // 지도 마커
+      if (mapInstance) {
         addSearchMarker(mapInstance, { lat: parseFloat(r.y), lng: parseFloat(r.x), name: r.place_name }, () => {
           addPlace(r);
-          ul.style.display = 'none';
-          ul.innerHTML = '';
+          kul2.style.display = 'none';
+          kul2.innerHTML = '';
+          clearSearchMarkers();
         });
-      });
-    }
-
-    ul.querySelectorAll('.search-result-item[data-idx]').forEach(li => {
-      li.addEventListener('click', () => {
-        addPlace(results[parseInt(li.dataset.idx)]);
-        ul.style.display = 'none';
-        ul.innerHTML = '';
-      });
+      }
     });
+    if (results.length) kul2.style.display = 'block';
   }
 
-  // 직접 입력 항목 — 지도 클릭 시에만 표시
-  const manualLi = document.createElement('li');
-  manualLi.className = 'search-result-item manual-input-item';
-  manualLi.style.cssText = 'position:sticky;bottom:0;background:#fff;border-top:1px solid var(--border)';
-  manualLi.innerHTML = `
-    <div style="font-size:12px;color:var(--sub);margin-bottom:6px">
+  // ── 2. 직접입력 → mapClickCard (지도-코스목록 사이)
+  showManualInputCard(lat, lng, addr);
+}
+
+function showManualInputCard(lat, lng, addr) {
+  const card = document.getElementById('mapClickCard');
+  const ul   = document.getElementById('mapClickResults');
+  if (!card || !ul) return;
+
+  ul.innerHTML = '';
+
+  const li = document.createElement('li');
+  li.className = 'search-result-item manual-input-item';
+  li.style.cursor = 'default';
+  li.innerHTML = `
+    <div style="font-size:12px;color:var(--sub);margin-bottom:8px">
       ${addr ? `📍 ${escHtml(addr)}` : '선택한 위치'} — 직접 입력
     </div>
     <input type="text" id="manualPlaceName" class="create-search-input"
       placeholder="장소 이름" style="margin-bottom:6px;width:100%" autocomplete="off"/>
-    <input type="text" id="manualPlaceCategory" class="create-search-input"
-      placeholder="카테고리 (예: 음식점)" style="margin-bottom:6px;width:100%" autocomplete="off"/>
-    <button id="manualAddBtn" class="create-search-btn" style="width:100%">직접 추가</button>
+    ${buildCategorySelect()}
+    <button id="manualAddBtn" class="create-search-btn" style="width:100%;margin-top:6px">직접 추가</button>
   `;
-  ul.appendChild(manualLi);
+  ul.appendChild(li);
+  card.style.display = '';
 
-  document.getElementById('manualAddBtn').addEventListener('click', () => {
-    const name = document.getElementById('manualPlaceName').value.trim();
+  li.querySelector('#manualAddBtn').addEventListener('click', () => {
+    const name = (li.querySelector('#manualPlaceName')?.value || '').trim();
     if (!name) { showToast('장소 이름을 입력해주세요'); return; }
-    const category = document.getElementById('manualPlaceCategory').value.trim();
+    const category = li.querySelector('#manualPlaceCategory')?.value || '';
     addPlace({
       place_name: name,
       category_name: category,
-      road_address_name: addr,
-      address_name: addr,
-      x: String(lng ?? ''),
-      y: String(lat ?? ''),
+      road_address_name: addr || '',
+      address_name: addr || '',
+      x: lng != null ? String(lng) : '',
+      y: lat != null ? String(lat) : '',
     });
-    ul.style.display = 'none';
+    card.style.display = 'none';
     ul.innerHTML = '';
   });
-
-  ul.style.display = '';
 }
 
 // ── 장소 추가 ─────────────────────────────────────────────
@@ -423,8 +462,13 @@ function addPlace(r) {
   places.push(place);
 
   // 검색 결과 숨기기
-  document.getElementById('searchResults').style.display = 'none';
-  clearSearchMarkers();
+  const _kr = document.getElementById('keywordResults');
+  if (_kr) { _kr.style.display = 'none'; _kr.innerHTML = ''; }
+  const _mr = document.getElementById('mapClickResults');
+  if (_mr) { _mr.style.display = 'none'; _mr.innerHTML = ''; }
+  const _mc = document.getElementById('mapClickCard');
+  if (_mc) { _mc.style.display = 'none'; }
+  if (mapInstance) clearSearchMarkers();
   searchInput.value = '';
 
   renderPlaceList();
@@ -508,8 +552,10 @@ function renderPlaceList() {
     Sortable.create(ul, {
       handle:    '.place-drag-handle',
       animation: 150,
-      filter:    '.place-time-btn, .place-comment-input, .place-photo-input',  // 버튼/입력창 드래그 방지
+      filter:    '.place-time-btn, .place-comment-input, .place-photo-input',
       preventOnFilter: false,
+      forceFallback: true,   // 모바일 터치 드래그 활성화
+      fallbackTolerance: 5,  // 터치 민감도
       onEnd() {
         const items = [...ul.querySelectorAll('.create-place-item')];
         const reordered = items.map(el => places[parseInt(el.dataset.idx)]);

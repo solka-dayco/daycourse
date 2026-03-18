@@ -85,14 +85,22 @@
 /* ── 지도 카드 ─────────────────────────────────────────── */
 .create-map-card {
   padding: 14px 14px 0;
-  overflow: hidden;
+  overflow: visible; /* 검색결과 드롭다운 노출 */
   background: var(--bg-card);
+}
+
+/* 지도 컨테이너 래퍼는 overflow:hidden 유지 (모바일 렌더링 필수) */
+.create-map-card > div[style*="position:relative"],
+.create-map-card > div:last-child {
+  overflow: hidden;
 }
 
 .create-search-wrap {
   display: flex;
   gap: 8px;
   margin-bottom: 10px;
+  position: relative;
+  z-index: 200;
 }
 
 .create-search-input {
@@ -124,11 +132,15 @@
   list-style: none;
   border: 1.5px solid var(--border);
   border-radius: 10px;
-  overflow: hidden;
-  margin-bottom: 10px;
-  max-height: 200px;
   overflow-y: auto;
+  max-height: 112px;
   background: #fff;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 300;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
 }
 
 .search-result-item {
@@ -145,10 +157,13 @@
 .result-address { font-size: 11px; color: var(--sub); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .create-map {
-  height: 300px;
+  height: 420px;
   border-radius: 0 0 14px 14px;
   overflow: hidden;
   display: block;
+  /* 모바일: 지도 컨테이너 크기 명시 */
+  width: 100%;
+  position: relative;
 }
 
 .map-location-btn {
@@ -332,8 +347,8 @@
 .create-thumbnail-wrap {
   position: relative;
   width: 100%;
-  aspect-ratio: 4/3;
-  min-height: 180px; /* 모바일 aspect-ratio 미지원 대비 */
+  aspect-ratio: 4/5;
+  min-height: 240px; /* 모바일 aspect-ratio 미지원 대비 */
   border-radius: 12px;
   overflow: hidden;
   background: var(--bg);
@@ -356,9 +371,14 @@
 .create-thumbnail-label { font-size: 13px; font-weight: 600; }
 
 .create-thumbnail-preview {
-  width: 100%; height: 100%;
-  object-fit: cover;
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
   display: block;
+  margin: auto;
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .create-thumbnail-remove {
@@ -375,3 +395,12 @@
   z-index: 1;
 }
 .create-thumbnail-remove:hover { background: rgba(0,0,0,.75); }
+/* ── 지도 클릭 결과 (카드 내부) ──────────────────────── */
+.create-map-results {
+  list-style: none;
+  overflow-y: auto;
+  max-height: 300px;
+  background: #fff;
+  margin: 0;
+  padding: 0;
+}

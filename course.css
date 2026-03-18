@@ -44,7 +44,7 @@
 .carousel-overlay {
   position: absolute; bottom: 0; left: 0; right: 0;
   padding: 380px 20px 42px;
-  background: linear-gradient(transparent, rgba(0,0,0,1));
+  background: linear-gradient(transparent, rgba(0,0,0,0.55));
   pointer-events: none;
 }
 /*캐러셀 텍스트 — vw 기반 반응형 (줄바꿈 방지) */
@@ -320,4 +320,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
+}
+/* 썸네일 슬라이드 — 오버레이 없음 */
+.carousel-slide:first-child .carousel-overlay {
+  display: none;
 }

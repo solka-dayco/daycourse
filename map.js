@@ -8,16 +8,14 @@
  * @returns {Promise<kakao.maps.Map>}
  */
 export function createMap(containerId, { lat = 37.5665, lng = 126.9780, level = 5 } = {}) {
-  return new Promise(resolve => {
-    kakao.maps.load(() => {
-      const container = document.getElementById(containerId);
-      const map = new kakao.maps.Map(container, {
-        center: new kakao.maps.LatLng(lat, lng),
-        level,
-      });
-      resolve(map);
-    });
+  // kakao.maps.load() 는 호출부(create.js)에서 이미 완료된 상태로 진입하므로
+  // 중첩 호출 없이 바로 Map 인스턴스 생성 — 모바일 호환성 확보
+  const container = document.getElementById(containerId);
+  const map = new kakao.maps.Map(container, {
+    center: new kakao.maps.LatLng(lat, lng),
+    level,
   });
+  return Promise.resolve(map);
 }
 
 // ── 마커 관리 ─────────────────────────────────────────────
@@ -238,7 +236,7 @@ export function getCurrentPosition() {
     navigator.geolocation.getCurrentPosition(
       pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       err => reject(err),
-      { timeout: 8000, maximumAge: 60000 }
+      { timeout: 5000, maximumAge: 60000, enableHighAccuracy: false }
     );
   });
 }
