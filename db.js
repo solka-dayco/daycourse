@@ -649,6 +649,22 @@ function getOrCreateSessionIdForEvent() {
   return getOrCreateSessionId();
 }
 
+function getOrCreateAnonymousId() {
+  const KEY = 'dc_anonymous_id';
+  let id = localStorage.getItem(KEY);
+
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(KEY, id);
+  }
+
+  return id;
+}
+
+function getOrCreateAnonymousIdForEvent() {
+  return getOrCreateAnonymousId();
+}
+
 export async function logEvent(eventName, targetType = 'page', targetId = null, metadata = {}) {
   try {
     const session = await getSession();
