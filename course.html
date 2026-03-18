@@ -74,7 +74,8 @@
             공유
           </button>
           <!-- 비본인: 신고 버튼 -->
-          <button class="course-report-btn" id="reportBtn" aria-label="신고" style="display:none">신고</button>
+          <button class="course-action-btn course-report-btn" id="reportBtn" aria-label="신고" style="display:none">
+          </button>
         </div>
 
         <!-- 본인 코스 수정/삭제 -->
@@ -109,7 +110,7 @@
       <!-- 댓글 -->
       <div class="detail-section" id="commentSection">
         <div class="comment-header">
-          <div class="section-label">댓글 <span class="comment-count-label">0</span> <span class="comment-total" id="commentTotal"></span></div>
+          <div class="section-label">💬 댓글 <span class="comment-total" id="commentTotal"></span></div>
           <div class="comment-sort-chips">
             <button class="chip active" data-sort="latest">최신순</button>
             <button class="chip" data-sort="popular">인기순</button>
@@ -137,10 +138,12 @@
   <div class="photo-viewer" id="photoViewer" style="display:none" role="dialog" aria-modal="true">
     <button class="photo-viewer-close" id="viewerClose" aria-label="닫기"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     <span class="photo-viewer-counter" id="viewerCounter"></span>
-    <img class="photo-viewer-img" id="viewerImg" src="" alt=""/>
+    <div class="photo-viewer-img-wrap">
+      <img class="photo-viewer-img" id="viewerImg" src="" alt=""/>
+      <div class="viewer-caption" id="viewerCaption"></div>
+    </div>
     <button class="photo-viewer-nav prev" id="viewerPrev" aria-label="이전">‹</button>
     <button class="photo-viewer-nav next" id="viewerNext" aria-label="다음">›</button>
-    <div class="viewer-caption" id="viewerCaption"></div>
   </div>
 
   <!-- 공유 바텀시트 -->
@@ -172,6 +175,18 @@
     <div class="bottom-sheet-item" data-reason="abuse"> 욕설 / 비방</div>
     <div class="bottom-sheet-item" data-reason="other"> 기타</div>
   </div>
+
+  <footer class="site-footer">
+    <div class="footer-logo">데이코스</div>
+    <div class="footer-slogan">나만의 하루 코스, 데이코스</div>
+    <div class="footer-links">
+      <a href="privacy.html">개인정보처리방침</a>
+      <a href="privacy.html#terms">이용약관</a>
+    </div>
+    <div class="footer-contact">문의 · <a href="/cdn-cgi/l/email-protection#f69a9e85c6c6c7c6c2b6919b979f9ad895999b"><span class="__cf_email__" data-cfemail="c2aeaab1f2f2f3f2f682a5afa3abaeeca1adaf">[email&#160;protected]</span></a></div>
+    <div class="footer-copy">© 2026 DayCourse. All rights reserved. v1.0.0</div>
+  </footer>
+
   <div class="toast" id="toast"></div>
   <script type="module" src="course.js"></script>
 </body>
