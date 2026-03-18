@@ -641,14 +641,9 @@ export async function deletePhoto(path) {
 
 // ─── 행동 로그 ────────────────────────────────────────────
 
-function getOrCreateAnonymousIdForEvent() {
-  return getOrCreateAnonymousId();
-}
-
 function getOrCreateSessionIdForEvent() {
   return getOrCreateSessionId();
 }
-
 function getOrCreateAnonymousId() {
   const KEY = 'dc_anonymous_id';
   let id = localStorage.getItem(KEY);
