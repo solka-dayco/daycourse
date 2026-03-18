@@ -11,14 +11,15 @@ export async function loadLogs() {
 
   if (!initialized) {
     initialized = true;
+
     let timer;
-    search.addEventListener('input', () => {
+    search?.addEventListener('input', () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
         keyword = search.value.trim();
         offset = 0;
         fetchLogs();
-      }, 350);
+      }, 300);
     });
   }
 
@@ -27,12 +28,14 @@ export async function loadLogs() {
 
 async function fetchLogs() {
   const wrap = document.getElementById('logsTableWrap');
+  if (!wrap) return;
+
   wrap.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
 
   let q = supabase
     .from('event_logs')
     .select(
-      'id, session_id, user_id, event_name, target_type, target_id, event_page, created_at',
+      'id, user_id, anonymous_id, event_name, target_type, target_id, session_id, event_page, created_at',
       { count: 'exact' }
     )
     .order('created_at', { ascending: false })
@@ -47,13 +50,21 @@ async function fetchLogs() {
   if (error) {
     console.error('[fetchLogs error]', error);
     wrap.innerHTML = `<div class="admin-empty">로그 조회 실패: ${escHtml(error.message || 'unknown error')}</div>`;
-    renderPagination({ hasPrev: offset > 0, hasNext: false, count: 0 });
+    renderPagination({
+      hasPrev: offset > 0,
+      hasNext: false,
+      count: count || 0,
+    });
     return;
   }
 
   if (!data?.length) {
     wrap.innerHTML = '<div class="admin-empty">로그 없음</div>';
-    renderPagination({ hasPrev: offset > 0, hasNext: false, count: count || 0 });
+    renderPagination({
+      hasPrev: offset > 0,
+      hasNext: false,
+      count: count || 0,
+    });
     return;
   }
 
@@ -61,28 +72,38 @@ async function fetchLogs() {
     <table>
       <thead>
         <tr>
-          <th>user_id</th>
-          <th>session_id</th>
           <th>event_name</th>
-          <th>event_page</th>
           <th>target_type</th>
           <th>target_id</th>
+          <th>event_page</th>
+          <th>user_id</th>
+          <th>anonymous_id</th>
+          <th>session_id</th>
           <th>생성일</th>
         </tr>
       </thead>
       <tbody>
-        ${data.map(l => {
-          const sid = l.session_id || '-';
-          const eventPage = l.event_page ? escHtml(JSON.stringify(l.event_page)) : '-';
+        ${data.map((l) => {
+          const eventName = escHtml(l.event_name || '-');
+          const targetType = escHtml(l.target_type || '-');
+          const targetId = l.target_id ? escHtml(String(l.target_id)) : '-';
+          const userId = l.user_id ? escHtml(String(l.user_id)) : '-';
+          const anonymousId = l.anonymous_id ? escHtml(String(l.anonymous_id)) : '-';
+          const sessionId = l.session_id ? escHtml(String(l.session_id)) : '-';
+
+          const eventPageRaw = l.event_page ? safeJsonStringify(l.event_page) : '-';
+          const eventPageEscaped = escHtml(eventPageRaw);
+          const eventPageShort = truncate(eventPageEscaped, 56);
 
           return `
             <tr>
-              <td style="font-size:11px;color:#888">${l.user_id ? escHtml(l.user_id) : '-'}</td>
-              <td style="font-size:11px;color:#888">${sid !== '-' ? escHtml(sid) : '-'}</td>
-              <td>${escHtml(l.event_name || '-')}</td>
-              <td title="${eventPage}" style="max-width:220px;">${truncate(eventPage, 40)}</td>
-              <td>${escHtml(l.target_type || '-')}</td>
-              <td style="font-size:11px;color:#888">${l.target_id ? escHtml(String(l.target_id)) : '-'}</td>
+              <td>${eventName}</td>
+              <td>${targetType}</td>
+              <td style="font-size:11px;color:#888">${targetId}</td>
+              <td title="${eventPageEscaped}" style="max-width:260px">${eventPageShort}</td>
+              <td style="font-size:11px;color:#888">${userId}</td>
+              <td style="font-size:11px;color:#888">${anonymousId}</td>
+              <td style="font-size:11px;color:#888">${sessionId}</td>
               <td>${fmtDate(l.created_at)}</td>
             </tr>
           `;
@@ -94,12 +115,14 @@ async function fetchLogs() {
   renderPagination({
     hasPrev: offset > 0,
     hasNext: offset + PAGE < (count || 0),
-    count: count || 0
+    count: count || 0,
   });
 }
 
 function renderPagination({ hasPrev, hasNext, count }) {
   const pg = document.getElementById('logsPagination');
+  if (!pg) return;
+
   const currentPage = Math.floor(offset / PAGE) + 1;
   const totalPages = Math.max(1, Math.ceil((count || 0) / PAGE));
 
@@ -127,20 +150,31 @@ function escHtml(s) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function truncate(s, n) {
   return s.length > n ? s.slice(0, n) + '…' : s;
 }
 
+function safeJsonStringify(value) {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value ?? '-');
+  }
+}
+
 function fmtDate(s) {
   return s
     ? new Date(s).toLocaleString('ko-KR', {
+        year: 'numeric',
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        second: '2-digit',
       })
     : '';
 }

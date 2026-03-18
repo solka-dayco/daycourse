@@ -1,4 +1,4 @@
-// db.js — 모든 DB/Storage 접근 로직 (v4 — session_id 로깅 포함)
+// db.js — 모든 DB/Storage 접근 로직 (v5 — session/anonymous_id 로깅 포함)
 // Supabase 전환 시 이 파일만 수정하면 됩니다.
 
 import { supabase } from './supabase.js';
@@ -41,9 +41,9 @@ export async function signOut() {
 export async function upsertUserProfile({ id, username, nickname, gender, birth_year, region }) {
   const payload = { id, username, nickname };
   // gender, birth_year는 비공개 (RLS로 본인+admin만 조회)
-  if (gender !== undefined)     payload.gender     = gender;
+  if (gender !== undefined) payload.gender = gender;
   if (birth_year !== undefined) payload.birth_year = birth_year;
-  if (region !== undefined)     payload.region     = region;
+  if (region !== undefined) payload.region = region;
 
   const { error } = await supabase.from('users').upsert(payload);
   if (error) throw error;
@@ -79,8 +79,8 @@ export async function fetchCourses({
   regionSub = '',
   maxTime = 0,
   sort = 'latest',
-  cursor = null,     // cursor 기반 페이지네이션 (lastId or lastDate)
-  page = 0,          // 오프셋 기반 fallback
+  cursor = null, // cursor 기반 페이지네이션 (lastId or lastDate)
+  page = 0, // 오프셋 기반 fallback
   pageSize = 20,
 } = {}) {
   if (!keyword) {
@@ -96,15 +96,24 @@ export async function fetchCourses({
       .neq('is_deleted', true);
 
     if (regionMain) query = query.eq('region_main', regionMain);
-    if (regionSub)  query = query.eq('region_sub', regionSub);
+    if (regionSub) query = query.eq('region_sub', regionSub);
     if (maxTime > 0) query = query.lte('total_time', maxTime);
 
     switch (sort) {
-      case 'popular':    query = query.order('like_count',      { ascending: false }); break;
-      case 'referenced': query = query.order('reference_count', { ascending: false }); break;
-      case 'time_asc':   query = query.order('total_time',      { ascending: true  }); break;
-      case 'time_desc':  query = query.order('total_time',      { ascending: false }); break;
-      default:           query = query.order('created_at',      { ascending: false });
+      case 'popular':
+        query = query.order('like_count', { ascending: false });
+        break;
+      case 'referenced':
+        query = query.order('reference_count', { ascending: false });
+        break;
+      case 'time_asc':
+        query = query.order('total_time', { ascending: true });
+        break;
+      case 'time_desc':
+        query = query.order('total_time', { ascending: false });
+        break;
+      default:
+        query = query.order('created_at', { ascending: false });
     }
 
     query = query.range(page * pageSize, (page + 1) * pageSize - 1);
@@ -115,31 +124,31 @@ export async function fetchCourses({
 
   // 키워드 있을 때 → RPC
   const { data, error } = await supabase.rpc('search_courses', {
-    p_keyword:     keyword,
+    p_keyword: keyword,
     p_region_main: regionMain,
-    p_region_sub:  regionSub,
-    p_max_time:    maxTime,
-    p_sort:        sort,
-    p_offset:      page * pageSize,
-    p_limit:       pageSize,
+    p_region_sub: regionSub,
+    p_max_time: maxTime,
+    p_sort: sort,
+    p_offset: page * pageSize,
+    p_limit: pageSize,
   });
   if (error) throw error;
 
   const total = data?.[0]?.total_count ?? 0;
-  const courseIds = (data || []).map(c => c.id);
+  const courseIds = (data || []).map((c) => c.id);
   let placesMap = {};
   if (courseIds.length > 0) {
     const { data: places } = await supabase
       .from('course_places')
       .select('course_id, order_index, name, photo_url')
       .in('course_id', courseIds);
-    (places || []).forEach(p => {
+    (places || []).forEach((p) => {
       if (!placesMap[p.course_id]) placesMap[p.course_id] = [];
       placesMap[p.course_id].push(p);
     });
   }
 
-  const courses = (data || []).map(c => ({
+  const courses = (data || []).map((c) => ({
     ...c,
     course_places: (placesMap[c.id] || []).sort((a, b) => a.order_index - b.order_index),
   }));
@@ -174,7 +183,10 @@ export async function fetchCourseById(courseId) {
 }
 
 /** 유저가 만든 코스 목록 */
-export async function fetchCoursesByUser(userId, { page = 0, pageSize = 20, onlyReferenced = false } = {}) {
+export async function fetchCoursesByUser(
+  userId,
+  { page = 0, pageSize = 20, onlyReferenced = false } = {}
+) {
   let query = supabase
     .from('courses')
     .select(
@@ -204,7 +216,7 @@ export async function fetchReferencedCourses(courseId) {
   if (error) return [];
 
   // 각 코스 places 조회
-  const ids = (data || []).map(c => c.id);
+  const ids = (data || []).map((c) => c.id);
   if (ids.length === 0) return data || [];
 
   const { data: places } = await supabase
@@ -213,12 +225,12 @@ export async function fetchReferencedCourses(courseId) {
     .in('course_id', ids);
 
   const placesMap = {};
-  (places || []).forEach(p => {
+  (places || []).forEach((p) => {
     if (!placesMap[p.course_id]) placesMap[p.course_id] = [];
     placesMap[p.course_id].push(p);
   });
 
-  return (data || []).map(c => ({
+  return (data || []).map((c) => ({
     ...c,
     course_places: (placesMap[c.id] || []).sort((a, b) => a.order_index - b.order_index),
   }));
@@ -250,16 +262,10 @@ export async function createCourse(courseData, places) {
 }
 
 export async function updateCourse(courseId, courseData, places) {
-  const { error: courseErr } = await supabase
-    .from('courses')
-    .update(courseData)
-    .eq('id', courseId);
+  const { error: courseErr } = await supabase.from('courses').update(courseData).eq('id', courseId);
   if (courseErr) throw courseErr;
 
-  const { error: delErr } = await supabase
-    .from('course_places')
-    .delete()
-    .eq('course_id', courseId);
+  const { error: delErr } = await supabase.from('course_places').delete().eq('course_id', courseId);
   if (delErr) throw delErr;
 
   if (places && places.length > 0) {
@@ -289,13 +295,18 @@ export async function isCourseLiked(courseId, userId) {
 export async function toggleCourseLike(courseId, userId) {
   const liked = await isCourseLiked(courseId, userId);
   if (liked) {
-    await supabase.from('course_likes').delete()
-      .eq('course_id', courseId).eq('user_id', userId);
+    await supabase.from('course_likes').delete().eq('course_id', courseId).eq('user_id', userId);
     await supabase.rpc('decrement_like_count', { course_id: courseId });
     // 점수 반환
     try {
-      const { data: course } = await supabase.from('courses').select('author_id').eq('id', courseId).single();
-      if (course) await supabase.rpc('add_user_score', { p_user_id: course.author_id, p_delta: -1 });
+      const { data: course } = await supabase
+        .from('courses')
+        .select('author_id')
+        .eq('id', courseId)
+        .single();
+      if (course) {
+        await supabase.rpc('add_user_score', { p_user_id: course.author_id, p_delta: -1 });
+      }
     } catch (_) {}
     return false;
   } else {
@@ -303,19 +314,21 @@ export async function toggleCourseLike(courseId, userId) {
     await supabase.rpc('increment_like_count', { course_id: courseId });
     // 점수 부여 + 알림
     try {
-      const { data: course } = await supabase.from('courses')
-        .select('author_id, name').eq('id', courseId).single();
+      const { data: course } = await supabase
+        .from('courses')
+        .select('author_id, name')
+        .eq('id', courseId)
+        .single();
       if (course) {
         await supabase.rpc('add_user_score', { p_user_id: course.author_id, p_delta: 1 });
-        const { data: actor } = await supabase.from('users')
-          .select('nickname').eq('id', userId).single();
+        const { data: actor } = await supabase.from('users').select('nickname').eq('id', userId).single();
         await supabase.rpc('upsert_notification', {
-          p_actor_user_id:  userId,
+          p_actor_user_id: userId,
           p_actor_nickname: actor?.nickname ?? '',
           p_target_user_id: course.author_id,
-          p_type:           'course_like',
-          p_course_id:      courseId,
-          p_course_name:    course.name,
+          p_type: 'course_like',
+          p_course_id: courseId,
+          p_course_name: course.name,
         });
       }
     } catch (_) {}
@@ -338,8 +351,7 @@ export async function isBookmarked(courseId, userId) {
 export async function toggleBookmark(courseId, userId) {
   const marked = await isBookmarked(courseId, userId);
   if (marked) {
-    await supabase.from('bookmarks').delete()
-      .eq('course_id', courseId).eq('user_id', userId);
+    await supabase.from('bookmarks').delete().eq('course_id', courseId).eq('user_id', userId);
     return false;
   } else {
     await supabase.from('bookmarks').insert({ course_id: courseId, user_id: userId });
@@ -350,23 +362,23 @@ export async function toggleBookmark(courseId, userId) {
 export async function fetchBookmarkedCourses(userId, { page = 0, pageSize = 20 } = {}) {
   const { data, error } = await supabase.rpc('get_bookmarked_courses', {
     p_user_id: userId,
-    p_limit:   pageSize,
-    p_offset:  page * pageSize,
+    p_limit: pageSize,
+    p_offset: page * pageSize,
   });
   if (error) throw error;
 
-  const ids = (data || []).map(c => c.id);
+  const ids = (data || []).map((c) => c.id);
   if (ids.length === 0) return data || [];
   const { data: places } = await supabase
     .from('course_places')
     .select('course_id, order_index, name, photo_url')
     .in('course_id', ids);
   const map = {};
-  (places || []).forEach(p => {
+  (places || []).forEach((p) => {
     if (!map[p.course_id]) map[p.course_id] = [];
     map[p.course_id].push(p);
   });
-  return (data || []).map(c => ({
+  return (data || []).map((c) => ({
     ...c,
     course_places: (map[c.id] || []).sort((a, b) => a.order_index - b.order_index),
   }));
@@ -377,23 +389,23 @@ export async function fetchBookmarkedCourses(userId, { page = 0, pageSize = 20 }
 export async function fetchLikedCourses(userId, { page = 0, pageSize = 20 } = {}) {
   const { data, error } = await supabase.rpc('get_liked_courses', {
     p_user_id: userId,
-    p_limit:   pageSize,
-    p_offset:  page * pageSize,
+    p_limit: pageSize,
+    p_offset: page * pageSize,
   });
   if (error) throw error;
 
-  const ids = (data || []).map(c => c.id);
+  const ids = (data || []).map((c) => c.id);
   if (ids.length === 0) return data || [];
   const { data: places } = await supabase
     .from('course_places')
     .select('course_id, order_index, name, photo_url')
     .in('course_id', ids);
   const map = {};
-  (places || []).forEach(p => {
+  (places || []).forEach((p) => {
     if (!map[p.course_id]) map[p.course_id] = [];
     map[p.course_id].push(p);
   });
-  return (data || []).map(c => ({
+  return (data || []).map((c) => ({
     ...c,
     course_places: (map[c.id] || []).sort((a, b) => a.order_index - b.order_index),
   }));
@@ -410,16 +422,18 @@ export async function fetchComments(courseId, sort = 'latest') {
     .order('created_at', { ascending: sort !== 'latest' });
   if (error) throw error;
 
-  let comments = (data || []).map(c => ({
+  let comments = (data || []).map((c) => ({
     ...c,
     like_count: (c.comment_likes || []).length,
     replies: (c.replies || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
   }));
 
   if (sort === 'popular') {
-    comments.sort((a, b) =>
-      (b.like_count * 2 + (b.replies?.length || 0) * 3) -
-      (a.like_count * 2 + (a.replies?.length || 0) * 3)
+    comments.sort(
+      (a, b) =>
+        b.like_count * 2 +
+        (b.replies?.length || 0) * 3 -
+        (a.like_count * 2 + (a.replies?.length || 0) * 3)
     );
   } else if (sort === 'likes') {
     comments.sort((a, b) => b.like_count - a.like_count);
@@ -440,17 +454,20 @@ export async function addComment({ courseId, authorId, nickname, content }) {
   await supabase.rpc('increment_comment_count', { p_course_id: courseId });
   try {
     await supabase.rpc('add_user_score', { p_user_id: authorId, p_delta: 2 });
-    const { data: course } = await supabase.from('courses')
-      .select('author_id, name').eq('id', courseId).single();
+    const { data: course } = await supabase
+      .from('courses')
+      .select('author_id, name')
+      .eq('id', courseId)
+      .single();
     if (course) {
       await supabase.rpc('upsert_notification', {
-        p_actor_user_id:  authorId,
+        p_actor_user_id: authorId,
         p_actor_nickname: nickname,
         p_target_user_id: course.author_id,
-        p_type:           'course_comment',
-        p_course_id:      courseId,
-        p_course_name:    course.name,
-        p_comment_id:     data.id,
+        p_type: 'course_comment',
+        p_course_id: courseId,
+        p_course_name: course.name,
+        p_comment_id: data.id,
       });
     }
   } catch (_) {}
@@ -473,8 +490,7 @@ export async function toggleCommentLike(commentId, userId) {
     .maybeSingle();
 
   if (existing) {
-    await supabase.from('comment_likes').delete()
-      .eq('comment_id', commentId).eq('user_id', userId);
+    await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', userId);
     return false;
   } else {
     await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: userId });
@@ -495,23 +511,29 @@ export async function addReply({ commentId, authorId, nickname, content }) {
   // comment_count +1 (답글도 카운트) + 알림
   try {
     await supabase.rpc('add_user_score', { p_user_id: authorId, p_delta: 2 });
-    const { data: comment } = await supabase.from('comments')
-      .select('course_id, author_id').eq('id', commentId).single();
+    const { data: comment } = await supabase
+      .from('comments')
+      .select('course_id, author_id')
+      .eq('id', commentId)
+      .single();
     if (comment) {
       await supabase.rpc('increment_comment_count', { p_course_id: comment.course_id });
 
       // 코스명 별도 조회
-      const { data: courseRow } = await supabase.from('courses')
-        .select('name').eq('id', comment.course_id).single();
+      const { data: courseRow } = await supabase
+        .from('courses')
+        .select('name')
+        .eq('id', comment.course_id)
+        .single();
 
       await supabase.rpc('upsert_notification', {
-        p_actor_user_id:  authorId,
+        p_actor_user_id: authorId,
         p_actor_nickname: nickname,
         p_target_user_id: comment.author_id,
-        p_type:           'comment_reply',
-        p_course_id:      comment.course_id,
-        p_course_name:    courseRow?.name ?? '',
-        p_comment_id:     commentId,
+        p_type: 'comment_reply',
+        p_course_id: comment.course_id,
+        p_course_name: courseRow?.name ?? '',
+        p_comment_id: commentId,
       });
     }
   } catch (_) {}
@@ -524,8 +546,7 @@ export async function deleteReply(replyId, commentId) {
   if (error) throw error;
   // comment_count -1
   try {
-    const { data: comment } = await supabase.from('comments')
-      .select('course_id').eq('id', commentId).single();
+    const { data: comment } = await supabase.from('comments').select('course_id').eq('id', commentId).single();
     if (comment) await supabase.rpc('decrement_comment_count', { p_course_id: comment.course_id });
   } catch (_) {}
 }
@@ -539,8 +560,7 @@ export async function toggleReplyLike(replyId, userId) {
     .maybeSingle();
 
   if (existing) {
-    await supabase.from('reply_likes').delete()
-      .eq('reply_id', replyId).eq('user_id', userId);
+    await supabase.from('reply_likes').delete().eq('reply_id', replyId).eq('user_id', userId);
     return false;
   } else {
     await supabase.from('reply_likes').insert({ reply_id: replyId, user_id: userId });
@@ -598,7 +618,7 @@ export async function submitReport({ reporterUserId, targetType, targetId, reaso
   const { error } = await supabase.from('reports').insert({
     reporter_user_id: reporterUserId,
     target_type: targetType,
-    target_id:   String(targetId),
+    target_id: String(targetId),
     reason,
   });
   if (error) throw error;
@@ -621,34 +641,36 @@ export async function deletePhoto(path) {
 
 // ─── 행동 로그 ────────────────────────────────────────────
 
-function getOrCreateSessionId() {
-  const KEY = 'dc_session_id';
-  let sid = localStorage.getItem(KEY);
-  if (!sid) {
-    sid = crypto.randomUUID();
-    localStorage.setItem(KEY, sid);
-  }
-  return sid;
+function getOrCreateAnonymousIdForEvent() {
+  return getOrCreateAnonymousId();
+}
+
+function getOrCreateSessionIdForEvent() {
+  return getOrCreateSessionId();
 }
 
 export async function logEvent(eventName, targetType = 'page', targetId = null, metadata = {}) {
   try {
     const session = await getSession();
-    if (session?.user?.id) {
-      const { data: u } = await supabase
-        .from('users').select('role').eq('id', session.user.id).single();
-      if (u?.role === 'admin') return;
-    }
-    const sessionId = getOrCreateSessionId();
-    await supabase.from('event_logs').insert({
-      user_id:     session?.user?.id ?? null,
-      event_name:  eventName,
+    const sessionId = getOrCreateSessionIdForEvent();
+    const anonymousId = getOrCreateAnonymousIdForEvent();
+
+    const { error } = await supabase.from('event_logs').insert({
+      user_id: session?.user?.id ?? null,
+      anonymous_id: anonymousId,
+      event_name: eventName,
       target_type: targetType || null,
-      target_id:   targetId   || null,
-      session_id:  sessionId,
-      event_page:  metadata   || {},
+      target_id: targetId ? String(targetId) : null,
+      session_id: sessionId,
+      event_page: metadata || {},
     });
-  } catch (err) { console.error('[logEvent error]', err); }
+
+    if (error) {
+      console.error('[logEvent insert error]', error);
+    }
+  } catch (err) {
+    console.error('[logEvent error]', err);
+  }
 }
 
 // ─── 참조 코스 ───────────────────────────────────────────
@@ -659,19 +681,25 @@ export async function createReferenceCourse(courseData, places, parentCourseId) 
     await supabase.rpc('increment_reference_count', { course_id: parentCourseId });
     // 알림
     try {
-      const { data: parent } = await supabase.from('courses')
-        .select('author_id, name').eq('id', parentCourseId).single();
+      const { data: parent } = await supabase
+        .from('courses')
+        .select('author_id, name')
+        .eq('id', parentCourseId)
+        .single();
       if (parent) {
         const session = await getSession();
-        const { data: actor } = await supabase.from('users')
-          .select('nickname').eq('id', session.user.id).single();
+        const { data: actor } = await supabase
+          .from('users')
+          .select('nickname')
+          .eq('id', session.user.id)
+          .single();
         await supabase.rpc('upsert_notification', {
-          p_actor_user_id:  session.user.id,
+          p_actor_user_id: session.user.id,
           p_actor_nickname: actor?.nickname ?? '',
           p_target_user_id: parent.author_id,
-          p_type:           'course_reference',
-          p_course_id:      parentCourseId,
-          p_course_name:    parent.name,
+          p_type: 'course_reference',
+          p_course_id: parentCourseId,
+          p_course_name: parent.name,
         });
         // 점수 부여 (참조됨)
         await supabase.rpc('add_user_score', { p_user_id: parent.author_id, p_delta: 5 });
@@ -684,8 +712,7 @@ export async function createReferenceCourse(courseData, places, parentCourseId) 
 export async function onCourseDeleted(courseId, parentCourseId) {
   await deleteCourse(courseId);
   if (parentCourseId) {
-    const { data } = await supabase.from('courses').select('id')
-      .eq('id', parentCourseId).maybeSingle();
+    const { data } = await supabase.from('courses').select('id').eq('id', parentCourseId).maybeSingle();
     if (data) await supabase.rpc('decrement_reference_count', { course_id: parentCourseId });
   }
 }

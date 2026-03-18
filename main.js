@@ -1,8 +1,11 @@
-// main.js — 피드 페이지 (v3)
+// main.js — 피드 페이지 (v4 — 원본 유지 + 퍼널 로그 보강)
 import {
-  fetchCourses, autocompleteSearch,
-  isCourseLiked, toggleCourseLike,
-  logEvent, getCurrentUser
+  fetchCourses,
+  autocompleteSearch,
+  isCourseLiked,
+  toggleCourseLike,
+  logEvent,
+  getCurrentUser
 } from './db.js';
 import { initSidebar } from './sidebar.js';
 import { initIcons, initSidebarIcons } from './icons.js';
@@ -11,33 +14,41 @@ import { supabase } from './supabase.js';
 initSidebar();
 initIcons();
 initSidebarIcons();
+
+// 최초 페이지 진입 로그
 logEvent('page_view', 'page', null, { page: 'feed' });
 
 // ── 상태 ──────────────────────────────────────────────────
 const PAGE_SIZE = 20;
 let state = {
-  keyword: '', regionMain: '', regionSub: '',
-  maxTime: 0, sort: 'latest',
-  page: 0, total: 0,
-  loading: false, allLoaded: false,
+  keyword: '',
+  regionMain: '',
+  regionSub: '',
+  maxTime: 0,
+  sort: 'latest',
+  page: 0,
+  total: 0,
+  loading: false,
+  allLoaded: false,
 };
+
 let currentUser = null;
 
-
-
 // ── 초기화 ─────────────────────────────────────────────────
-const feedGrid       = document.getElementById('feedGrid');
-const spinner        = document.getElementById('spinner');
-const feedEmpty      = document.getElementById('feedEmpty');
-const ptrIndicator   = document.getElementById('ptrIndicator');
-const searchInput    = document.getElementById('searchInput');
+const feedGrid = document.getElementById('feedGrid');
+const spinner = document.getElementById('spinner');
+const feedEmpty = document.getElementById('feedEmpty');
+const ptrIndicator = document.getElementById('ptrIndicator');
+const searchInput = document.getElementById('searchInput');
 const autocompleteList = document.getElementById('autocompleteList');
-const filterPanel    = document.getElementById('filterPanel');
-const filterBadge    = document.getElementById('filterBadge');
+const filterPanel = document.getElementById('filterPanel');
+const filterBadge = document.getElementById('filterBadge');
 
 (async () => {
   currentUser = await getCurrentUser();
-  if (currentUser) document.getElementById('headerCreateBtn').style.display = '';
+  if (currentUser) {
+    document.getElementById('headerCreateBtn').style.display = '';
+  }
   loadFeed(true);
 })();
 
@@ -47,6 +58,7 @@ window.addEventListener('pageshow', e => {
     state.page = 0;
     state.allLoaded = false;
     feedGrid.innerHTML = '';
+    logEvent('page_restore', 'page', null, { page: 'feed' });
     loadFeed(true);
   }
 });
@@ -76,6 +88,7 @@ searchInput.addEventListener('input', () => {
     feedSearchTimer = setTimeout(() => {
       if (state.keyword !== '') {
         state.keyword = '';
+        logEvent('search_clear', 'search', null, { page: 'feed' });
         reload();
       }
     }, 400);
@@ -84,6 +97,7 @@ searchInput.addEventListener('input', () => {
 
 searchInput.addEventListener('keydown', e => {
   const items = autocompleteList.querySelectorAll('.autocomplete-item');
+
   if (e.key === 'ArrowDown') {
     e.preventDefault();
     acFocusedIdx = Math.min(acFocusedIdx + 1, items.length - 1);
@@ -98,6 +112,10 @@ searchInput.addEventListener('keydown', e => {
     } else {
       state.keyword = searchInput.value.trim();
       hideAutocomplete();
+      logEvent('search', 'search', null, {
+        page: 'feed',
+        keyword: state.keyword || ''
+      });
       reload();
     }
   } else if (e.key === 'Escape') {
@@ -110,20 +128,25 @@ document.addEventListener('click', e => {
 });
 
 function showAutocomplete(results, kw) {
-  if (!results.length) { hideAutocomplete(); return; }
+  if (!results.length) {
+    hideAutocomplete();
+    return;
+  }
+
   acFocusedIdx = -1;
   autocompleteList.innerHTML = results.map(r => `
-    <li class="autocomplete-item" role="option" data-label="${escHtml(r.label)}">
+    <li class="autocomplete-item" role="option" data-label="${escAttr(r.label)}" data-type="${escAttr(r.type || '')}">
       <span>${highlightKw(escHtml(r.label), kw)}</span>
       <span class="autocomplete-item-type">${r.type === 'course' ? '코스' : '장소'}</span>
     </li>
   `).join('');
+
   autocompleteList.classList.add('show');
 
   autocompleteList.querySelectorAll('.autocomplete-item').forEach(el => {
     el.addEventListener('mousedown', e => {
       e.preventDefault();
-      selectAutocomplete(el.dataset.label);
+      selectAutocomplete(el.dataset.label, el.dataset.type || '');
     });
   });
 }
@@ -138,23 +161,38 @@ function updateAcFocus(items) {
   items.forEach((el, i) => el.classList.toggle('focused', i === acFocusedIdx));
 }
 
-function selectAutocomplete(label) {
+function selectAutocomplete(label, type = '') {
   searchInput.value = label;
   state.keyword = label;
   hideAutocomplete();
+
+  logEvent('autocomplete_select', 'search', null, {
+    page: 'feed',
+    keyword: label,
+    suggestion_type: type || null
+  });
+
   reload();
 }
 
 function highlightKw(text, kw) {
   if (!kw) return text;
-  return text.replace(new RegExp(`(${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
-    '<strong>$1</strong>');
+  return text.replace(
+    new RegExp(`(${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
+    '<strong>$1</strong>'
+  );
 }
 
 // 검색 버튼
 document.getElementById('searchBtn').addEventListener('click', () => {
   state.keyword = searchInput.value.trim();
   hideAutocomplete();
+
+  logEvent('search', 'search', null, {
+    page: 'feed',
+    keyword: state.keyword || ''
+  });
+
   reload();
 });
 
@@ -182,56 +220,117 @@ const REGION_SUB = {
 // ── 필터 UI ───────────────────────────────────────────────
 document.getElementById('filterToggleBtn').addEventListener('click', () => {
   filterPanel.classList.toggle('open');
-  document.getElementById('filterToggleBtn').classList.toggle('active', filterPanel.classList.contains('open'));
+  document.getElementById('filterToggleBtn')
+    .classList.toggle('active', filterPanel.classList.contains('open'));
 });
 
 document.getElementById('filterRegionMain').addEventListener('change', function () {
   state.regionMain = this.value;
   state.regionSub = '';
+
   const subSel = document.getElementById('filterRegionSub');
   const subs = REGION_SUB[this.value] || [];
+
   if (subs.length) {
-    subSel.innerHTML = `<option value="">세부 전체</option>` + subs.map(s => `<option>${s}</option>`).join('');
+    subSel.innerHTML =
+      `<option value="">세부 전체</option>` +
+      subs.map(s => `<option>${s}</option>`).join('');
     subSel.style.display = '';
   } else {
     subSel.style.display = 'none';
   }
+
   updateFilterBadge();
+
+  logEvent('filter_change', 'filter', null, {
+    page: 'feed',
+    region_main: state.regionMain || '',
+    region_sub: '',
+    max_time: state.maxTime,
+    sort: state.sort
+  });
+
   reload();
 });
 
 document.getElementById('filterRegionSub').addEventListener('change', function () {
   state.regionSub = this.value;
   updateFilterBadge();
+
+  logEvent('filter_change', 'filter', null, {
+    page: 'feed',
+    region_main: state.regionMain || '',
+    region_sub: state.regionSub || '',
+    max_time: state.maxTime,
+    sort: state.sort
+  });
+
   reload();
 });
 
 document.querySelectorAll('#filterTimeChips .chip').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('#filterTimeChips .chip').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#filterTimeChips .chip')
+      .forEach(b => b.classList.remove('active'));
+
     btn.classList.add('active');
-    state.maxTime = parseInt(btn.dataset.time);
+    state.maxTime = parseInt(btn.dataset.time, 10);
     updateFilterBadge();
+
+    logEvent('filter_change', 'filter', null, {
+      page: 'feed',
+      region_main: state.regionMain || '',
+      region_sub: state.regionSub || '',
+      max_time: state.maxTime,
+      sort: state.sort
+    });
+
     reload();
   });
 });
 
 document.querySelectorAll('#filterSortChips .chip').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('#filterSortChips .chip').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#filterSortChips .chip')
+      .forEach(b => b.classList.remove('active'));
+
     btn.classList.add('active');
     state.sort = btn.dataset.sort;
+
+    logEvent('sort_change', 'sort', null, {
+      page: 'feed',
+      sort: state.sort,
+      keyword: state.keyword || '',
+      region_main: state.regionMain || '',
+      region_sub: state.regionSub || '',
+      max_time: state.maxTime
+    });
+
     reload();
   });
 });
 
 document.getElementById('filterResetBtn').addEventListener('click', () => {
-  state.keyword = ''; state.regionMain = ''; state.regionSub = ''; state.maxTime = 0;
+  state.keyword = '';
+  state.regionMain = '';
+  state.regionSub = '';
+  state.maxTime = 0;
+  state.sort = 'latest';
+
   searchInput.value = '';
   document.getElementById('filterRegionMain').value = '';
   document.getElementById('filterRegionSub').style.display = 'none';
-  document.querySelectorAll('#filterTimeChips .chip').forEach((b, i) => b.classList.toggle('active', i === 0));
+
+  document.querySelectorAll('#filterTimeChips .chip')
+    .forEach((b, i) => b.classList.toggle('active', i === 0));
+
+  document.querySelectorAll('#filterSortChips .chip')
+    .forEach(b => b.classList.toggle('active', b.dataset.sort === 'latest'));
+
   updateFilterBadge();
+
+  logEvent('filter_reset', 'filter', null, { page: 'feed' });
+
   reload();
 });
 
@@ -239,6 +338,7 @@ function updateFilterBadge() {
   let count = 0;
   if (state.regionMain) count++;
   if (state.maxTime > 0) count++;
+
   filterBadge.textContent = count || '';
   filterBadge.style.display = count ? '' : 'none';
 }
@@ -266,10 +366,13 @@ document.addEventListener('touchmove', e => {
 document.addEventListener('touchend', async e => {
   if (!ptrActive) return;
   ptrActive = false;
+
   const dy = e.changedTouches[0].clientY - ptrStartY;
   if (dy > PTR_THRESHOLD && window.scrollY === 0) {
+    logEvent('feed_refresh', 'page', null, { page: 'feed' });
     await reload();
   }
+
   setTimeout(() => ptrIndicator.classList.add('hidden'), 400);
 }, { passive: true });
 
@@ -293,15 +396,24 @@ async function reload() {
 
 async function loadFeed(isFirstPage) {
   if (state.loading || state.allLoaded) return;
+
   state.loading = true;
-  if (isFirstPage) { spinner.style.display = ''; feedEmpty.style.display = 'none'; }
+  if (isFirstPage) {
+    spinner.style.display = '';
+    feedEmpty.style.display = 'none';
+  }
 
   try {
     const { courses, total } = await fetchCourses({
-      keyword: state.keyword, regionMain: state.regionMain,
-      regionSub: state.regionSub, maxTime: state.maxTime,
-      sort: state.sort, page: state.page, pageSize: PAGE_SIZE,
+      keyword: state.keyword,
+      regionMain: state.regionMain,
+      regionSub: state.regionSub,
+      maxTime: state.maxTime,
+      sort: state.sort,
+      page: state.page,
+      pageSize: PAGE_SIZE,
     });
+
     state.total = total;
 
     if (courses.length === 0 && state.page === 0) {
@@ -309,11 +421,11 @@ async function loadFeed(isFirstPage) {
     } else {
       // 병렬로 좋아요 상태 조회
       const likedMap = {};
+
       if (currentUser && courses.length) {
         await Promise.all(courses.map(async c => {
-          const { data } = await supabase.from('course_likes').select('course_id')
-            .eq('course_id', c.id).eq('user_id', currentUser.id).maybeSingle();
-          likedMap[c.id] = !!data;
+          const liked = await isCourseLiked(c.id, currentUser.id);
+          likedMap[c.id] = liked;
         }));
       }
 
@@ -349,14 +461,15 @@ function buildCard(course, liked) {
   const card = document.createElement('div');
   card.className = 'feed-card';
   card.dataset.courseId = course.id;
+
   card.innerHTML = `
     <div class="feed-thumb">
       ${thumb
-        ? `<img src="${escHtml(thumb)}" alt="${escHtml(course.name)}" loading="lazy"/>`
+        ? `<img src="${escAttr(thumb)}" alt="${escAttr(course.name)}" loading="lazy"/>`
         : `<div class="feed-thumb-placeholder">🗺️</div>`
       }
       ${course.region_main
-        ? `<span class="feed-region-badge">${escHtml(course.region_main)}${course.region_sub ? ' · ' + course.region_sub : ''}</span>`
+        ? `<span class="feed-region-badge">${escHtml(course.region_main)}${course.region_sub ? ' · ' + escHtml(course.region_sub) : ''}</span>`
         : ''
       }
     </div>
@@ -365,19 +478,21 @@ function buildCard(course, liked) {
       <div class="feed-places-path">${escHtml(pathText)}</div>
       ${course.description ? `<div class="feed-description">${escHtml(course.description)}</div>` : ''}
       <div class="feed-meta">
-        <span class="feed-author"
-          data-user-id="${escHtml(course.author_id)}"
+        <span
+          class="feed-author"
+          data-user-id="${escAttr(course.author_id)}"
           style="cursor:pointer"
-          title="${escHtml(course.author_nickname)}"
+          title="${escAttr(course.author_nickname)}"
         >${escHtml(course.author_nickname)}</span>
         <div class="feed-actions">
-          ${timeText ? `<span class="feed-time-badge">⏱ ${timeText}</span>` : ''}
-          <button class="feed-like-btn ${liked ? 'liked' : ''}" data-id="${course.id}" aria-label="좋아요">
+          ${timeText ? `<span class="feed-time-badge">⏱ ${escHtml(timeText)}</span>` : ''}
+          <button class="feed-like-btn ${liked ? 'liked' : ''}" data-id="${escAttr(course.id)}" aria-label="좋아요">
             <span class="heart">♥</span>
             <span class="like-count">${course.like_count || 0}</span>
           </button>
-          <button class="feed-comment-btn" data-id="${course.id}" aria-label="댓글">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> <span>${course.comment_count || 0}</span>
+          <button class="feed-comment-btn" data-id="${escAttr(course.id)}" aria-label="댓글">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>${course.comment_count || 0}</span>
           </button>
         </div>
       </div>
@@ -391,52 +506,103 @@ function buildCard(course, liked) {
 function bindCardEvents(card, course) {
   // 카드 클릭
   card.addEventListener('click', e => {
-    if (e.target.closest('.feed-like-btn') ||
-        e.target.closest('.feed-comment-btn') ||
-        e.target.closest('.feed-author')) return;
-    logEvent('course_view', 'course', course.id);
+    if (
+      e.target.closest('.feed-like-btn') ||
+      e.target.closest('.feed-comment-btn') ||
+      e.target.closest('.feed-author')
+    ) return;
+
+    logEvent('course_view', 'course', course.id, {
+      page: 'feed',
+      region_main: course.region_main || '',
+      region_sub: course.region_sub || '',
+      author_id: course.author_id || null
+    });
+
     location.href = `course.html?id=${course.id}`;
   });
 
   // 작성자 클릭 → 유저 페이지
   card.querySelector('.feed-author')?.addEventListener('click', e => {
     e.stopPropagation();
+
+    logEvent('author_click', 'user', course.author_id, {
+      page: 'feed',
+      course_id: course.id
+    });
+
     location.href = `user.html?id=${course.author_id}`;
   });
 
   // 댓글 버튼
-  card.querySelector('.feed-comment-btn').addEventListener('click', e => {
+  card.querySelector('.feed-comment-btn')?.addEventListener('click', e => {
     e.stopPropagation();
+
+    logEvent('comment_cta_click', 'course', course.id, {
+      page: 'feed'
+    });
+
     location.href = `course.html?id=${course.id}#commentSection`;
   });
 
   // 좋아요
-  card.querySelector('.feed-like-btn').addEventListener('click', async e => {
+  card.querySelector('.feed-like-btn')?.addEventListener('click', async e => {
     e.stopPropagation();
-    if (!currentUser) { location.href = 'login.html'; return; }
+
+    if (!currentUser) {
+      logEvent('login_required_click', 'course', course.id, {
+        page: 'feed',
+        action: 'like'
+      });
+      location.href = 'login.html';
+      return;
+    }
+
     const btn = e.currentTarget;
-    const nowLiked = btn.classList.contains('liked');
     const countEl = btn.querySelector('.like-count');
-    btn.classList.toggle('liked', !nowLiked);
-    countEl.textContent = parseInt(countEl.textContent) + (!nowLiked ? 1 : -1);
+    const wasLiked = btn.classList.contains('liked');
+
+    // 낙관적 UI
+    btn.classList.toggle('liked', !wasLiked);
+    countEl.textContent = String(parseInt(countEl.textContent, 10) + (!wasLiked ? 1 : -1));
+
     try {
-      await toggleCourseLike(course.id, currentUser.id);
-      logEvent('course_like', 'course', course.id);
-    } catch {
-      btn.classList.toggle('liked', nowLiked);
-      countEl.textContent = parseInt(countEl.textContent) + (nowLiked ? 1 : -1);
+      const liked = await toggleCourseLike(course.id, currentUser.id);
+
+      logEvent(liked ? 'like_click' : 'like_cancel', 'course', course.id, {
+        page: 'feed'
+      });
+    } catch (err) {
+      console.error('좋아요 처리 오류:', err);
+      // 롤백
+      btn.classList.toggle('liked', wasLiked);
+      countEl.textContent = String(parseInt(countEl.textContent, 10) + (wasLiked ? 1 : -1));
     }
   });
 }
 
 // ── 유틸 ─────────────────────────────────────────────────
 function escHtml(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function escAttr(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 function formatMinutes(min) {
   if (!min) return '';
-  const h = Math.floor(min / 60), m = min % 60;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
   return m ? `${h ? h + '시간 ' : ''}${m}분` : `${h}시간`;
 }

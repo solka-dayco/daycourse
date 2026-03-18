@@ -1,97 +1,125 @@
-// course.js — 코스 상세 페이지 (v3)
+// course.js — 코스 상세 페이지 (v4 — 퍼널 로그 강화 + 안정화)
 import {
-  getCurrentUser, fetchCourseById,
-  isCourseLiked, toggleCourseLike,
-  isBookmarked, toggleBookmark,
-  fetchComments, addComment, deleteComment, toggleCommentLike,
-  addReply, deleteReply, toggleReplyLike,
+  getCurrentUser,
+  fetchCourseById,
+  isCourseLiked,
+  toggleCourseLike,
+  isBookmarked,
+  toggleBookmark,
+  fetchComments,
+  addComment,
+  deleteComment,
+  toggleCommentLike,
+  addReply,
+  deleteReply,
+  toggleReplyLike,
   fetchReferencedCourses,
-  onCourseDeleted, logEvent, submitReport,
+  onCourseDeleted,
+  logEvent,
+  submitReport,
 } from './db.js';
 import { initSidebar } from './sidebar.js';
 import { initIcons, initSidebarIcons } from './icons.js';
 import { supabase } from './supabase.js';
 
 // ── 안전한 DOM 헬퍼 ──────────────────────────────────────
-// getElementById가 null을 반환해도 오류 없이 처리
 function $id(id) {
   return document.getElementById(id);
 }
 function setText(id, val) {
-  const el = $id(id); if (el) el.textContent = val;
+  const el = $id(id);
+  if (el) el.textContent = val;
 }
 function setHtml(id, val) {
-  const el = $id(id); if (el) el.innerHTML = val;
+  const el = $id(id);
+  if (el) el.innerHTML = val;
 }
 function show(id) {
-  const el = $id(id); if (el) el.style.display = '';
+  const el = $id(id);
+  if (el) el.style.display = '';
 }
 function hide(id) {
-  const el = $id(id); if (el) el.style.display = 'none';
+  const el = $id(id);
+  if (el) el.style.display = 'none';
 }
 function on(id, ev, fn) {
-  const el = $id(id); if (el) el.addEventListener(ev, fn);
+  const el = $id(id);
+  if (el) el.addEventListener(ev, fn);
 }
 
 initSidebar();
 initSidebarIcons();
 
 // ── 파라미터 ──────────────────────────────────────────────
-const params   = new URLSearchParams(location.search);
+const params = new URLSearchParams(location.search);
 const courseId = params.get('id');
 
-if (!courseId) { location.href = 'main.html'; }
+if (!courseId) {
+  location.href = 'main.html';
+}
 
 // ── 상태 ─────────────────────────────────────────────────
-let course = null, currentUser = null;
+let course = null;
+let currentUser = null;
 let commentSort = 'latest';
 
 // ── 요소 참조 ─────────────────────────────────────────────
-const spinner      = document.getElementById('spinner');
-const courseContent = document.getElementById('courseContent');
-const likeBtn      = document.getElementById('likeBtn');
-const bookmarkBtn  = document.getElementById('bookmarkBtn');
-const commentInput = document.getElementById('commentInput');
-const commentSubmitBtn = document.getElementById('commentSubmitBtn');
+const spinner = $id('spinner');
+const courseContent = $id('courseContent');
+const likeBtn = $id('likeBtn');
+const bookmarkBtn = $id('bookmarkBtn');
+const commentInput = $id('commentInput');
+const commentSubmitBtn = $id('commentSubmitBtn');
 
 // ── 초기화 ───────────────────────────────────────────────
 (async () => {
-  [course, currentUser] = await Promise.all([
-    fetchCourseById(courseId),
-    getCurrentUser(),
-  ]);
+  try {
+    [course, currentUser] = await Promise.all([
+      fetchCourseById(courseId),
+      getCurrentUser(),
+    ]);
 
-  if (!course) {
+    if (!course) {
+      spinner.style.display = 'none';
+      showToast('코스를 찾을 수 없습니다');
+      setTimeout(() => {
+        location.href = 'main.html';
+      }, 1500);
+      return;
+    }
+
+    logEvent('course_view', 'course', courseId, {
+      page: 'course',
+      author_id: course.author_id || null,
+      region_main: course.region_main || '',
+      region_sub: course.region_sub || '',
+      has_thumbnail: !!course.thumbnail_url,
+      place_count: Array.isArray(course.course_places) ? course.course_places.length : 0,
+    });
+
+    renderCourseHeader();
+    renderCarousel();
+    renderTimeline();
+    renderReferencedCourses();
+    await renderLikeBookmark();
+    initCommentSortChips();
+    await renderComments();
+
     spinner.style.display = 'none';
-    showToast('코스를 찾을 수 없습니다');
-    setTimeout(() => location.href = 'main.html', 1500);
-    return;
-  }
+    courseContent.style.display = '';
 
-  logEvent('course_view', 'course', courseId);
+    initIcons();
+    renderMap();
 
-  renderCourseHeader();
-  renderCarousel();
-  renderTimeline();
-  renderReferencedCourses();
-  await renderLikeBookmark();
-  initCommentSortChips();
-  await renderComments();
-
-  spinner.style.display = 'none';
-  courseContent.style.display = '';
-
-  // 아이콘 초기화 — DOM이 보인 후 실행
-  initIcons();
-
-  // 지도는 courseContent가 보인 후 초기화 — display:none 상태에서 초기화하면 크기 0으로 깨짐
-  renderMap();
-
-  // 앵커 처리 (댓글 섹션)
-  if (location.hash === '#commentSection') {
-    setTimeout(() => {
-      document.getElementById('commentSection')?.scrollIntoView({ behavior: 'smooth' });
-    }, 300);
+    if (location.hash === '#commentSection') {
+      setTimeout(() => {
+        $id('commentSection')?.scrollIntoView({ behavior: 'smooth' });
+      }, 300);
+    }
+  } catch (err) {
+    console.error('course init error:', err);
+    spinner.style.display = 'none';
+    showToast('코스 정보를 불러오지 못했습니다');
   }
 })();
 
@@ -100,18 +128,28 @@ function renderCourseHeader() {
   document.title = `${course.name} — 데이코스`;
 
   if (course.region_main) {
-    setText('courseRegion', course.region_main + (course.region_sub ? ` · ${course.region_sub}` : ''));
+    setText(
+      'courseRegion',
+      course.region_main + (course.region_sub ? ` · ${course.region_sub}` : '')
+    );
   }
+
   setText('courseTime', formatMinutes(course.total_time) || '');
-  setText('courseName',  course.name);
-  setText('courseDesc',  course.description || '');
-  setText('courseDate',  relativeTime(course.created_at));
+  setText('courseName', course.name);
+  setText('courseDesc', course.description || '');
+  setText('courseDate', relativeTime(course.created_at));
 
   // 작성자 → 유저 페이지
   const authorEl = $id('courseAuthor');
   if (authorEl) {
     authorEl.textContent = course.author_nickname;
-    authorEl.addEventListener('click', () => { location.href = `user.html?id=${course.author_id}`; });
+    authorEl.addEventListener('click', () => {
+      logEvent('author_click', 'user', course.author_id, {
+        page: 'course',
+        course_id: courseId,
+      });
+      location.href = `user.html?id=${course.author_id}`;
+    });
   }
 
   // 참조 출처
@@ -119,46 +157,64 @@ function renderCourseHeader() {
     const refEl = $id('courseRef');
     if (refEl) {
       refEl.style.display = '';
-      refEl.innerHTML = `이 코스는 <a href="course.html?id=${escHtml(course.original_course_id)}">${escHtml(course.original_course_name || '원본 코스')}</a>를 참고하여 만들어졌습니다`;
+      refEl.innerHTML =
+        `이 코스는 <a href="course.html?id=${escHtml(course.original_course_id)}">${escHtml(course.original_course_name || '원본 코스')}</a>를 참고하여 만들어졌습니다`;
+
+      refEl.querySelector('a')?.addEventListener('click', () => {
+        logEvent('original_course_click', 'course', course.original_course_id, {
+          page: 'course',
+          course_id: courseId,
+        });
+      });
     }
   }
 
-  // 참조 수
   setText('refCount', course.reference_count ?? 0);
-
-  // 댓글 수 뱃지
   setText('commentCountBadge', course.comment_count || 0);
 
-  // 본인 코스 — 수정/삭제 / 타인 코스 — 신고 버튼
-  const ownerActions = document.getElementById('ownerActions');
-  const reportBtn    = document.getElementById('reportBtn');
-  const editBtn      = document.getElementById('editBtn');
-  const deleteBtn_el = document.getElementById('deleteBtn');
+  const ownerActions = $id('ownerActions');
+  const reportBtn = $id('reportBtn');
+  const editBtn = $id('editBtn');
+  const deleteBtnEl = $id('deleteBtn');
 
   if (currentUser && currentUser.id === course.author_id) {
     if (ownerActions) ownerActions.style.display = '';
-    if (reportBtn)    reportBtn.style.display    = 'none';
+    if (reportBtn) reportBtn.style.display = 'none';
 
     editBtn?.addEventListener('click', () => {
+      logEvent('course_edit_click', 'course', courseId, {
+        page: 'course',
+      });
       location.href = `create.html?mode=edit&id=${courseId}`;
     });
-    deleteBtn_el?.addEventListener('click', () => {
-      document.getElementById('deleteModal')?.classList.add('show');
+
+    deleteBtnEl?.addEventListener('click', () => {
+      $id('deleteModal')?.classList.add('show');
     });
   } else if (currentUser) {
     if (reportBtn) {
       reportBtn.style.display = '';
-      reportBtn.addEventListener('click', openReportSheet);
+      reportBtn.addEventListener('click', () => {
+        logEvent('report_open', 'course', courseId, {
+          page: 'course',
+        });
+        openReportSheet();
+      });
     }
   }
 
   // 삭제 모달
-  document.getElementById('deleteCancel')?.addEventListener('click', () => {
-    document.getElementById('deleteModal')?.classList.remove('show');
+  $id('deleteCancel')?.addEventListener('click', () => {
+    $id('deleteModal')?.classList.remove('show');
   });
-  document.getElementById('deleteConfirm')?.addEventListener('click', async () => {
-    document.getElementById('deleteModal')?.classList.remove('show');
+
+  $id('deleteConfirm')?.addEventListener('click', async () => {
+    $id('deleteModal')?.classList.remove('show');
+
     try {
+      logEvent('course_delete_confirm', 'course', courseId, {
+        page: 'course',
+      });
       await onCourseDeleted(courseId, course.parent_course_id);
       location.href = 'main.html';
     } catch (e) {
@@ -168,9 +224,20 @@ function renderCourseHeader() {
 
   // 참조 버튼
   on('copyBtn', 'click', () => {
-    if (!currentUser) { location.href = 'login.html'; return; }
+    if (!currentUser) {
+      logEvent('login_required_click', 'course', courseId, {
+        page: 'course',
+        action: 'reference',
+      });
+      location.href = 'login.html';
+      return;
+    }
+
+    logEvent('course_reference', 'course', courseId, {
+      page: 'course',
+    });
+
     location.href = `create.html?mode=copy&id=${courseId}`;
-    logEvent('course_reference', 'course', courseId);
   });
 
   // 공유 버튼
@@ -178,12 +245,17 @@ function renderCourseHeader() {
 
   // 댓글 점프
   on('commentJumpBtn', 'click', () => {
-    document.getElementById('commentSection')?.scrollIntoView({ behavior: 'smooth' });
+    logEvent('comment_cta_click', 'course', courseId, {
+      page: 'course',
+    });
+    $id('commentSection')?.scrollIntoView({ behavior: 'smooth' });
   });
 }
 
 // ── 좋아요 / 북마크 ───────────────────────────────────────
 async function renderLikeBookmark() {
+  if (!likeBtn || !bookmarkBtn) return;
+
   likeBtn.innerHTML = `♥ <span id="likeCount">${course.like_count || 0}</span>`;
 
   if (currentUser) {
@@ -191,33 +263,57 @@ async function renderLikeBookmark() {
       isCourseLiked(courseId, currentUser.id),
       isBookmarked(courseId, currentUser.id),
     ]);
-    if (liked)  likeBtn.classList.add('liked');
+
+    if (liked) likeBtn.classList.add('liked');
     if (marked) bookmarkBtn.classList.add('bookmarked');
   }
 
   likeBtn.addEventListener('click', async () => {
-    if (!currentUser) { location.href = 'login.html'; return; }
+    if (!currentUser) {
+      logEvent('login_required_click', 'course', courseId, {
+        page: 'course',
+        action: 'like',
+      });
+      location.href = 'login.html';
+      return;
+    }
+
     const nowLiked = likeBtn.classList.contains('liked');
-    const countEl  = likeBtn.querySelector('#likeCount');
+    const countEl = likeBtn.querySelector('#likeCount');
+
     likeBtn.classList.toggle('liked', !nowLiked);
-    countEl.textContent = parseInt(countEl.textContent) + (!nowLiked ? 1 : -1);
+    countEl.textContent = parseInt(countEl.textContent, 10) + (!nowLiked ? 1 : -1);
+
     try {
-      await toggleCourseLike(courseId, currentUser.id);
-      logEvent('course_like', 'course', courseId);
+      const liked = await toggleCourseLike(courseId, currentUser.id);
+      logEvent(liked ? 'like_click' : 'like_cancel', 'course', courseId, {
+        page: 'course',
+      });
     } catch {
       likeBtn.classList.toggle('liked', nowLiked);
-      countEl.textContent = parseInt(countEl.textContent) + (nowLiked ? 1 : -1);
+      countEl.textContent = parseInt(countEl.textContent, 10) + (nowLiked ? 1 : -1);
     }
   });
 
   bookmarkBtn.addEventListener('click', async () => {
-    if (!currentUser) { location.href = 'login.html'; return; }
+    if (!currentUser) {
+      logEvent('login_required_click', 'course', courseId, {
+        page: 'course',
+        action: 'bookmark',
+      });
+      location.href = 'login.html';
+      return;
+    }
+
     const nowMarked = bookmarkBtn.classList.contains('bookmarked');
     bookmarkBtn.classList.toggle('bookmarked', !nowMarked);
+
     try {
-      await toggleBookmark(courseId, currentUser.id);
-      showToast(!nowMarked ? '북마크에 추가했습니다' : '북마크를 해제했습니다');
-      logEvent('course_bookmark', 'course', courseId);
+      const marked = await toggleBookmark(courseId, currentUser.id);
+      showToast(marked ? '북마크에 추가했습니다' : '북마크를 해제했습니다');
+      logEvent(marked ? 'bookmark_add' : 'bookmark_remove', 'course', courseId, {
+        page: 'course',
+      });
     } catch {
       bookmarkBtn.classList.toggle('bookmarked', nowMarked);
     }
@@ -229,14 +325,17 @@ function renderCarousel() {
   const places = course.course_places || [];
   const photoPlaces = places.filter(p => p.photo_url);
   const thumbnail = course.thumbnail_url || null;
-  const track   = document.getElementById('carouselTrack');
-  const counter = document.getElementById('carouselCounter');
+  const track = $id('carouselTrack');
+  const counter = $id('carouselCounter');
 
-  // 썸네일 + 장소 사진 슬라이드 목록 구성
-  // 썸네일은 맨 앞에 독립 슬라이드로 추가
   const slides = [];
   if (thumbnail) {
-    slides.push({ type: 'thumbnail', photo_url: thumbnail, name: course.name, comment: '' });
+    slides.push({
+      type: 'thumbnail',
+      photo_url: thumbnail,
+      name: course.name,
+      comment: '',
+    });
   }
   photoPlaces.forEach(p => slides.push({ type: 'place', ...p }));
 
@@ -258,7 +357,7 @@ function renderCarousel() {
         ${p.type === 'thumbnail' ? '' : (() => {
           const parts = p.name.trim().split(' ');
           if (parts.length >= 2) {
-            const loc  = escHtml(parts[parts.length - 1]);
+            const loc = escHtml(parts[parts.length - 1]);
             const name = escHtml(parts.slice(0, -1).join(' '));
             return `<span class="carousel-place-name-main">${name}<span class="carousel-place-name-sub"> ${loc}</span></span>`;
           }
@@ -269,14 +368,17 @@ function renderCarousel() {
     </div>
   `).join('');
 
-  // 전체화면 뷰어
   const viewerPhotos = slides;
-  let viewerIdx = 0;
   track.querySelectorAll('.carousel-slide').forEach((slide, i) => {
-    slide.addEventListener('click', () => openViewer(i, viewerPhotos));
+    slide.addEventListener('click', () => {
+      logEvent('carousel_open', 'course', courseId, {
+        page: 'course',
+        index: i,
+      });
+      openViewer(i, viewerPhotos);
+    });
   });
 
-  // 네비게이션
   let curIdx = 0;
   const total = slides.length;
 
@@ -291,36 +393,63 @@ function renderCarousel() {
     updateCounter();
   }
 
-  on('carouselPrev', 'click', () => goTo(curIdx - 1));
-  on('carouselNext', 'click', () => goTo(curIdx + 1));
+  on('carouselPrev', 'click', () => {
+    goTo(curIdx - 1);
+    logEvent('carousel_nav', 'course', courseId, {
+      page: 'course',
+      direction: 'prev',
+      index: curIdx,
+    });
+  });
 
-  // 스와이프
+  on('carouselNext', 'click', () => {
+    goTo(curIdx + 1);
+    logEvent('carousel_nav', 'course', courseId, {
+      page: 'course',
+      direction: 'next',
+      index: curIdx,
+    });
+  });
+
   let touchStartX = 0;
-  const carousel = document.getElementById('carousel');
-  carousel.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  const carousel = $id('carousel');
+
+  carousel.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+  }, { passive: true });
+
   carousel.addEventListener('touchend', e => {
     const dx = e.changedTouches[0].clientX - touchStartX;
     if (Math.abs(dx) > 40) {
       goTo(curIdx + (dx < 0 ? 1 : -1));
-      logEvent('carousel_swipe', 'course', courseId);
+      logEvent('carousel_swipe', 'course', courseId, {
+        page: 'course',
+        direction: dx < 0 ? 'next' : 'prev',
+        index: curIdx,
+      });
     }
   }, { passive: true });
 
-  // 타임라인 썸네일 클릭 → 캐러셀 이동 연동 (전역 함수)
   window.jumpCarousel = (placeName) => {
     const idx = slides.findIndex(p => p.type !== 'thumbnail' && p.name === placeName);
     if (idx >= 0) {
       goTo(idx);
+      logEvent('timeline_photo_jump', 'course', courseId, {
+        page: 'course',
+        place_name: placeName,
+        index: idx,
+      });
       document.querySelector('.carousel-wrap')?.scrollIntoView({ behavior: 'smooth' });
     }
   };
 }
 
 // ── 전체화면 뷰어 ─────────────────────────────────────────
-let viewerPhotos = [], viewerCurrent = 0;
+let viewerPhotos = [];
+let viewerCurrent = 0;
 
 function openViewer(idx, photos) {
-  viewerPhotos  = photos;
+  viewerPhotos = photos;
   viewerCurrent = idx;
   renderViewer();
   show('photoViewer');
@@ -329,35 +458,61 @@ function openViewer(idx, photos) {
 
 function renderViewer() {
   const p = viewerPhotos[viewerCurrent];
-  $id('viewerImg') && ($id('viewerImg').src = p.photo_url);
+  if ($id('viewerImg')) $id('viewerImg').src = p.photo_url;
   setText('viewerCounter', `${viewerCurrent + 1} / ${viewerPhotos.length}`);
-  setHtml('viewerCaption', `<div class="viewer-caption-name">${escHtml(p.name)}</div>${p.comment ? `<div class="viewer-caption-comment">${escHtml(p.comment)}</div>` : ''}`);
+  setHtml(
+    'viewerCaption',
+    `<div class="viewer-caption-name">${escHtml(p.name)}</div>${p.comment ? `<div class="viewer-caption-comment">${escHtml(p.comment)}</div>` : ''}`
+  );
 }
 
-on('viewerClose', 'click', () => { hide('photoViewer'); document.body.style.overflow = ''; });
+on('viewerClose', 'click', () => {
+  hide('photoViewer');
+  document.body.style.overflow = '';
+});
+
 on('viewerPrev', 'click', () => {
-  if (viewerCurrent > 0) { viewerCurrent--; renderViewer(); }
+  if (viewerCurrent > 0) {
+    viewerCurrent--;
+    renderViewer();
+    logEvent('viewer_nav', 'course', courseId, {
+      page: 'course',
+      direction: 'prev',
+      index: viewerCurrent,
+    });
+  }
 });
+
 on('viewerNext', 'click', () => {
-  if (viewerCurrent < viewerPhotos.length - 1) { viewerCurrent++; renderViewer(); }
+  if (viewerCurrent < viewerPhotos.length - 1) {
+    viewerCurrent++;
+    renderViewer();
+    logEvent('viewer_nav', 'course', courseId, {
+      page: 'course',
+      direction: 'next',
+      index: viewerCurrent,
+    });
+  }
 });
-// 뷰어 배경 클릭 닫기
+
 on('photoViewer', 'click', e => {
-  if (e.target === $id('photoViewer')) { hide('photoViewer'); document.body.style.overflow = ''; }
+  if (e.target === $id('photoViewer')) {
+    hide('photoViewer');
+    document.body.style.overflow = '';
+  }
 });
 
 // ── 타임라인 ─────────────────────────────────────────────
 function renderTimeline() {
-  const places  = course.course_places || [];
-  const container = document.getElementById('timeline');
+  const places = course.course_places || [];
+  const container = $id('timeline');
   container.innerHTML = '';
 
   places.forEach((p, i) => {
-    // 이동 시간 (두 번째 장소부터)
     if (i > 0 && p.travel_time) {
       const travelEl = document.createElement('div');
       travelEl.className = 'tl-travel';
-      const dist = i > 0 ? haversineDist(places[i-1], p) : null;
+      const dist = i > 0 ? haversineDist(places[i - 1], p) : null;
       travelEl.innerHTML = `
         <span>↓</span>
         <span>이동 ${formatMinutes(p.travel_time)}</span>
@@ -376,7 +531,9 @@ function renderTimeline() {
       <div class="tl-right">
         <div class="tl-place-row">
           <div class="tl-place-info">
-            ${p.place_url ? `<a class="tl-name tl-name-link" href="${escHtml(p.place_url)}" target="_blank" rel="noopener">${escHtml(p.name)}</a>` : `<div class="tl-name">${escHtml(p.name)}</div>`}
+            ${p.place_url
+              ? `<a class="tl-name tl-name-link" href="${escHtml(p.place_url)}" target="_blank" rel="noopener">${escHtml(p.name)}</a>`
+              : `<div class="tl-name">${escHtml(p.name)}</div>`}
             <div class="tl-sub">${escHtml(p.category || '')}${p.address ? ` · ${escHtml(p.address)}` : ''}</div>
             ${p.stay_time ? `<div class="tl-duration">${formatMinutes(p.stay_time)}</div>` : ''}
           </div>
@@ -391,7 +548,6 @@ function renderTimeline() {
       </div>
     `;
 
-    // 사진 썸네일 클릭 → 캐러셀 이동
     const thumb = item.querySelector('.tl-photo');
     if (thumb) {
       thumb.addEventListener('click', () => {
@@ -399,16 +555,24 @@ function renderTimeline() {
       });
     }
 
+    item.querySelector('.tl-name-link')?.addEventListener('click', () => {
+      logEvent('place_link_click', 'place', p.id || null, {
+        page: 'course',
+        place_name: p.name || '',
+        course_id: courseId,
+      });
+    });
+
     container.appendChild(item);
   });
 
-  // 요약
-  const totalStay = places.reduce((s, p) => s + (p.stay_time || 0), 0);
-  const totalTravel = places.reduce((s, p) => s + (p.travel_time || 0), 0);
-  setHtml('timelineSummary', `
-    <span>총 <strong>${places.length}개</strong> 장소</span>
-    <span>총 소요 <strong>${formatMinutes(course.total_time)}</strong></span>
-  `);
+  setHtml(
+    'timelineSummary',
+    `
+      <span>총 <strong>${places.length}개</strong> 장소</span>
+      <span>총 소요 <strong>${formatMinutes(course.total_time)}</strong></span>
+    `
+  );
 }
 
 // ── 지도 ─────────────────────────────────────────────────
@@ -417,17 +581,21 @@ function renderMap() {
     const places = course.course_places || [];
     if (!places.length) return;
 
-    const container = document.getElementById('detailMap');
-    const first = places[0];
+    const validPlaces = places.filter(p => typeof p.lat === 'number' && typeof p.lng === 'number');
+    if (!validPlaces.length) return;
+
+    const container = $id('detailMap');
+    const first = validPlaces[0];
+
     const map = new kakao.maps.Map(container, {
       center: new kakao.maps.LatLng(first.lat, first.lng),
       level: 5,
     });
 
     const bounds = new kakao.maps.LatLngBounds();
-    const path   = [];
+    const path = [];
 
-    places.forEach((p, i) => {
+    validPlaces.forEach((p, i) => {
       const pos = new kakao.maps.LatLng(p.lat, p.lng);
       path.push(pos);
       bounds.extend(pos);
@@ -441,29 +609,35 @@ function renderMap() {
         box-shadow:0 2px 6px rgba(0,0,0,.35);
       `;
       el.textContent = i + 1;
-      new kakao.maps.CustomOverlay({ position: pos, content: el, map });
+
+      new kakao.maps.CustomOverlay({
+        position: pos,
+        content: el,
+        map,
+      });
     });
 
     new kakao.maps.Polyline({
       path,
       strokeWeight: 3,
       strokeColor: '#e8648a',
-      strokeOpacity: .7,
+      strokeOpacity: 0.7,
       strokeStyle: 'solid',
       map,
     });
 
-    if (places.length > 1) map.setBounds(bounds);
+    if (validPlaces.length > 1) map.setBounds(bounds);
 
-    // 컨테이너 크기 재계산 (display:none 해제 직후 초기화 시 필요)
     kakao.maps.event.addListener(map, 'idle', () => {});
     setTimeout(() => map.relayout(), 100);
 
-    // 내 위치 버튼
     on('detailMyLocationBtn', 'click', () => {
       navigator.geolocation?.getCurrentPosition(pos => {
         const latlng = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
         map.setCenter(latlng);
+        logEvent('map_my_location', 'course', courseId, {
+          page: 'course',
+        });
       });
     });
   });
@@ -477,13 +651,13 @@ async function renderReferencedCourses() {
     const refs = await fetchReferencedCourses(courseId);
     if (!refs.length) return;
 
-    const section = document.getElementById('referencedSection');
-    const grid    = document.getElementById('referencedGrid');
+    const section = $id('referencedSection');
+    const grid = $id('referencedGrid');
     section.style.display = '';
 
     refs.forEach(c => {
       const places = (c.course_places || []).sort((a, b) => a.order_index - b.order_index);
-      const thumb  = c.thumbnail_url || places.find(p => p.photo_url)?.photo_url || '';
+      const thumb = c.thumbnail_url || places.find(p => p.photo_url)?.photo_url || '';
 
       const card = document.createElement('div');
       card.className = 'feed-card';
@@ -498,34 +672,50 @@ async function renderReferencedCourses() {
           <div class="feed-course-name">${escHtml(c.name)}</div>
           <div class="feed-meta" style="justify-content:space-between">
             <span class="feed-author">${escHtml(c.author_nickname)}</span>
-            <span class="feed-like-btn"><span class="heart">♥</span>${c.like_count||0}</span>
+            <span class="feed-like-btn"><span class="heart">♥</span>${c.like_count || 0}</span>
           </div>
         </div>
       `;
-      card.addEventListener('click', () => { location.href = `course.html?id=${c.id}`; });
+
+      card.addEventListener('click', () => {
+        logEvent('referenced_course_click', 'course', c.id, {
+          page: 'course',
+          source_course_id: courseId,
+        });
+        location.href = `course.html?id=${c.id}`;
+      });
+
       grid.appendChild(card);
     });
-  } catch (e) { console.error('참조 코스 로드 실패:', e); }
+  } catch (e) {
+    console.error('참조 코스 로드 실패:', e);
+  }
 }
 
 // ── 댓글 ─────────────────────────────────────────────────
-// 정렬 칩은 최초 1회만 바인딩
 function initCommentSortChips() {
   document.querySelectorAll('.comment-sort-chips .chip').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.comment-sort-chips .chip').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.comment-sort-chips .chip')
+        .forEach(b => b.classList.remove('active'));
+
       btn.classList.add('active');
       commentSort = btn.dataset.sort;
+
+      logEvent('comment_sort_change', 'course', courseId, {
+        page: 'course',
+        sort: commentSort,
+      });
+
       renderComments();
     });
   });
 }
 
 async function renderComments() {
-  const list = document.getElementById('commentList');
+  const list = $id('commentList');
   list.innerHTML = '<div class="spinner-wrap" style="padding:20px"><div class="spinner"></div></div>';
 
-  // 현재 활성 칩 표시 업데이트
   document.querySelectorAll('.comment-sort-chips .chip').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.sort === commentSort);
   });
@@ -534,17 +724,19 @@ async function renderComments() {
     const comments = await fetchComments(courseId, commentSort);
     list.innerHTML = '';
 
-    // 총 댓글 수 (댓글 + 답글 합산)
     const total = comments.reduce((s, c) => s + 1 + (c.replies?.length || 0), 0);
     setText('commentTotal', total > 0 ? `${total}개` : '');
     setText('commentCountBadge', course.comment_count || 0);
+
     const ccLabel2 = document.querySelector('.comment-count-label');
     if (ccLabel2) ccLabel2.textContent = course.comment_count || 0;
 
     comments.forEach(c => list.appendChild(buildCommentEl(c)));
-  } catch (e) { console.error(e); list.innerHTML = ''; }
+  } catch (e) {
+    console.error(e);
+    list.innerHTML = '';
+  }
 
-  // 댓글 등록 (최초 1회만 - setupCommentInput 내부에서 중복 방지)
   setupCommentInput();
 }
 
@@ -553,15 +745,14 @@ function buildCommentEl(c) {
   item.className = 'comment-item';
   item.dataset.id = c.id;
 
-  // 삭제된 댓글
   if (c.is_deleted) {
     item.innerHTML = `<div class="comment-body" style="color:#bbb;font-style:italic">삭제된 댓글입니다.</div>`;
     return item;
   }
 
   const likeCount = (c.comment_likes || []).length;
-  const isLiked   = currentUser ? (c.comment_likes || []).some(l => l.user_id === currentUser.id) : false;
-  const isOwn     = currentUser && currentUser.id === c.author_id;
+  const isLiked = currentUser ? (c.comment_likes || []).some(l => l.user_id === currentUser.id) : false;
+  const isOwn = currentUser && currentUser.id === c.author_id;
 
   item.innerHTML = `
     <div class="comment-item-header">
@@ -585,66 +776,111 @@ function buildCommentEl(c) {
     </div>
   `;
 
-  // 좋아요
-  item.querySelector('.comment-like-btn').addEventListener('click', async btn => {
-    if (!currentUser) { location.href = 'login.html'; return; }
+  item.querySelector('.comment-like-btn')?.addEventListener('click', async btn => {
+    if (!currentUser) {
+      logEvent('login_required_click', 'comment', c.id, {
+        page: 'course',
+        action: 'comment_like',
+      });
+      location.href = 'login.html';
+      return;
+    }
+
     const el = btn.currentTarget;
     const nowLiked = el.classList.contains('liked');
-    const countEl  = el.querySelector('.comment-like-count');
+    const countEl = el.querySelector('.comment-like-count');
+
     el.classList.toggle('liked', !nowLiked);
-    countEl.textContent = parseInt(countEl.textContent) + (!nowLiked ? 1 : -1);
-    try { await toggleCommentLike(c.id, currentUser.id); }
-    catch {
+    countEl.textContent = parseInt(countEl.textContent, 10) + (!nowLiked ? 1 : -1);
+
+    try {
+      await toggleCommentLike(c.id, currentUser.id);
+      logEvent('comment_like', 'comment', c.id, {
+        page: 'course',
+      });
+    } catch {
       el.classList.toggle('liked', nowLiked);
-      countEl.textContent = parseInt(countEl.textContent) + (nowLiked ? 1 : -1);
+      countEl.textContent = parseInt(countEl.textContent, 10) + (nowLiked ? 1 : -1);
     }
   });
 
-  // 답글 토글
-  item.querySelector('.comment-reply-toggle').addEventListener('click', () => {
-    const wrap = document.getElementById(`replyInputWrap-${c.id}`);
+  item.querySelector('.comment-reply-toggle')?.addEventListener('click', () => {
+    const wrap = $id(`replyInputWrap-${c.id}`);
     const isHidden = wrap.style.display === 'none';
     wrap.style.display = isHidden ? '' : 'none';
-    if (isHidden) wrap.querySelector('.reply-input')?.focus();
+
+    if (isHidden) {
+      wrap.querySelector('.reply-input')?.focus();
+      logEvent('reply_input_open', 'comment', c.id, {
+        page: 'course',
+      });
+    }
   });
 
-  // 답글 등록
   const replySubmit = item.querySelector('.reply-submit-btn');
-  const replyInput  = item.querySelector('.reply-input');
-  replySubmit.addEventListener('click', async () => {
-    if (!currentUser) { location.href = 'login.html'; return; }
+  const replyInput = item.querySelector('.reply-input');
+
+  replySubmit?.addEventListener('click', async () => {
+    if (!currentUser) {
+      logEvent('login_required_click', 'comment', c.id, {
+        page: 'course',
+        action: 'reply',
+      });
+      location.href = 'login.html';
+      return;
+    }
+
     const content = replyInput.value.trim();
     if (!content) return;
+
     replySubmit.disabled = true;
+
     try {
       const reply = await addReply({
         commentId: c.id,
-        authorId:  currentUser.id,
-        nickname:  currentUser.nickname,
+        authorId: currentUser.id,
+        nickname: currentUser.nickname,
         content,
       });
-      const area = document.getElementById(`replyArea-${c.id}`);
+
+      const area = $id(`replyArea-${c.id}`);
       area.insertAdjacentHTML('beforeend', buildReplyHtml(reply));
       replyInput.value = '';
-      document.getElementById(`replyInputWrap-${c.id}`).style.display = 'none';
+      $id(`replyInputWrap-${c.id}`).style.display = 'none';
       bindReplyEvents(area.lastElementChild);
-    } catch (e) { showToast('답글 등록 실패'); }
-    finally { replySubmit.disabled = false; }
-  });
-  replyInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); replySubmit.click(); }
+
+      logEvent('reply_create', 'comment', c.id, {
+        page: 'course',
+        length: content.length,
+      });
+    } catch (e) {
+      showToast('답글 등록 실패');
+    } finally {
+      replySubmit.disabled = false;
+    }
   });
 
-  // 댓글 삭제
+  replyInput?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      replySubmit.click();
+    }
+  });
+
   item.querySelector('.comment-delete-btn')?.addEventListener('click', async () => {
     if (!confirm('댓글을 삭제하시겠어요?')) return;
+
     try {
       await deleteComment(c.id, courseId);
       item.remove();
-    } catch (e) { showToast('삭제 실패'); }
+      logEvent('comment_delete', 'comment', c.id, {
+        page: 'course',
+      });
+    } catch (e) {
+      showToast('삭제 실패');
+    }
   });
 
-  // 답글 이벤트 바인딩
   item.querySelectorAll('.reply-item').forEach(el => bindReplyEvents(el));
 
   return item;
@@ -654,6 +890,7 @@ function buildReplyHtml(r) {
   const isOwn = currentUser && currentUser.id === r.author_id;
   const rLiked = currentUser ? (r.reply_likes || []).some(l => l.user_id === currentUser.id) : false;
   const rLikeCount = (r.reply_likes || []).length;
+
   return `
     <div class="reply-item" data-id="${r.id}" data-comment-id="${r.comment_id}">
       <div class="reply-header">
@@ -676,49 +913,77 @@ function bindReplyEvents(el) {
   const cId = el.dataset.commentId;
 
   el.querySelector('.reply-like-btn')?.addEventListener('click', async btn => {
-    if (!currentUser) { location.href = 'login.html'; return; }
+    if (!currentUser) {
+      logEvent('login_required_click', 'reply', rId, {
+        page: 'course',
+        action: 'reply_like',
+      });
+      location.href = 'login.html';
+      return;
+    }
+
     const b = btn.currentTarget;
     const nowLiked = b.classList.contains('liked');
-    const countEl  = b.querySelector('.reply-like-count');
+    const countEl = b.querySelector('.reply-like-count');
+
     b.classList.toggle('liked', !nowLiked);
-    countEl.textContent = parseInt(countEl.textContent) + (!nowLiked ? 1 : -1);
-    try { await toggleReplyLike(rId, currentUser.id); }
-    catch {
+    countEl.textContent = parseInt(countEl.textContent, 10) + (!nowLiked ? 1 : -1);
+
+    try {
+      await toggleReplyLike(rId, currentUser.id);
+      logEvent('reply_like', 'reply', rId, {
+        page: 'course',
+      });
+    } catch {
       b.classList.toggle('liked', nowLiked);
-      countEl.textContent = parseInt(countEl.textContent) + (nowLiked ? 1 : -1);
+      countEl.textContent = parseInt(countEl.textContent, 10) + (nowLiked ? 1 : -1);
     }
   });
 
   el.querySelector('.reply-delete-btn')?.addEventListener('click', async () => {
     if (!confirm('답글을 삭제하시겠어요?')) return;
+
     try {
       await deleteReply(rId, cId);
       el.remove();
-    } catch { showToast('삭제 실패'); }
+      logEvent('reply_delete', 'reply', rId, {
+        page: 'course',
+      });
+    } catch {
+      showToast('삭제 실패');
+    }
   });
 }
 
 let commentInputBound = false;
 function setupCommentInput() {
+  if (!commentInput || !commentSubmitBtn) return;
+
   if (!currentUser) {
     commentInput.placeholder = '로그인 후 댓글을 작성할 수 있습니다';
-    commentInput.disabled    = true;
+    commentInput.disabled = true;
     commentSubmitBtn.disabled = true;
     return;
   }
-  if (commentInputBound) return;   // 이미 바인딩됨 → skip
+
+  if (commentInputBound) return;
   commentInputBound = true;
 
   commentSubmitBtn.addEventListener('click', submitComment);
   commentInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment(); }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      submitComment();
+    }
   });
 }
 
 async function submitComment() {
   const content = commentInput.value.trim();
   if (!content || !currentUser) return;
+
   commentSubmitBtn.disabled = true;
+
   try {
     const comment = await addComment({
       courseId,
@@ -726,29 +991,40 @@ async function submitComment() {
       nickname: currentUser.nickname,
       content,
     });
+
     commentInput.value = '';
     comment.comment_likes = [];
     comment.replies = [];
-    const list = document.getElementById('commentList');
+
+    const list = $id('commentList');
     list.prepend(buildCommentEl(comment));
 
-    // 뱃지 카운트 즉시 반영
+    const badge = $id('commentCountBadge');
     const ccLabel3 = document.querySelector('.comment-count-label');
-    const badge = document.getElementById('commentCountBadge');
-    badge.textContent = parseInt(badge.textContent || '0') + 1;
+    badge.textContent = parseInt(badge.textContent || '0', 10) + 1;
     if (ccLabel3) ccLabel3.textContent = badge.textContent;
 
-    logEvent('comment_create', 'course', courseId);
-  } catch (e) { showToast('댓글 등록 실패'); }
-  finally { commentSubmitBtn.disabled = false; }
+    logEvent('comment_create', 'course', courseId, {
+      page: 'course',
+      length: content.length,
+    });
+  } catch (e) {
+    showToast('댓글 등록 실패');
+  } finally {
+    commentSubmitBtn.disabled = false;
+  }
 }
 
 // ── 공유 ─────────────────────────────────────────────────
 function openShareSheet() {
   $id('shareOverlay')?.classList.add('show');
   $id('shareSheet')?.classList.add('open');
-  logEvent('share_click', 'course', courseId);
+
+  logEvent('share_click', 'course', courseId, {
+    page: 'course',
+  });
 }
+
 function closeShareSheet() {
   $id('shareOverlay')?.classList.remove('show');
   $id('shareSheet')?.classList.remove('open');
@@ -758,8 +1034,14 @@ on('shareOverlay', 'click', closeShareSheet);
 
 on('copyLinkBtn', 'click', () => {
   navigator.clipboard.writeText(location.href)
-    .then(() => showToast('링크가 복사되었습니다'))
+    .then(() => {
+      showToast('링크가 복사되었습니다');
+      logEvent('share_copy_link', 'course', courseId, {
+        page: 'course',
+      });
+    })
     .catch(() => showToast('복사 실패'));
+
   closeShareSheet();
 });
 
@@ -771,12 +1053,20 @@ on('kakaoShareBtn', 'click', () => {
         title: course.name,
         description: course.description || '',
         imageUrl: course.thumbnail_url || '',
-        link: { mobileWebUrl: location.href, webUrl: location.href },
+        link: {
+          mobileWebUrl: location.href,
+          webUrl: location.href,
+        },
       },
+    });
+
+    logEvent('share_kakao', 'course', courseId, {
+      page: 'course',
     });
   } else {
     showToast('카카오 SDK 미초기화');
   }
+
   closeShareSheet();
 });
 
@@ -785,6 +1075,7 @@ function openReportSheet() {
   $id('reportOverlay')?.classList.add('show');
   $id('reportSheet')?.classList.add('open');
 }
+
 function closeReportSheet() {
   $id('reportOverlay')?.classList.remove('show');
   $id('reportSheet')?.classList.remove('open');
@@ -796,8 +1087,18 @@ document.querySelectorAll('#reportSheet .bottom-sheet-item').forEach(item => {
   item.addEventListener('click', async () => {
     const reason = item.dataset.reason;
     if (!reason) return;
+
     closeReportSheet();
-    if (!currentUser) { location.href = 'login.html'; return; }
+
+    if (!currentUser) {
+      logEvent('login_required_click', 'course', courseId, {
+        page: 'course',
+        action: 'report',
+      });
+      location.href = 'login.html';
+      return;
+    }
+
     try {
       await submitReport({
         reporterUserId: currentUser.id,
@@ -805,7 +1106,13 @@ document.querySelectorAll('#reportSheet .bottom-sheet-item').forEach(item => {
         targetId: courseId,
         reason,
       });
+
       showToast('신고가 접수되었습니다');
+
+      logEvent('report_submit', 'course', courseId, {
+        page: 'course',
+        reason,
+      });
     } catch (e) {
       showToast('신고 실패: ' + e.message);
     }
@@ -816,26 +1123,24 @@ document.querySelectorAll('#reportSheet .bottom-sheet-item').forEach(item => {
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
 
-  // 전체화면 뷰어
   if ($id('photoViewer')?.style.display !== 'none') {
     hide('photoViewer');
     document.body.style.overflow = '';
     return;
   }
-  // 공유 시트
+
   if ($id('shareSheet')?.classList.contains('open')) {
     closeShareSheet();
     return;
   }
-  // 신고 시트
+
   if ($id('reportSheet')?.classList.contains('open')) {
     closeReportSheet();
     return;
   }
-  // 삭제 모달
+
   if ($id('deleteModal')?.classList.contains('show')) {
     $id('deleteModal')?.classList.remove('show');
-    return;
   }
 });
 
@@ -844,20 +1149,28 @@ function haversineDist(a, b) {
   const R = 6371;
   const dLat = (b.lat - a.lat) * Math.PI / 180;
   const dLng = (b.lng - a.lng) * Math.PI / 180;
-  const x = Math.sin(dLat/2)**2 +
-    Math.cos(a.lat*Math.PI/180) * Math.cos(b.lat*Math.PI/180) * Math.sin(dLng/2)**2;
-  return (R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x))).toFixed(1);
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.lat * Math.PI / 180) *
+    Math.cos(b.lat * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return (R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x))).toFixed(1);
 }
 
 function escHtml(str) {
   if (!str) return '';
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function formatMinutes(min) {
   if (!min) return '';
-  const h = Math.floor(min / 60), m = min % 60;
-  return m ? `${h ? h+'시간 ' : ''}${m}분` : `${h}시간`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m ? `${h ? h + '시간 ' : ''}${m}분` : `${h}시간`;
 }
 
 function relativeTime(isoStr) {
@@ -865,16 +1178,20 @@ function relativeTime(isoStr) {
   const m = Math.floor(diff / 60000);
   const h = Math.floor(m / 60);
   const d = Math.floor(h / 24);
-  if (m < 1)  return '방금 전';
+
+  if (m < 1) return '방금 전';
   if (m < 60) return `${m}분 전`;
   if (h < 24) return `${h}시간 전`;
-  if (d < 7)  return `${d}일 전`;
+  if (d < 7) return `${d}일 전`;
+
   return new Date(isoStr).toLocaleDateString('ko-KR');
 }
 
 let toastTimer;
 function showToast(msg) {
-  const el = document.getElementById('toast');
+  const el = $id('toast');
+  if (!el) return;
+
   el.textContent = msg;
   el.classList.add('show');
   clearTimeout(toastTimer);
