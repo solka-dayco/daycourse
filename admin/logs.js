@@ -72,38 +72,37 @@ async function fetchLogs() {
     <table>
       <thead>
         <tr>
-          <th>event_name</th>
-          <th>target_type</th>
-          <th>target_id</th>
-          <th>event_page</th>
           <th>user_id</th>
           <th>anonymous_id</th>
           <th>session_id</th>
+          <th>event_name</th>
+          <th>event_page</th>
+          <th>target_type</th>
+          <th>target_id</th>
           <th>생성일</th>
         </tr>
       </thead>
       <tbody>
         ${data.map((l) => {
-          const eventName = escHtml(l.event_name || '-');
-          const targetType = escHtml(l.target_type || '-');
-          const targetId = l.target_id ? escHtml(String(l.target_id)) : '-';
           const userId = l.user_id ? escHtml(String(l.user_id)) : '-';
           const anonymousId = l.anonymous_id ? escHtml(String(l.anonymous_id)) : '-';
           const sessionId = l.session_id ? escHtml(String(l.session_id)) : '-';
-
+          const eventName = escHtml(l.event_name || '-');
           const eventPageRaw = l.event_page ? safeJsonStringify(l.event_page) : '-';
+          const targetType = escHtml(l.target_type || '-');
+          const targetId = l.target_id ? escHtml(String(l.target_id)) : '-';
           const eventPageEscaped = escHtml(eventPageRaw);
           const eventPageShort = truncate(eventPageEscaped, 56);
 
           return `
             <tr>
-              <td>${eventName}</td>
-              <td>${targetType}</td>
-              <td style="font-size:11px;color:#888">${targetId}</td>
-              <td title="${eventPageEscaped}" style="max-width:260px">${eventPageShort}</td>
               <td style="font-size:11px;color:#888">${userId}</td>
               <td style="font-size:11px;color:#888">${anonymousId}</td>
-              <td style="font-size:11px;color:#888">${sessionId}</td>
+              <td style="font-size:11px;color:#888">${sessionId}</td>  
+              <td>${eventName}</td>
+              <td title="${eventPageEscaped}" style="max-width:260px">${eventPageShort}</td>
+              <td>${targetType}</td>
+              <td style="font-size:11px;color:#888">${targetId}</td>
               <td>${fmtDate(l.created_at)}</td>
             </tr>
           `;
