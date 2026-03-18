@@ -1,4 +1,4 @@
-// db.js — 모든 DB/Storage 접근 로직 (v5 — session/anonymous_id 로깅 포함)
+// db.js — 모든 DB/Storage 접근 로직 (v6 — session/anonymous_id 로깅 안정화)
 // Supabase 전환 시 이 파일만 수정하면 됩니다.
 
 import { supabase } from './supabase.js';
@@ -16,11 +16,13 @@ export async function getSession() {
 export async function getCurrentUser() {
   const session = await getSession();
   if (!session) return null;
+
   const { data, error } = await supabase
     .from('users')
     .select('*')
     .eq('id', session.user.id)
     .single();
+
   if (error) return null;
   return data;
 }
@@ -29,7 +31,10 @@ export async function getCurrentUser() {
 
 export async function signInWithKakao(redirectTo = null) {
   const options = redirectTo ? { redirectTo } : {};
-  const { error } = await supabase.auth.signInWithOAuth({ provider: 'kakao', options });
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'kakao',
+    options,
+  });
   if (error) throw error;
 }
 
@@ -38,8 +43,16 @@ export async function signOut() {
   if (error) throw error;
 }
 
-export async function upsertUserProfile({ id, username, nickname, gender, birth_year, region }) {
+export async function upsertUserProfile({
+  id,
+  username,
+  nickname,
+  gender,
+  birth_year,
+  region,
+}) {
   const payload = { id, username, nickname };
+
   // gender, birth_year는 비공개 (RLS로 본인+admin만 조회)
   if (gender !== undefined) payload.gender = gender;
   if (birth_year !== undefined) payload.birth_year = birth_year;
@@ -56,13 +69,17 @@ export async function fetchUserById(userId) {
     .select('id, nickname, user_score, level, created_at')
     .eq('id', userId)
     .single();
+
   if (error) throw error;
   return data;
 }
 
 /** 유저 통계 (코스 수, 받은 좋아요, 참조 수) */
 export async function fetchUserStats(userId) {
-  const { data, error } = await supabase.rpc('get_user_stats', { p_user_id: userId });
+  const { data, error } = await supabase.rpc('get_user_stats', {
+    p_user_id: userId,
+  });
+
   if (error) throw error;
   return data?.[0] ?? { course_count: 0, total_likes: 0, total_references: 0 };
 }
@@ -70,8 +87,8 @@ export async function fetchUserStats(userId) {
 // ─── 피드 / 코스 목록 ─────────────────────────────────────
 
 /**
- * 피드 코스 목록 조회 (cursor 기반 무한스크롤 지원)
- * @param {{ keyword?, regionMain?, regionSub?, maxTime?, sort?, cursor?, pageSize? }} options
+ * 피드 코스 목록 조회
+ * @param {{ keyword?, regionMain?, regionSub?, maxTime?, sort?, cursor?, page?, pageSize? }} options
  */
 export async function fetchCourses({
   keyword = '',
@@ -79,10 +96,12 @@ export async function fetchCourses({
   regionSub = '',
   maxTime = 0,
   sort = 'latest',
-  cursor = null, // cursor 기반 페이지네이션 (lastId or lastDate)
-  page = 0, // 오프셋 기반 fallback
+  cursor = null, // 현재 미사용 (향후 cursor 기반 페이지네이션용)
+  page = 0,
   pageSize = 20,
 } = {}) {
+  void cursor;
+
   if (!keyword) {
     let query = supabase
       .from('courses')
@@ -101,10 +120,14 @@ export async function fetchCourses({
 
     switch (sort) {
       case 'popular':
-        query = query.order('like_count', { ascending: false });
+        query = query
+          .order('like_count', { ascending: false })
+          .order('created_at', { ascending: false });
         break;
       case 'referenced':
-        query = query.order('reference_count', { ascending: false });
+        query = query
+          .order('reference_count', { ascending: false })
+          .order('created_at', { ascending: false });
         break;
       case 'time_asc':
         query = query.order('total_time', { ascending: true });
@@ -117,9 +140,14 @@ export async function fetchCourses({
     }
 
     query = query.range(page * pageSize, (page + 1) * pageSize - 1);
+
     const { data, error, count } = await query;
     if (error) throw error;
-    return { courses: data || [], total: count || 0 };
+
+    return {
+      courses: data || [],
+      total: count || 0,
+    };
   }
 
   // 키워드 있을 때 → RPC
@@ -132,16 +160,21 @@ export async function fetchCourses({
     p_offset: page * pageSize,
     p_limit: pageSize,
   });
+
   if (error) throw error;
 
   const total = data?.[0]?.total_count ?? 0;
   const courseIds = (data || []).map((c) => c.id);
-  let placesMap = {};
+
+  const placesMap = {};
   if (courseIds.length > 0) {
-    const { data: places } = await supabase
+    const { data: places, error: placesError } = await supabase
       .from('course_places')
       .select('course_id, order_index, name, photo_url')
       .in('course_id', courseIds);
+
+    if (placesError) throw placesError;
+
     (places || []).forEach((p) => {
       if (!placesMap[p.course_id]) placesMap[p.course_id] = [];
       placesMap[p.course_id].push(p);
@@ -150,7 +183,9 @@ export async function fetchCourses({
 
   const courses = (data || []).map((c) => ({
     ...c,
-    course_places: (placesMap[c.id] || []).sort((a, b) => a.order_index - b.order_index),
+    course_places: (placesMap[c.id] || []).sort(
+      (a, b) => a.order_index - b.order_index
+    ),
   }));
 
   return { courses, total: Number(total) };
@@ -159,10 +194,12 @@ export async function fetchCourses({
 /** 검색 자동완성 */
 export async function autocompleteSearch(keyword) {
   if (!keyword || keyword.length < 2) return [];
+
   const { data, error } = await supabase.rpc('autocomplete_search', {
     p_keyword: keyword,
     p_limit: 5,
   });
+
   if (error) return [];
   return data || [];
 }
@@ -175,10 +212,13 @@ export async function fetchCourseById(courseId) {
     .select(`*, course_places(*)`)
     .eq('id', courseId)
     .single();
+
   if (error) throw error;
+
   if (data?.course_places) {
     data.course_places.sort((a, b) => a.order_index - b.order_index);
   }
+
   return data;
 }
 
@@ -205,24 +245,33 @@ export async function fetchCoursesByUser(
   }
 
   query = query.range(page * pageSize, (page + 1) * pageSize - 1);
+
   const { data, error, count } = await query;
   if (error) throw error;
-  return { courses: data || [], total: count || 0 };
+
+  return {
+    courses: data || [],
+    total: count || 0,
+  };
 }
 
 /** 참조된 코스 목록 (상세 페이지 하단) */
 export async function fetchReferencedCourses(courseId) {
-  const { data, error } = await supabase.rpc('get_referenced_courses', { p_course_id: courseId });
+  const { data, error } = await supabase.rpc('get_referenced_courses', {
+    p_course_id: courseId,
+  });
+
   if (error) return [];
 
-  // 각 코스 places 조회
   const ids = (data || []).map((c) => c.id);
   if (ids.length === 0) return data || [];
 
-  const { data: places } = await supabase
+  const { data: places, error: placesError } = await supabase
     .from('course_places')
     .select('course_id, order_index, name, photo_url')
     .in('course_id', ids);
+
+  if (placesError) throw placesError;
 
   const placesMap = {};
   (places || []).forEach((p) => {
@@ -232,7 +281,9 @@ export async function fetchReferencedCourses(courseId) {
 
   return (data || []).map((c) => ({
     ...c,
-    course_places: (placesMap[c.id] || []).sort((a, b) => a.order_index - b.order_index),
+    course_places: (placesMap[c.id] || []).sort(
+      (a, b) => a.order_index - b.order_index
+    ),
   }));
 }
 
@@ -244,33 +295,63 @@ export async function createCourse(courseData, places) {
     .insert(courseData)
     .select('id')
     .single();
+
   if (courseErr) throw courseErr;
 
   if (places && places.length > 0) {
-    const placeRows = places.map((p, i) => ({ ...p, course_id: course.id, order_index: i }));
-    const { error: placeErr } = await supabase.from('course_places').insert(placeRows);
+    const placeRows = places.map((p, i) => ({
+      ...p,
+      course_id: course.id,
+      order_index: i,
+    }));
+
+    const { error: placeErr } = await supabase
+      .from('course_places')
+      .insert(placeRows);
+
     if (placeErr) throw placeErr;
   }
 
   // 유저 점수 +10 (코스 작성)
   try {
     const session = await getSession();
-    if (session) await supabase.rpc('add_user_score', { p_user_id: session.user.id, p_delta: 10 });
+    if (session) {
+      await supabase.rpc('add_user_score', {
+        p_user_id: session.user.id,
+        p_delta: 10,
+      });
+    }
   } catch (_) {}
 
   return course.id;
 }
 
 export async function updateCourse(courseId, courseData, places) {
-  const { error: courseErr } = await supabase.from('courses').update(courseData).eq('id', courseId);
+  const { error: courseErr } = await supabase
+    .from('courses')
+    .update(courseData)
+    .eq('id', courseId);
+
   if (courseErr) throw courseErr;
 
-  const { error: delErr } = await supabase.from('course_places').delete().eq('course_id', courseId);
+  const { error: delErr } = await supabase
+    .from('course_places')
+    .delete()
+    .eq('course_id', courseId);
+
   if (delErr) throw delErr;
 
   if (places && places.length > 0) {
-    const placeRows = places.map((p, i) => ({ ...p, course_id: courseId, order_index: i }));
-    const { error: placeErr } = await supabase.from('course_places').insert(placeRows);
+    const placeRows = places.map((p, i) => ({
+      ...p,
+      course_id: courseId,
+      order_index: i,
+    }));
+
+    const { error: placeErr } = await supabase
+      .from('course_places')
+      .insert(placeRows);
+
     if (placeErr) throw placeErr;
   }
 }
@@ -289,14 +370,22 @@ export async function isCourseLiked(courseId, userId) {
     .eq('course_id', courseId)
     .eq('user_id', userId)
     .maybeSingle();
+
   return !!data;
 }
 
 export async function toggleCourseLike(courseId, userId) {
   const liked = await isCourseLiked(courseId, userId);
+
   if (liked) {
-    await supabase.from('course_likes').delete().eq('course_id', courseId).eq('user_id', userId);
+    await supabase
+      .from('course_likes')
+      .delete()
+      .eq('course_id', courseId)
+      .eq('user_id', userId);
+
     await supabase.rpc('decrement_like_count', { course_id: courseId });
+
     // 점수 반환
     try {
       const { data: course } = await supabase
@@ -304,36 +393,57 @@ export async function toggleCourseLike(courseId, userId) {
         .select('author_id')
         .eq('id', courseId)
         .single();
+
       if (course) {
-        await supabase.rpc('add_user_score', { p_user_id: course.author_id, p_delta: -1 });
-      }
-    } catch (_) {}
-    return false;
-  } else {
-    await supabase.from('course_likes').insert({ course_id: courseId, user_id: userId });
-    await supabase.rpc('increment_like_count', { course_id: courseId });
-    // 점수 부여 + 알림
-    try {
-      const { data: course } = await supabase
-        .from('courses')
-        .select('author_id, name')
-        .eq('id', courseId)
-        .single();
-      if (course) {
-        await supabase.rpc('add_user_score', { p_user_id: course.author_id, p_delta: 1 });
-        const { data: actor } = await supabase.from('users').select('nickname').eq('id', userId).single();
-        await supabase.rpc('upsert_notification', {
-          p_actor_user_id: userId,
-          p_actor_nickname: actor?.nickname ?? '',
-          p_target_user_id: course.author_id,
-          p_type: 'course_like',
-          p_course_id: courseId,
-          p_course_name: course.name,
+        await supabase.rpc('add_user_score', {
+          p_user_id: course.author_id,
+          p_delta: -1,
         });
       }
     } catch (_) {}
-    return true;
+
+    return false;
   }
+
+  await supabase.from('course_likes').insert({
+    course_id: courseId,
+    user_id: userId,
+  });
+
+  await supabase.rpc('increment_like_count', { course_id: courseId });
+
+  // 점수 부여 + 알림
+  try {
+    const { data: course } = await supabase
+      .from('courses')
+      .select('author_id, name')
+      .eq('id', courseId)
+      .single();
+
+    if (course) {
+      await supabase.rpc('add_user_score', {
+        p_user_id: course.author_id,
+        p_delta: 1,
+      });
+
+      const { data: actor } = await supabase
+        .from('users')
+        .select('nickname')
+        .eq('id', userId)
+        .single();
+
+      await supabase.rpc('upsert_notification', {
+        p_actor_user_id: userId,
+        p_actor_nickname: actor?.nickname ?? '',
+        p_target_user_id: course.author_id,
+        p_type: 'course_like',
+        p_course_id: courseId,
+        p_course_name: course.name,
+      });
+    }
+  } catch (_) {}
+
+  return true;
 }
 
 // ─── 북마크 ───────────────────────────────────────────────
@@ -345,69 +455,102 @@ export async function isBookmarked(courseId, userId) {
     .eq('course_id', courseId)
     .eq('user_id', userId)
     .maybeSingle();
+
   return !!data;
 }
 
 export async function toggleBookmark(courseId, userId) {
   const marked = await isBookmarked(courseId, userId);
+
   if (marked) {
-    await supabase.from('bookmarks').delete().eq('course_id', courseId).eq('user_id', userId);
+    await supabase
+      .from('bookmarks')
+      .delete()
+      .eq('course_id', courseId)
+      .eq('user_id', userId);
+
     return false;
-  } else {
-    await supabase.from('bookmarks').insert({ course_id: courseId, user_id: userId });
-    return true;
   }
+
+  await supabase.from('bookmarks').insert({
+    course_id: courseId,
+    user_id: userId,
+  });
+
+  return true;
 }
 
-export async function fetchBookmarkedCourses(userId, { page = 0, pageSize = 20 } = {}) {
+export async function fetchBookmarkedCourses(
+  userId,
+  { page = 0, pageSize = 20 } = {}
+) {
   const { data, error } = await supabase.rpc('get_bookmarked_courses', {
     p_user_id: userId,
     p_limit: pageSize,
     p_offset: page * pageSize,
   });
+
   if (error) throw error;
 
   const ids = (data || []).map((c) => c.id);
   if (ids.length === 0) return data || [];
-  const { data: places } = await supabase
+
+  const { data: places, error: placesError } = await supabase
     .from('course_places')
     .select('course_id, order_index, name, photo_url')
     .in('course_id', ids);
+
+  if (placesError) throw placesError;
+
   const map = {};
   (places || []).forEach((p) => {
     if (!map[p.course_id]) map[p.course_id] = [];
     map[p.course_id].push(p);
   });
+
   return (data || []).map((c) => ({
     ...c,
-    course_places: (map[c.id] || []).sort((a, b) => a.order_index - b.order_index),
+    course_places: (map[c.id] || []).sort(
+      (a, b) => a.order_index - b.order_index
+    ),
   }));
 }
 
 // ─── 좋아요한 코스 목록 ───────────────────────────────────
 
-export async function fetchLikedCourses(userId, { page = 0, pageSize = 20 } = {}) {
+export async function fetchLikedCourses(
+  userId,
+  { page = 0, pageSize = 20 } = {}
+) {
   const { data, error } = await supabase.rpc('get_liked_courses', {
     p_user_id: userId,
     p_limit: pageSize,
     p_offset: page * pageSize,
   });
+
   if (error) throw error;
 
   const ids = (data || []).map((c) => c.id);
   if (ids.length === 0) return data || [];
-  const { data: places } = await supabase
+
+  const { data: places, error: placesError } = await supabase
     .from('course_places')
     .select('course_id, order_index, name, photo_url')
     .in('course_id', ids);
+
+  if (placesError) throw placesError;
+
   const map = {};
   (places || []).forEach((p) => {
     if (!map[p.course_id]) map[p.course_id] = [];
     map[p.course_id].push(p);
   });
+
   return (data || []).map((c) => ({
     ...c,
-    course_places: (map[c.id] || []).sort((a, b) => a.order_index - b.order_index),
+    course_places: (map[c.id] || []).sort(
+      (a, b) => a.order_index - b.order_index
+    ),
   }));
 }
 
@@ -420,12 +563,15 @@ export async function fetchComments(courseId, sort = 'latest') {
     .select(`*, comment_likes(user_id), replies(*, reply_likes(user_id))`)
     .eq('course_id', courseId)
     .order('created_at', { ascending: sort !== 'latest' });
+
   if (error) throw error;
 
-  let comments = (data || []).map((c) => ({
+  const comments = (data || []).map((c) => ({
     ...c,
     like_count: (c.comment_likes || []).length,
-    replies: (c.replies || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
+    replies: (c.replies || []).sort(
+      (a, b) => new Date(a.created_at) - new Date(b.created_at)
+    ),
   }));
 
   if (sort === 'popular') {
@@ -445,20 +591,32 @@ export async function fetchComments(courseId, sort = 'latest') {
 export async function addComment({ courseId, authorId, nickname, content }) {
   const { data, error } = await supabase
     .from('comments')
-    .insert({ course_id: courseId, author_id: authorId, nickname, content })
+    .insert({
+      course_id: courseId,
+      author_id: authorId,
+      nickname,
+      content,
+    })
     .select('*')
     .single();
+
   if (error) throw error;
 
   // comment_count +1 + 알림
   await supabase.rpc('increment_comment_count', { p_course_id: courseId });
+
   try {
-    await supabase.rpc('add_user_score', { p_user_id: authorId, p_delta: 2 });
+    await supabase.rpc('add_user_score', {
+      p_user_id: authorId,
+      p_delta: 2,
+    });
+
     const { data: course } = await supabase
       .from('courses')
       .select('author_id, name')
       .eq('id', courseId)
       .single();
+
     if (course) {
       await supabase.rpc('upsert_notification', {
         p_actor_user_id: authorId,
@@ -478,7 +636,10 @@ export async function addComment({ courseId, authorId, nickname, content }) {
 export async function deleteComment(commentId, courseId) {
   const { error } = await supabase.from('comments').delete().eq('id', commentId);
   if (error) throw error;
-  if (courseId) await supabase.rpc('decrement_comment_count', { p_course_id: courseId });
+
+  if (courseId) {
+    await supabase.rpc('decrement_comment_count', { p_course_id: courseId });
+  }
 }
 
 export async function toggleCommentLike(commentId, userId) {
@@ -490,12 +651,21 @@ export async function toggleCommentLike(commentId, userId) {
     .maybeSingle();
 
   if (existing) {
-    await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', userId);
+    await supabase
+      .from('comment_likes')
+      .delete()
+      .eq('comment_id', commentId)
+      .eq('user_id', userId);
+
     return false;
-  } else {
-    await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: userId });
-    return true;
   }
+
+  await supabase.from('comment_likes').insert({
+    comment_id: commentId,
+    user_id: userId,
+  });
+
+  return true;
 }
 
 // ─── 답글 ─────────────────────────────────────────────────
@@ -503,23 +673,35 @@ export async function toggleCommentLike(commentId, userId) {
 export async function addReply({ commentId, authorId, nickname, content }) {
   const { data, error } = await supabase
     .from('replies')
-    .insert({ comment_id: commentId, author_id: authorId, nickname, content })
+    .insert({
+      comment_id: commentId,
+      author_id: authorId,
+      nickname,
+      content,
+    })
     .select('*')
     .single();
+
   if (error) throw error;
 
   // comment_count +1 (답글도 카운트) + 알림
   try {
-    await supabase.rpc('add_user_score', { p_user_id: authorId, p_delta: 2 });
+    await supabase.rpc('add_user_score', {
+      p_user_id: authorId,
+      p_delta: 2,
+    });
+
     const { data: comment } = await supabase
       .from('comments')
       .select('course_id, author_id')
       .eq('id', commentId)
       .single();
-    if (comment) {
-      await supabase.rpc('increment_comment_count', { p_course_id: comment.course_id });
 
-      // 코스명 별도 조회
+    if (comment) {
+      await supabase.rpc('increment_comment_count', {
+        p_course_id: comment.course_id,
+      });
+
       const { data: courseRow } = await supabase
         .from('courses')
         .select('name')
@@ -544,10 +726,20 @@ export async function addReply({ commentId, authorId, nickname, content }) {
 export async function deleteReply(replyId, commentId) {
   const { error } = await supabase.from('replies').delete().eq('id', replyId);
   if (error) throw error;
+
   // comment_count -1
   try {
-    const { data: comment } = await supabase.from('comments').select('course_id').eq('id', commentId).single();
-    if (comment) await supabase.rpc('decrement_comment_count', { p_course_id: comment.course_id });
+    const { data: comment } = await supabase
+      .from('comments')
+      .select('course_id')
+      .eq('id', commentId)
+      .single();
+
+    if (comment) {
+      await supabase.rpc('decrement_comment_count', {
+        p_course_id: comment.course_id,
+      });
+    }
   } catch (_) {}
 }
 
@@ -560,23 +752,36 @@ export async function toggleReplyLike(replyId, userId) {
     .maybeSingle();
 
   if (existing) {
-    await supabase.from('reply_likes').delete().eq('reply_id', replyId).eq('user_id', userId);
+    await supabase
+      .from('reply_likes')
+      .delete()
+      .eq('reply_id', replyId)
+      .eq('user_id', userId);
+
     return false;
-  } else {
-    await supabase.from('reply_likes').insert({ reply_id: replyId, user_id: userId });
-    return true;
   }
+
+  await supabase.from('reply_likes').insert({
+    reply_id: replyId,
+    user_id: userId,
+  });
+
+  return true;
 }
 
 // ─── 알림 ─────────────────────────────────────────────────
 
-export async function fetchNotifications(userId, { page = 0, pageSize = 30 } = {}) {
+export async function fetchNotifications(
+  userId,
+  { page = 0, pageSize = 30 } = {}
+) {
   const { data, error } = await supabase
     .from('notifications')
     .select('*')
     .eq('target_user_id', userId)
     .order('created_at', { ascending: false })
     .range(page * pageSize, (page + 1) * pageSize - 1);
+
   if (error) throw error;
   return data || [];
 }
@@ -589,23 +794,36 @@ export async function markNotificationsRead(userId) {
 
 // ─── 활동 내역 ────────────────────────────────────────────
 
-export async function fetchActivityLikes(userId, { page = 0, pageSize = 20 } = {}) {
+export async function fetchActivityLikes(
+  userId,
+  { page = 0, pageSize = 20 } = {}
+) {
   return fetchLikedCourses(userId, { page, pageSize });
 }
 
-export async function fetchActivityBookmarks(userId, { page = 0, pageSize = 20 } = {}) {
+export async function fetchActivityBookmarks(
+  userId,
+  { page = 0, pageSize = 20 } = {}
+) {
   return fetchBookmarkedCourses(userId, { page, pageSize });
 }
 
-export async function fetchActivityMyCourses(userId, { page = 0, pageSize = 20 } = {}) {
+export async function fetchActivityMyCourses(
+  userId,
+  { page = 0, pageSize = 20 } = {}
+) {
   const { courses } = await fetchCoursesByUser(userId, { page, pageSize });
   return courses;
 }
 
 // ─── 신고 ─────────────────────────────────────────────────
 
-export async function submitReport({ reporterUserId, targetType, targetId, reason }) {
-  // 중복 신고 방지
+export async function submitReport({
+  reporterUserId,
+  targetType,
+  targetId,
+  reason,
+}) {
   const { data: existing } = await supabase
     .from('reports')
     .select('id')
@@ -613,7 +831,10 @@ export async function submitReport({ reporterUserId, targetType, targetId, reaso
     .eq('target_type', targetType)
     .eq('target_id', String(targetId))
     .maybeSingle();
-  if (existing) throw new Error('이미 신고한 콘텐츠입니다');
+
+  if (existing) {
+    throw new Error('이미 신고한 콘텐츠입니다');
+  }
 
   const { error } = await supabase.from('reports').insert({
     reporter_user_id: reporterUserId,
@@ -621,6 +842,7 @@ export async function submitReport({ reporterUserId, targetType, targetId, reaso
     target_id: String(targetId),
     reason,
   });
+
   if (error) throw error;
 }
 
@@ -629,8 +851,13 @@ export async function submitReport({ reporterUserId, targetType, targetId, reaso
 export async function uploadPhoto(blob, path) {
   const { error } = await supabase.storage
     .from(STORAGE_BUCKET)
-    .upload(path, blob, { contentType: 'image/webp', upsert: true });
+    .upload(path, blob, {
+      contentType: 'image/webp',
+      upsert: true,
+    });
+
   if (error) throw error;
+
   const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
   return data.publicUrl;
 }
@@ -641,15 +868,57 @@ export async function deletePhoto(path) {
 
 // ─── 행동 로그 ────────────────────────────────────────────
 
+function canUseStorage() {
+  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+}
+
+function canUseSessionStorage() {
+  return typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
+}
+
+function createUuidFallback() {
+  return `fallback-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function createClientId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return createUuidFallback();
+}
+
+function getOrCreateSessionId() {
+  const KEY = 'dc_session_id';
+
+  if (!canUseSessionStorage()) {
+    return createClientId();
+  }
+
+  let id = sessionStorage.getItem(KEY);
+
+  if (!id) {
+    id = createClientId();
+    sessionStorage.setItem(KEY, id);
+  }
+
+  return id;
+}
+
 function getOrCreateSessionIdForEvent() {
   return getOrCreateSessionId();
 }
+
 function getOrCreateAnonymousId() {
   const KEY = 'dc_anonymous_id';
+
+  if (!canUseStorage()) {
+    return createClientId();
+  }
+
   let id = localStorage.getItem(KEY);
 
   if (!id) {
-    id = crypto.randomUUID();
+    id = createClientId();
     localStorage.setItem(KEY, id);
   }
 
@@ -660,24 +929,31 @@ function getOrCreateAnonymousIdForEvent() {
   return getOrCreateAnonymousId();
 }
 
-export async function logEvent(eventName, targetType = 'page', targetId = null, metadata = {}) {
+export async function logEvent(
+  eventName,
+  targetType = 'page',
+  targetId = null,
+  metadata = {}
+) {
   try {
     const session = await getSession();
     const sessionId = getOrCreateSessionIdForEvent();
     const anonymousId = getOrCreateAnonymousIdForEvent();
 
-    const { error } = await supabase.from('event_logs').insert({
+    const payload = {
       user_id: session?.user?.id ?? null,
       anonymous_id: anonymousId,
       event_name: eventName,
       target_type: targetType || null,
-      target_id: targetId ? String(targetId) : null,
+      target_id: targetId != null ? String(targetId) : null,
       session_id: sessionId,
       event_page: metadata || {},
-    });
+    };
+
+    const { error } = await supabase.from('event_logs').insert(payload);
 
     if (error) {
-      console.error('[logEvent insert error]', error);
+      console.error('[logEvent insert error]', error, payload);
     }
   } catch (err) {
     console.error('[logEvent error]', err);
@@ -686,10 +962,18 @@ export async function logEvent(eventName, targetType = 'page', targetId = null, 
 
 // ─── 참조 코스 ───────────────────────────────────────────
 
-export async function createReferenceCourse(courseData, places, parentCourseId) {
+export async function createReferenceCourse(
+  courseData,
+  places,
+  parentCourseId
+) {
   const courseId = await createCourse(courseData, places);
+
   if (parentCourseId) {
-    await supabase.rpc('increment_reference_count', { course_id: parentCourseId });
+    await supabase.rpc('increment_reference_count', {
+      course_id: parentCourseId,
+    });
+
     // 알림
     try {
       const { data: parent } = await supabase
@@ -697,13 +981,17 @@ export async function createReferenceCourse(courseData, places, parentCourseId) 
         .select('author_id, name')
         .eq('id', parentCourseId)
         .single();
+
       if (parent) {
         const session = await getSession();
+        if (!session) return courseId;
+
         const { data: actor } = await supabase
           .from('users')
           .select('nickname')
           .eq('id', session.user.id)
           .single();
+
         await supabase.rpc('upsert_notification', {
           p_actor_user_id: session.user.id,
           p_actor_nickname: actor?.nickname ?? '',
@@ -712,18 +1000,33 @@ export async function createReferenceCourse(courseData, places, parentCourseId) 
           p_course_id: parentCourseId,
           p_course_name: parent.name,
         });
+
         // 점수 부여 (참조됨)
-        await supabase.rpc('add_user_score', { p_user_id: parent.author_id, p_delta: 5 });
+        await supabase.rpc('add_user_score', {
+          p_user_id: parent.author_id,
+          p_delta: 5,
+        });
       }
     } catch (_) {}
   }
+
   return courseId;
 }
 
 export async function onCourseDeleted(courseId, parentCourseId) {
   await deleteCourse(courseId);
+
   if (parentCourseId) {
-    const { data } = await supabase.from('courses').select('id').eq('id', parentCourseId).maybeSingle();
-    if (data) await supabase.rpc('decrement_reference_count', { course_id: parentCourseId });
+    const { data } = await supabase
+      .from('courses')
+      .select('id')
+      .eq('id', parentCourseId)
+      .maybeSingle();
+
+    if (data) {
+      await supabase.rpc('decrement_reference_count', {
+        course_id: parentCourseId,
+      });
+    }
   }
 }
