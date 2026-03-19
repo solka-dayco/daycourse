@@ -35,7 +35,6 @@
   --transition:    .18s ease;
 }
 
-
 body {
   font-family: -apple-system, 'Pretendard', BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
   background: var(--bg);
@@ -43,8 +42,6 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
-
-
 
 a { text-decoration: none; color: inherit; }
 button { cursor: pointer; border: none; background: none; font: inherit; }
@@ -63,7 +60,6 @@ img { display: block; max-width: 100%; }
   padding: 0 16px;
   z-index: 900;
 }
-
 
 .header-menu {
   font-size: 20px;
@@ -309,7 +305,7 @@ img { display: block; max-width: 100%; }
 .feed-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 2px;
   padding: 0 10px 80px;
 }
 @media (min-width: 768px) {
@@ -407,17 +403,16 @@ img { display: block; max-width: 100%; }
   text-overflow: ellipsis;
   margin-bottom: 6px;
   line-height: 1.4;
-  font-style:italic;
+  font-style: italic;
 }
 
 .feed-meta {
   margin-top: auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 4px;
   padding-top: 6px;
-  border-top: 1px solid var(--border);
+  /*border-top: 1px solid var(--border);*/
 }
 
 .feed-author {
@@ -432,6 +427,7 @@ img { display: block; max-width: 100%; }
 
 .feed-actions {
   display: flex;
+  margin-left: auto;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
@@ -461,6 +457,24 @@ img { display: block; max-width: 100%; }
 .feed-like-btn:hover, .feed-comment-btn:hover { color: var(--dark); }
 .feed-like-btn.liked { color: var(--liked-color); font-weight: 700; }
 .feed-like-btn .heart { font-size: 12px; }
+
+/* 모바일 피드 단순화: 썸네일 + 코스 제목만 노출 */
+@media (max-width: 767px) {
+  .feed-course-name,
+  .feed-places-path,
+  .feed-description,
+  .feed-author,
+  .feed-time-badge
+  {
+    display: none;
+  }
+  .feed-meta {
+    padding: 1px;
+  }
+  .feed-body {
+    padding: 0px;
+  }
+}
 
 /* ── 스피너 ─────────────────────────────────────────── */
 .spinner-wrap {
@@ -786,6 +800,7 @@ img { display: block; max-width: 100%; }
   font-size: 11px;
   color: var(--text-light);
 }
+
 /* ── 아이콘/텍스트 정렬 보정 ──────────────────────────── */
 
 /* 헤더 — 햄버거 아이콘과 타이틀 수직 정렬 */
