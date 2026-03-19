@@ -421,7 +421,8 @@ img { display: block; max-width: 100%; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 52px;
+  padding: 6px;
+  max-width: 70px;
   font-weight: 600;
 }
 
@@ -463,7 +464,6 @@ img { display: block; max-width: 100%; }
   .feed-course-name,
   .feed-places-path,
   .feed-description,
-  .feed-author,
   .feed-time-badge
   {
     display: none;
