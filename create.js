@@ -1,4 +1,4 @@
-// create.js — 코스 만들기 / 수정 / 참조 (draft 복원 개선판)
+// create.js — 코스 만들기 / 수정 / 참조 (썸네일 자동 대체 + 수정 시 썸네일 빈칸 유지)
 import {
   getCurrentUser,
   createCourse,
@@ -73,7 +73,7 @@ let draftTimer;
 let _draftEnabled = false;
 let _isSaved = false;
 
-const DRAFT_VERSION = 3;
+const DRAFT_VERSION = 4;
 const DRAFT_KEY =
   mode === 'edit'
     ? `dc_draft_edit_${sourceId}`
@@ -91,6 +91,7 @@ const draftSaveBtnEl = document.getElementById('draftSaveBtn');
 const saveBtnEl = document.getElementById('saveBtn');
 const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
+const photoRequiredConfirmBtn = document.getElementById('photoRequiredConfirmBtn');
 
 // ── 유틸 ─────────────────────────────────────────────────
 function formatMinutes(min) {
@@ -271,12 +272,17 @@ function applyDraftToForm(draft) {
     : [];
 
   thumbnailBlob = null;
-  thumbnailExistingUrl = draft.thumbnailExistingUrl || '';
 
-  if (thumbnailExistingUrl) {
-    setThumbnailPreview(thumbnailExistingUrl);
-  } else {
+  if (mode === 'edit') {
+    thumbnailExistingUrl = '';
     clearThumbnailPreview();
+  } else {
+    thumbnailExistingUrl = draft.thumbnailExistingUrl || '';
+    if (thumbnailExistingUrl) {
+      setThumbnailPreview(thumbnailExistingUrl);
+    } else {
+      clearThumbnailPreview();
+    }
   }
 
   renderPlaceList();
@@ -299,13 +305,10 @@ function applySourceCourseToForm(course) {
       regionSubEl.value = course.region_sub || '';
     }
 
+    // 수정 시에는 기존 썸네일을 표시하지 않고 빈칸 유지
     thumbnailBlob = null;
-    thumbnailExistingUrl = course.thumbnail_url || '';
-    if (thumbnailExistingUrl) {
-      setThumbnailPreview(thumbnailExistingUrl);
-    } else {
-      clearThumbnailPreview();
-    }
+    thumbnailExistingUrl = '';
+    clearThumbnailPreview();
   } else {
     if (courseNameEl) courseNameEl.value = '';
     if (courseDescEl) courseDescEl.value = '';
@@ -390,7 +393,35 @@ function hasDirtyContent() {
   );
 }
 
-// ── draft 조회/삭제 ───────────────────────────────────────
+//────  사진 저장 함수  ────────────────────────
+async function ensureThumbnailFromFirstPlace(tempIdForUpload) {
+  if (thumbnailBlob) {
+    const thumbPath = `thumbnails/${currentUser.id}/${Date.now()}.webp`;
+    const uploaded = await uploadPhoto(thumbnailBlob, thumbPath);
+    thumbnailBlob = null;
+    return uploaded || '';
+  }
+
+  if (thumbnailExistingUrl) {
+    return thumbnailExistingUrl;
+  }
+
+  const firstPlace = places[0];
+  if (!firstPlace) return '';
+
+  if (firstPlace._photoBlob) {
+    const firstPlaceThumbPath = `thumbnails/${currentUser.id}/${Date.now()}_from_place_0.webp`;
+    return await uploadPhoto(firstPlace._photoBlob, firstPlaceThumbPath);
+  }
+
+  if (firstPlace.photo_url) {
+    return firstPlace.photo_url;
+  }
+
+  return '';
+}
+
+// ── draft 조회/삭제 ──────────────────────────────────────
 function loadAllDrafts() {
   const drafts = [];
 
@@ -441,7 +472,7 @@ function buildDraftPayload() {
       _photoBlob: null,
       _photoPreview: '',
     })),
-    thumbnailExistingUrl: thumbnailExistingUrl || '',
+    thumbnailExistingUrl: mode === 'edit' ? '' : (thumbnailExistingUrl || ''),
     savedAt: Date.now(),
   };
 }
@@ -1007,6 +1038,38 @@ function addPlace(r) {
   logEvent('place_add', 'course', null, { place_name: place.name });
 }
 
+// ── 장소 사진 필수 검증 ───────────────────────────────────
+function hasPlacePhoto(place) {
+  if (!place) return false;
+  return Boolean(place._photoBlob || place._photoPreview || place.photo_url);
+}
+
+function getFirstPlaceWithoutPhotoIndex() {
+  return places.findIndex((place) => !hasPlacePhoto(place));
+}
+
+function scrollToPlacePhotoSlot(idx) {
+  if (!Number.isInteger(idx) || idx < 0) return;
+
+  const photoSlot = document.querySelector(`.place-photo-slot[data-idx="${idx}"]`);
+  if (!photoSlot) return;
+
+  photoSlot.scrollIntoView({
+    behavior: 'smooth',
+    block: 'center',
+  });
+}
+
+function openPhotoRequiredModal(idx = -1) {
+  openModal('photoRequiredModal');
+
+  if (idx >= 0) {
+    setTimeout(() => {
+      scrollToPlacePhotoSlot(idx);
+    }, 120);
+  }
+}
+
 // ── 장소 목록 렌더 ────────────────────────────────────────
 function renderPlaceList() {
   const ul = document.getElementById('placeList');
@@ -1224,10 +1287,14 @@ document.querySelectorAll('#travelTimeChips .time-chip').forEach((chip) => {
   });
 });
 
-['stayTimeModal', 'travelTimeModal'].forEach((id) => {
+['stayTimeModal', 'travelTimeModal', 'photoRequiredModal'].forEach((id) => {
   document.getElementById(id)?.addEventListener('click', (e) => {
     if (e.target.id === id) closeModal(id);
   });
+});
+
+photoRequiredConfirmBtn?.addEventListener('click', () => {
+  closeModal('photoRequiredModal');
 });
 
 // ── 총 소요시간 계산 ──────────────────────────────────────
@@ -1293,6 +1360,12 @@ saveBtnEl?.addEventListener('click', async () => {
     return;
   }
 
+  const noPhoto = getFirstPlaceWithoutPhotoIndex();
+  if (noPhoto >= 0) {
+    openPhotoRequiredModal(noPhoto);
+    return;
+  }
+
   if (!saveBtnEl) return;
 
   saveBtnEl.disabled = true;
@@ -1313,12 +1386,8 @@ saveBtnEl?.addEventListener('click', async () => {
 
     const totalTime = places.reduce((sum, p) => sum + (p.stay_time || 0) + (p.travel_time || 0), 0);
 
-    let finalThumbnailUrl = thumbnailExistingUrl || '';
-    if (thumbnailBlob) {
-      const thumbPath = `thumbnails/${currentUser.id}/${Date.now()}.webp`;
-      finalThumbnailUrl = await uploadPhoto(thumbnailBlob, thumbPath);
-      thumbnailBlob = null;
-    }
+    // 썸네일이 비어 있으면 첫 번째 코스 사진을 썸네일로 사용
+    const finalThumbnailUrl = (await ensureThumbnailFromFirstPlace(tempId)) || '';
 
     const courseData = {
       name,

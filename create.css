@@ -343,6 +343,7 @@
 }
 .time-chip.active,
 .time-chip:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
 /* ── 썸네일 업로드 ─────────────────────────────────────── */
 .create-thumbnail-wrap {
   position: relative;
@@ -395,6 +396,7 @@
   z-index: 1;
 }
 .create-thumbnail-remove:hover { background: rgba(0,0,0,.75); }
+
 /* ── 지도 클릭 결과 (카드 내부) ──────────────────────── */
 .create-map-results {
   list-style: none;
@@ -420,3 +422,21 @@
 }
 .draft-save-btn:hover { color: var(--primary); border-color: var(--primary); }
 .draft-save-btn.saved { color: var(--primary); border-color: var(--primary); }
+
+/* ── 사진 필수 안내 모달 ───────────────────────────────── */
+.photo-required-modal-box {
+  text-align: center;
+  padding: 24px 20px 20px;
+}
+
+.photo-required-modal-desc {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--sub);
+}
+
+.photo-required-confirm-btn {
+  width: 100%;
+  margin-top: 18px;
+}
