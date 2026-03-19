@@ -10,18 +10,18 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --primary:       #e8648a;
+  --primary:       #D65A7C;
   --primary-light: #fdeef3;
-  --accent:        #d44d72;
-  --accent2:       #f43f72;
+  --accent:        #C54D6E;
+  --accent2:       #D31655;
   --bg:            #ffffff;
   --bg-card:       #ffffff;
   --bg-section:    #fafafa;
   --dark:          #1a1a1a;
-  --sub:           #888888;
+  --sub:           #767676;
   --text:          #1a1a1a;
-  --text-muted:    #888888;
-  --text-light:    #bbbbbb;
+  --text-muted:    #767676;
+  --text-light:    #999999;
   --border:        #f0f0f0;
   --border-dark:   #e0e0e0;
   --liked-color:   #e8648a;
@@ -165,7 +165,7 @@ img { display: block; max-width: 100%; }
 }
 
 .sidebar-nickname {
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 600;
   color: var(--text);
 }
@@ -227,11 +227,11 @@ img { display: block; max-width: 100%; }
   gap: 12px;
   padding: 11px 12px;
   border-radius: 10px;
-  font-size: 15px;
+  font-size: 18px;
   color: var(--text);
   transition: background var(--transition);
   position: relative;
-  margin-bottom: 2px;
+  margin-bottom: 10px;
 }
 .sidebar-nav-item:hover { background: var(--bg); }
 .sidebar-nav-item.active {
@@ -239,7 +239,7 @@ img { display: block; max-width: 100%; }
   font-weight: 600;
 }
 
-.sidebar-nav-icon { font-size: 18px; }
+.sidebar-nav-icon { font-size: 22px; }
 
 /* 알림 배지 */
 .notif-badge {
