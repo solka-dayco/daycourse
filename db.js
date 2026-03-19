@@ -90,7 +90,7 @@ export async function fetchUserStats(userId) {
  * 피드 코스 목록 조회
  * @param {{ keyword?, regionMain?, regionSub?, maxTime?, sort?, cursor?, page?, pageSize? }} options
  */
-export async function fetchCourses({
+export async function fetchCourses({ //DB courses 데이터 불러오는 함수)
   keyword = '',
   regionMain = '',
   regionSub = '',
@@ -107,7 +107,7 @@ export async function fetchCourses({
       .from('courses')
       .select(
         `id, name, description, region_main, region_sub, total_time,
-         like_count, reference_count, thumbnail_url,
+         like_count, comment_count, reference_count, thumbnail_url,
          author_id, author_nickname, created_at,
          course_places(order_index, name, photo_url)`,
         { count: 'exact' }

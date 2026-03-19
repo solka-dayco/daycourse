@@ -488,11 +488,11 @@ function buildCard(course, liked) {
           ${timeText ? `<span class="feed-time-badge">⏱ ${escHtml(timeText)}</span>` : ''}
           <button class="feed-like-btn ${liked ? 'liked' : ''}" data-id="${escAttr(course.id)}" aria-label="좋아요">
             <span class="heart">♥</span>
-            <span class="like-count">${course.like_count || 0}</span>
+            <span class="like-count">${course.like_count ?? 0}</span>
           </button>
           <button class="feed-comment-btn" data-id="${escAttr(course.id)}" aria-label="댓글">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            <span>${course.comment_count || 0}</span>
+            <span class="comment-count">${course.comment_count ?? 0}</span>
           </button>
         </div>
       </div>
