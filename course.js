@@ -1118,6 +1118,9 @@ function updateSeoTags() {
     course.thumbnail_url ||
     (course.course_places || []).find(p => p.photo_url)?.photo_url ||
     '';
+    if (image) {
+      upsertMeta('meta[property="og:image"]', 'property', 'og:image', image);
+    }
 
   document.title = title;
 
