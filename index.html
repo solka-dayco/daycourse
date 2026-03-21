@@ -1,126 +1,14 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta http-equiv="refresh" content="0; url=/main.html" />
   <meta name="google-site-verification" content="bue0ZtDF3VbDNxN2h5J4VwUKR5EPSU89RTztnR5LCo8" />
-
-  <title>데이코스 — 나만의 하루 코스</title>
-  <link rel="stylesheet" href="style.css"/>
-  <link rel="stylesheet" href="main.css"/>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <title>Redirecting...</title>
 </head>
 <body>
-  <!-- 사이드바 -->
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
-  <nav class="sidebar" id="sidebar"></nav>
-
-  <!-- 헤더 -->
-  <header class="header">
-    <button class="header-menu" id="sidebarToggle" aria-label="메뉴">☰</button>
-    <span class="header-title" onclick="location.href='/'">데이코스</span>
-    <div class="header-right">
-      <button id="headerCreateBtn" style="display:none" aria-label="코스 만들기">+</button>
-    </div>
-  </header>
-
-  <main class="page-wrap" id="pageWrap">
-    <!-- 검색 바 -->
-    <div class="search-wrap">
-      <div class="search-bar">
-        <input
-          type="text"
-          id="searchInput"
-          class="search-input"
-          placeholder="코스명, 장소명 검색…"
-          autocomplete="off"
-          aria-label="검색"
-        />
-        <button class="search-btn" id="searchBtn" aria-label="검색">🔍</button>
-      </div>
-      <!-- 자동완성 드롭다운 -->
-      <ul class="autocomplete-list" id="autocompleteList" role="listbox"></ul>
-    </div>
-
-    <!-- 필터 패널 -->
-    <div class="filter-wrap">
-      <div class="filter-toggle-row">
-        <button class="filter-toggle-btn" id="filterToggleBtn">
-          <span> 필터</span>
-          <span class="filter-badge" id="filterBadge" style="display:none"></span>
-        </button>
-        <div class="sort-chips" id="filterSortChips">
-          <button class="chip active" data-sort="latest">최신순</button>
-          <button class="chip" data-sort="popular">인기순</button>
-          <button class="chip" data-sort="referenced">인용 많은 순</button>
-          <button class="chip" data-sort="time_asc">짧은순</button>
-          <button class="chip" data-sort="time_desc">긴순</button>
-        </div>
-      </div>
-
-      <div class="filter-panel" id="filterPanel">
-        <div class="filter-row">
-          <select id="filterRegionMain" class="filter-select" aria-label="지역 선택">
-            <option value="">전국</option>
-            <option>서울</option><option>경기</option><option>인천</option>
-            <option>부산</option><option>대구</option><option>대전</option>
-            <option>광주</option><option>울산</option><option>세종</option>
-            <option>강원</option><option>충북</option><option>충남</option>
-            <option>전북</option><option>전남</option><option>경북</option>
-            <option>경남</option><option>제주</option>
-          </select>
-          <select id="filterRegionSub" class="filter-select" style="display:none" aria-label="세부 지역"></select>
-        </div>
-        <div class="filter-time-row">
-          <span class="filter-label">소요시간</span>
-          <div class="chips" id="filterTimeChips">
-            <button class="chip active" data-time="0">전체</button>
-            <button class="chip" data-time="120">2시간↓</button>
-            <button class="chip" data-time="240">4시간↓</button>
-            <button class="chip" data-time="360">6시간↓</button>
-            <button class="chip" data-time="480">8시간↓</button>
-          </div>
-        </div>
-        <button class="filter-reset-btn" id="filterResetBtn">초기화</button>
-      </div>
-    </div>
-
-    <!-- Pull to Refresh 인디케이터 -->
-    <div class="ptr-indicator hidden" id="ptrIndicator">
-      <div class="spinner spinner-sm"></div>
-      <span>새 코스 불러오는 중…</span>
-    </div>
-
-    <!-- 피드 그리드 -->
-    <div class="feed-grid" id="feedGrid"></div>
-
-    <!-- 로딩 스피너 -->
-    <div class="spinner-wrap" id="spinner" style="display:none">
-      <div class="spinner"></div>
-    </div>
-
-    <!-- 빈 상태 -->
-    <div class="empty-state" id="feedEmpty" style="display:none">
-      <p>코스가 없습니다</p>
-      <small>다른 키워드나 필터를 사용해보세요</small>
-    </div>
-
-    <!-- 무한 스크롤 센티넬 -->
-    <div class="infinite-sentinel" id="infiniteSentinel"></div>
-  </main>
-
-  <footer class="site-footer">
-    <div class="footer-logo">데이코스</div>
-    <div class="footer-slogan">나만의 하루 코스, 데이코스</div>
-    <div class="footer-links">
-      <a href="privacy.html">개인정보처리방침</a>
-      <a href="privacy.html#terms">이용약관</a>
-    </div>
-    <div class="footer-contact">문의 · <a href="mailto:lhs00104@gmail.com">lhs00104@gmail.com</a></div>
-    <div class="footer-copy">© 2026 DayCourse. All rights reserved. v1.0.0</div>
-  </footer>
-
-  <div class="toast" id="toast"></div>
-  <script type="module" src="main.js"></script>
+  <script>
+    location.replace('/main.html');
+  </script>
 </body>
 </html>
