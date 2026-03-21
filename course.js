@@ -125,7 +125,7 @@ const commentSubmitBtn = $id('commentSubmitBtn');
 
 // ── 코스 헤더 렌더 ────────────────────────────────────────
 function renderCourseHeader() {
-  document.title = `${course.name} — 데이코스`;
+  updateSeoTags();
 
   if (course.region_main) {
     setText(
@@ -1069,6 +1069,107 @@ on('kakaoShareBtn', 'click', () => {
 
   closeShareSheet();
 });
+
+function upsertMeta(selector, attrName, attrValue, content) {
+  let el = document.head.querySelector(selector);
+  if (!el) {
+    el = document.createElement('meta');
+    el.setAttribute(attrName, attrValue);
+    document.head.appendChild(el);
+  }
+  el.setAttribute('content', content);
+}
+
+function upsertLink(selector, rel, href) {
+  let el = document.head.querySelector(selector);
+  if (!el) {
+    el = document.createElement('link');
+    el.setAttribute('rel', rel);
+    document.head.appendChild(el);
+  }
+  el.setAttribute('href', href);
+}
+
+function buildSeoDescription(course) {
+  const placeCount = Array.isArray(course.course_places) ? course.course_places.length : 0;
+  const region = [course.region_main, course.region_sub].filter(Boolean).join(' ');
+  const timeText = formatMinutes(course.total_time);
+  const base = course.description?.trim();
+
+  if (base) {
+    return base.slice(0, 140);
+  }
+
+  return [
+    course.name,
+    region ? `${region} 코스` : '',
+    placeCount ? `${placeCount}개 장소` : '',
+    timeText ? `총 ${timeText}` : '',
+    '데이코스에서 확인해보세요.'
+  ].filter(Boolean).join(' · ').slice(0, 155);
+}
+
+//코스 제목 노출
+function updateSeoTags() {
+  const canonicalUrl = `${location.origin}/course.html?id=${encodeURIComponent(courseId)}`;
+  const title = `${course.name} | 데이코스`;
+  const description = buildSeoDescription(course);
+  const image =
+    course.thumbnail_url ||
+    (course.course_places || []).find(p => p.photo_url)?.photo_url ||
+    '';
+
+  document.title = title;
+
+  upsertMeta('meta[name="description"]', 'name', 'description', description);
+  upsertMeta('meta[name="robots"]', 'name', 'robots', 'index,follow');
+
+  upsertMeta('meta[property="og:type"]', 'property', 'og:type', 'website');
+  upsertMeta('meta[property="og:title"]', 'property', 'og:title', title);
+  upsertMeta('meta[property="og:description"]', 'property', 'og:description', description);
+  upsertMeta('meta[property="og:url"]', 'property', 'og:url', canonicalUrl);
+  if (image) {
+    upsertMeta('meta[property="og:image"]', 'property', 'og:image', image);
+  }
+
+  upsertMeta('meta[name="twitter:card"]', 'name', 'twitter:card', image ? 'summary_large_image' : 'summary');
+  upsertMeta('meta[name="twitter:title"]', 'name', 'twitter:title', title);
+  upsertMeta('meta[name="twitter:description"]', 'name', 'twitter:description', description);
+  if (image) {
+    upsertMeta('meta[name="twitter:image"]', 'name', 'twitter:image', image);
+  }
+
+  upsertLink('link[rel="canonical"]', 'canonical', canonicalUrl);
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": course.name,
+    "headline": course.name,
+    "description": description,
+    "url": canonicalUrl,
+    "inLanguage": "ko",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "데이코스",
+      "url": "https://daycourse.kr/"
+    },
+    "author": course.author_nickname ? {
+      "@type": "Person",
+      "name": course.author_nickname
+    } : undefined,
+    "image": image ? [image] : undefined
+  };
+
+  let script = document.getElementById('courseJsonLd');
+  if (!script) {
+    script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = 'courseJsonLd';
+    document.head.appendChild(script);
+  }
+  script.textContent = JSON.stringify(jsonLd);
+}
 
 // ── 신고 바텀시트 ─────────────────────────────────────────
 function openReportSheet() {
