@@ -36,6 +36,7 @@ let currentUser = null;
 
 // ── 초기화 ─────────────────────────────────────────────────
 const feedGrid = document.getElementById('feedGrid');
+const seoCourseLinks = document.getElementById('seoCourseLinks');
 const spinner = document.getElementById('spinner');
 const feedEmpty = document.getElementById('feedEmpty');
 const ptrIndicator = document.getElementById('ptrIndicator');
@@ -391,7 +392,24 @@ async function reload() {
   state.page = 0;
   state.allLoaded = false;
   feedGrid.innerHTML = '';
+  if (seoCourseLinks) seoCourseLinks.innerHTML = '';
   await loadFeed(true);
+}
+
+function renderSeoCourseLinks(courses, reset = false) {
+  if (!seoCourseLinks || !Array.isArray(courses)) return;
+
+  if (reset) {
+    seoCourseLinks.innerHTML = '';
+  }
+
+  const linksHtml = courses.map(course => `
+    <a href="/course.html?id=${encodeURIComponent(course.id)}">
+      ${escHtml(course.name)}
+    </a>
+  `).join('');
+
+  seoCourseLinks.insertAdjacentHTML('beforeend', linksHtml);
 }
 
 async function loadFeed(isFirstPage) {
@@ -435,6 +453,7 @@ async function loadFeed(isFirstPage) {
         frag.appendChild(card);
       }
       feedGrid.appendChild(frag);
+      renderSeoCourseLinks(courses, isFirstPage);
     }
 
     if (courses.length < PAGE_SIZE || (state.page + 1) * PAGE_SIZE >= total) {
