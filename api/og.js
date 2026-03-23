@@ -5,35 +5,20 @@
 export const config = { runtime: 'edge' };
 
 // ── 크롤러 판별 ───────────────────────────────────────────
-const CRAWLER_PATTERNS = [
-  'twitterbot',
-  'facebookexternalhit',
-  'facebot',
-  'slackbot',
-  'googlebot',
-  'bingbot',
-  'discordbot',
-  'telegrambot',
-  'whatsapp',
-  'kakaotalk-scrap',     // 카카오 공유 크롤러 (인앱 브라우저 'kakaotalk' 과 구분)
-  'linkedinbot',
-  'developers.google.com',
-  'applebot',
-  'ia_archiver',
-  'opengraph.xyz',
-  'ogp.me',
-  'iframely',
-  'embedly',
-  'rogerbot',
-  'vkshare',
-  'curl/',
-  'python-requests',
-];
-
+// 일반 브라우저는 항상 'Mozilla/5.0'으로 시작 — 크롤러는 대부분 그렇지 않음
+// 화이트리스트 방식 대신 브라우저 여부로 판별해 오탐 원천 차단
 function isCrawler(userAgent) {
-  if (!userAgent) return false;
+  if (!userAgent) return true;
   const ua = userAgent.toLowerCase();
-  return CRAWLER_PATTERNS.some(p => ua.includes(p));
+
+  // 카카오 공유 크롤러는 Mozilla/5.0으로 시작하지만 명시적으로 크롤러 처리
+  if (ua.includes('kakaotalk-scrap')) return true;
+
+  // Mozilla/5.0으로 시작하면 일반 브라우저 (Chrome, Safari, Firefox, 인앱 브라우저 전부 포함)
+  if (userAgent.startsWith('Mozilla/5.0')) return false;
+
+  // 그 외 (curl, python, bot 류) → 크롤러로 처리
+  return true;
 }
 
 // ── Supabase 조회 ─────────────────────────────────────────
