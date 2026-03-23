@@ -593,15 +593,109 @@ window.addEventListener('beforeunload', () => {
   }
 });
 
+// ── 드래프트 바텀시트 UI ─────────────────────────────────
+
+/**
+ * 1단계: 복구 여부 선택 바텀시트
+ * @returns {Promise<'restore'|'discard'>}
+ */
+function showDraftRestoreSheet(draftData) {
+  return new Promise((resolve) => {
+    const overlay  = document.getElementById('draftOverlay');
+    const sheet    = document.getElementById('draftSheet');
+    const titleEl  = document.getElementById('draftSheetTitle');
+    const timeEl   = document.getElementById('draftSheetTime');
+    const restoreBtn = document.getElementById('draftRestoreBtn');
+    const discardBtn = document.getElementById('draftDiscardBtn');
+
+    // 모드별 텍스트
+    const titleMap = {
+      edit: '수정 중이던 내용이 있어요',
+      copy: '인용 작성 중이던 내용이 있어요',
+    };
+    const restoreMap = {
+      edit: '이어서 수정하기',
+      copy: '이어서 작성하기',
+    };
+    const discardMap = {
+      edit: '처음부터 수정하기',
+      copy: '처음부터 작성하기',
+    };
+
+    const m = draftData.mode || null;
+    titleEl.textContent   = titleMap[m]   ?? '작성 중이던 코스가 있어요';
+    restoreBtn.textContent = restoreMap[m] ?? '이어서 작성하기';
+    discardBtn.textContent = discardMap[m] ?? '새로 시작하기';
+
+    const ago = Math.max(0, Math.round((Date.now() - (draftData.savedAt || 0)) / 60000));
+    timeEl.textContent = `${ago}분 전에 임시저장됨`;
+
+    // 열기
+    overlay.classList.add('show');
+    sheet.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    function close(result) {
+      overlay.classList.remove('show');
+      sheet.classList.remove('open');
+      document.body.style.overflow = '';
+      restoreBtn.removeEventListener('click', onRestore);
+      discardBtn.removeEventListener('click', onDiscard);
+      overlay.removeEventListener('click', onOverlay);
+      resolve(result);
+    }
+
+    function onRestore()  { close('restore'); }
+    function onDiscard()  { close('discard'); }
+    function onOverlay()  { close('restore'); } // 오버레이 탭 → 복구 (데이터 보호)
+
+    restoreBtn.addEventListener('click', onRestore);
+    discardBtn.addEventListener('click', onDiscard);
+    overlay.addEventListener('click', onOverlay);
+  });
+}
+
+/**
+ * 2단계: 삭제 재확인 바텀시트
+ * @returns {Promise<'delete'|'back'>}
+ */
+function showDraftDeleteConfirmSheet() {
+  return new Promise((resolve) => {
+    const overlay    = document.getElementById('draftConfirmOverlay');
+    const sheet      = document.getElementById('draftConfirmSheet');
+    const deleteBtn  = document.getElementById('draftDeleteConfirmBtn');
+    const backBtn    = document.getElementById('draftDeleteCancelBtn');
+
+    overlay.classList.add('show');
+    sheet.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    function close(result) {
+      overlay.classList.remove('show');
+      sheet.classList.remove('open');
+      document.body.style.overflow = '';
+      deleteBtn.removeEventListener('click', onDelete);
+      backBtn.removeEventListener('click', onBack);
+      overlay.removeEventListener('click', onBack);
+      resolve(result);
+    }
+
+    function onDelete() { close('delete'); }
+    function onBack()   { close('back'); }
+
+    deleteBtn.addEventListener('click', onDelete);
+    backBtn.addEventListener('click', onBack);
+    overlay.addEventListener('click', onBack); // 오버레이 탭 → 돌아가기
+  });
+}
+
 // ── 초기 데이터 로드 ──────────────────────────────────────
 if (!redirectedToLatestDraft) {
   let initialDraft = null;
 
   if (mode || sourceId) {
-    // edit/copy 모드: 현재 키에 맞는 드래프트만 로드
     initialDraft = draft.load();
   } else {
-    // 신규 모드: 가장 최근 드래프트 로드
     initialDraft = draft.loadLatest();
   }
 
@@ -609,22 +703,24 @@ if (!redirectedToLatestDraft) {
   let shouldResetToEmpty = false;
 
   if (draft.hasContent(initialDraft)) {
-    const ago = Math.max(0, Math.round((Date.now() - (initialDraft.savedAt || 0)) / 60000));
+    // 1단계: 복구 여부 선택
+    const restoreChoice = await showDraftRestoreSheet(initialDraft);
 
-    const msg =
-      initialDraft.mode === 'edit'
-        ? `${ago}분 전 수정 중이던 글이 있습니다.\n불러오시겠습니까?`
-        : initialDraft.mode === 'copy'
-          ? `${ago}분 전 인용 작성 중이던 글이 있습니다.\n불러오시겠습니까?`
-          : `${ago}분 전 작성 중이던 코스가 있습니다.\n불러오시겠습니까?`;
+    if (restoreChoice === 'restore') {
+      shouldRestoreDraft = true;
+    } else {
+      // 2단계: 삭제 재확인
+      const deleteChoice = await showDraftDeleteConfirmSheet();
 
-    shouldRestoreDraft = confirm(msg);
-
-    if (!shouldRestoreDraft) {
-      draft.clearAll();
-      initialDraft = null;
-      sourceCourse = null;
-      shouldResetToEmpty = true;
+      if (deleteChoice === 'delete') {
+        draft.clearAll();
+        initialDraft  = null;
+        sourceCourse  = null;
+        shouldResetToEmpty = true;
+      } else {
+        // 돌아가기 → 복구로 처리 (데이터 보호)
+        shouldRestoreDraft = true;
+      }
     }
   }
 

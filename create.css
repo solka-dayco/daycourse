@@ -440,3 +440,62 @@
   width: 100%;
   margin-top: 18px;
 }
+
+/* ── 드래프트 복구 바텀시트 ────────────────────────────── */
+.draft-sheet {
+  border-radius: 0;          /* radius 0 */
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
+
+.draft-sheet-inner {
+  padding: 24px 20px 8px;
+}
+
+.draft-sheet-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--dark);
+  margin-bottom: 6px;
+}
+
+.draft-sheet-time {
+  font-size: 13px;
+  color: var(--sub);
+  margin-bottom: 20px;
+}
+
+.draft-btn {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: 0;          /* radius 0 */
+  cursor: pointer;
+  transition: opacity .15s;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.draft-btn:last-child { margin-bottom: 0; }
+.draft-btn:hover { opacity: .85; }
+.draft-btn:active { opacity: .7; }
+
+/* 주 CTA — 메인 컬러 배경 */
+.draft-btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* 보조 — 흰 배경 + 메인 컬러 테두리·글씨 */
+.draft-btn-secondary {
+  background: #fff;
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+}
+
+/* 위험 — 빨간 배경 */
+.draft-btn-danger {
+  background: #e53935;
+  color: #fff;
+}

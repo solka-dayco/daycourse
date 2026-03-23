@@ -162,6 +162,28 @@
     </div>
   </div>
 
+  <!-- 드래프트 복구 바텀시트 (1단계) -->
+  <div class="bottom-sheet-overlay" id="draftOverlay"></div>
+  <div class="bottom-sheet draft-sheet" id="draftSheet" role="dialog" aria-modal="true">
+    <div class="draft-sheet-inner">
+      <div class="draft-sheet-title" id="draftSheetTitle"></div>
+      <div class="draft-sheet-time"  id="draftSheetTime"></div>
+      <button class="draft-btn draft-btn-primary" id="draftRestoreBtn"></button>
+      <button class="draft-btn draft-btn-secondary" id="draftDiscardBtn"></button>
+    </div>
+  </div>
+
+  <!-- 드래프트 삭제 확인 바텀시트 (2단계) -->
+  <div class="bottom-sheet-overlay" id="draftConfirmOverlay"></div>
+  <div class="bottom-sheet draft-sheet" id="draftConfirmSheet" role="dialog" aria-modal="true">
+    <div class="draft-sheet-inner">
+      <div class="draft-sheet-title">임시저장 데이터가 삭제됩니다</div>
+      <div class="draft-sheet-time">이 작업은 되돌릴 수 없습니다</div>
+      <button class="draft-btn draft-btn-danger" id="draftDeleteConfirmBtn">삭제하기</button>
+      <button class="draft-btn draft-btn-secondary" id="draftDeleteCancelBtn">돌아가기</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
   <script type="module" src="create.js"></script>
 </body>
