@@ -176,6 +176,17 @@ class DraftManager {
   }
   isSaved() { return this._saved; }
 
+  // 초기 로드 직후 스냅샷 저장 — 이후 변경 여부 판단에 사용
+  takeSnapshot(payload) {
+    this._snapshot = JSON.stringify(payload);
+  }
+
+  // 현재 상태가 스냅샷과 달라졌는지 여부
+  isDirtyFromSnapshot(currentPayload) {
+    if (!this._snapshot) return true; // 스냅샷 없으면 항상 dirty
+    return JSON.stringify(currentPayload) !== this._snapshot;
+  }
+
   _hasContent(draft) {
     if (!draft) return false;
     return Boolean(
@@ -498,23 +509,21 @@ function resetFormToEmpty() {
 }
 
 function hasDirtyContent() {
+  if (draft.isSaved()) return false;
+
+  // 아무것도 입력하지 않은 완전한 빈 상태
   const name = courseNameEl?.value || '';
   const desc = courseDescEl?.value || '';
   const regionMain = regionMainEl?.value || '';
   const regionSub = regionSubEl?.value || '';
-
-  return Boolean(
-    !draft.isSaved() &&
-      (
-        name.trim() ||
-        desc.trim() ||
-        regionMain ||
-        regionSub ||
-        places.length > 0 ||
-        thumbnailBlob ||
-        thumbnailExistingUrl
-      )
+  const hasAnyContent = Boolean(
+    name.trim() || desc.trim() || regionMain || regionSub ||
+    places.length > 0 || thumbnailBlob || thumbnailExistingUrl
   );
+  if (!hasAnyContent) return false;
+
+  // 스냅샷과 비교 — 초기 로드 상태에서 변경된 게 없으면 dirty 아님
+  return draft.isDirtyFromSnapshot(draft._buildPayload());
 }
 
 //────  사진 저장 함수  ────────────────────────
@@ -747,8 +756,9 @@ if (!redirectedToLatestDraft) {
   }
 }
 
-// 자동저장 활성화는 초기 세팅 후
+// 자동저장 활성화 + 초기 상태 스냅샷 (이후 변경 여부 판단 기준점)
 draft.enable();
+draft.takeSnapshot(draft._buildPayload());
 
 // ── 소개글 글자수 카운터 ──────────────────────────────────
 if (courseDescEl && descCountEl) {
