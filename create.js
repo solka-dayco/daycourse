@@ -634,14 +634,14 @@ function showDraftRestoreSheet(draftData) {
       copy: '이어서 작성하기',
     };
     const discardMap = {
-      edit: '처음부터 수정하기',
-      copy: '처음부터 작성하기',
+      edit: '임시저장 삭제하기',
+      copy: '임시저장 삭제하기',
     };
 
     const m = draftData.mode || null;
     titleEl.textContent   = titleMap[m]   ?? '작성 중이던 코스가 있어요';
     restoreBtn.textContent = restoreMap[m] ?? '이어서 작성하기';
-    discardBtn.textContent = discardMap[m] ?? '새로 시작하기';
+    discardBtn.textContent = discardMap[m] ?? '임시저장 삭제하기';
 
     const ago = Math.max(0, Math.round((Date.now() - (draftData.savedAt || 0)) / 60000));
     timeEl.textContent = `${ago}분 전에 임시저장됨`;
