@@ -24,7 +24,8 @@ export function createMap(containerId, { lat = 37.5665, lng = 126.9780, level = 
 let searchMarkers = [];
 
 /** 코스에 추가 버튼 클릭 중 플래그 — 지도 click 이벤트 오발동 방지 */
-let _isAddingPlace = false;
+export let _isAddingPlace = false;
+export function setIsAddingPlace(v) { _isAddingPlace = v; }
 
 /** 코스 장소 마커 배열 */
 let courseMarkers = [];
@@ -102,13 +103,16 @@ export function addSearchMarker(map, place, onAdd) {
   });
 
   // 추가 버튼 이벤트
+  tooltipEl.querySelector('button').addEventListener('mousedown', (e) => {
+    // mousedown 시점에 플래그 세팅 — click보다 먼저 발생해서 지도 click 차단
+    e.stopPropagation();
+    _isAddingPlace = true;
+    setTimeout(() => { _isAddingPlace = false; }, 300);
+  });
   tooltipEl.querySelector('button').addEventListener('click', (e) => {
     e.stopPropagation();
-    _isAddingPlace = true;          // 지도 click 이벤트 차단 시작
     tooltip.setMap(null);
     onAdd(place);
-    // 다음 틱에서 플래그 해제 (카카오맵 click 이벤트가 동기적으로 발생한 후)
-    setTimeout(() => { _isAddingPlace = false; }, 0);
   });
 
   // 마커 클릭 → 툴팁 토글

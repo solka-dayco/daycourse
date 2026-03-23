@@ -19,6 +19,7 @@ import {
   searchPlaces,
   getCurrentPosition,
   coordsToAddress,
+  _isAddingPlace,
 } from './map.js';
 import { cropAndCompress } from './photo.js';
 
@@ -844,6 +845,8 @@ kakao.maps.load(async () => {
   }
 
   kakao.maps.event.addListener(mapInstance, 'click', async (e) => {
+    // 코스에 추가 버튼 클릭 중이면 지도 클릭 무시
+    if (_isAddingPlace) return;
     const lat = e.latLng.getLat();
     const lng = e.latLng.getLng();
     let results = [];
