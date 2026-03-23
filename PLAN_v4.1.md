@@ -460,7 +460,46 @@ class DraftManager {
 - [ ] 레벨 UI 노출 (현재 `display:none`)
 - [ ] 카카오 로그인 활성화 (비즈 앱 전환 필요)
 - [ ] 피드 BFCache 스크롤 위치 복원
-- [ ] 수정 모드 썸네일 표시 버그 수정 ✅ (v4.1에서 완료)
+- [x] 수정 모드 썸네일 표시 버그 수정 ✅ (v4.1에서 완료)
+- [x] 지도 마커 툴팁 '코스에 추가' 버튼 오발동 버그 수정 ✅ (v4.1에서 완료)
+
+---
+
+### SEO — 개별 코스 구글 색인
+
+#### S1. 동적 sitemap 생성 ⬜ (v4.1 예정)
+
+**목표**: 개별 코스 페이지(`/course?id=...`)가 구글·네이버에 자연 노출되도록 sitemap에 전체 코스 URL을 동적으로 포함.
+
+**구현 방향**
+- `api/sitemap.js` Vercel Edge Function 신규 작성
+- Supabase에서 `courses` 테이블 전체 ID 조회 (is_deleted=false)
+- XML 형식으로 동적 반환
+- `Cache-Control: s-maxage=3600` (1시간 CDN 캐시 — 매 요청마다 Supabase 조회 방지)
+- `vercel.json`에 `/sitemap.xml` → `/api/sitemap` rewrite 추가
+- Google Search Console에 sitemap 재제출
+
+**제한 및 전환 기준**
+- 단일 sitemap 파일 제한: URL 50,000개, 50MB
+- 현재 규모(수십~수백 개)에서는 단일 파일로 충분
+- 코스가 **10,000개 초과** 시 아래 S2로 전환
+
+#### S2. sitemap index로 전환 (코스 10,000개 초과 시)
+
+**구현 방향**
+```
+GET /sitemap.xml          → sitemap index (서브 sitemap 목록)
+GET /sitemap/courses-1    → 코스 1~5,000
+GET /sitemap/courses-2    → 코스 5,001~10,000
+...
+```
+- `api/sitemap.js`에서 총 코스 수 조회 후 페이지 수 계산
+- 각 서브 sitemap URL을 index에 나열
+- 서브 sitemap은 `api/sitemap/[page].js`로 분리
+
+**작업 파일**
+- 신규: `api/sitemap.js`
+- 수정: `vercel.json` (sitemap rewrite 추가)
 
 ---
 
