@@ -1,8 +1,8 @@
-# 데이코스 (DayCourse) — 설정 & 배포 가이드 v4
+# 데이코스 (DayCourse) — 설정 & 배포 가이드 v4.1
 
 > **배포 도메인**: https://daycourse.kr (GitHub Pages)  
 > **저장소**: https://github.com/solka-dayco/daycourse  
-> **최종 갱신**: 2026.03.23 (RLS 점검 및 DB 정합성 수정 반영)
+> **최종 갱신**: 2026.03.23 (v4.1 — 1단계 리팩토링 완료)
 
 ---
 
@@ -102,6 +102,9 @@ daycourse/
 ├── robots.txt              # 검색엔진 크롤링 정책
 ├── CNAME                   # GitHub Pages 커스텀 도메인 (daycourse.kr)
 │
+├── api/                    # Vercel Edge Functions
+│   └── og.js               # OG 미리보기 (크롤러용 동적 메타 태그)
+│
 └── admin/                  # 어드민 패널 (관리자 전용)
     ├── admin.html          # 어드민 SPA (사이드바 탭 전환)
     ├── admin.css           # 어드민 전용 스타일
@@ -149,6 +152,54 @@ daycourse/
 | **참조 코스 목록** | 상세 페이지 하단 "이 코스를 참조한 코스" 섹션 (최대 6개) |
 | **댓글 정렬** | 최신순·인기순·좋아요순 |
 | **score 정렬** | `like_count × 2 + comment_count × 3 + reference_count × 4` |
+
+---
+
+## 3-2. v4.1 변경 사항 (2026.03.23)
+
+### R1 — URL 구조 정리 ✅
+
+| 항목 | 내용 |
+|------|------|
+| `vercel.json` 신규 생성 | rewrites (`.html` 없는 URL 서빙) + redirects (구 `.html` URL → 새 URL 301) + 보안 헤더 |
+| `index.html` 교체 | 피드 콘텐츠 직접 담당. 기존 meta refresh 리다이렉트 제거 |
+| `main.html` 삭제 | `index.html`로 통합 |
+| 전체 내부 링크 치환 | 모든 HTML·JS 파일의 `.html` 경로 → `/path` 형태로 일괄 변환 |
+| `sitemap.xml` 업데이트 | 새 URL 구조 반영, Google Search Console 재제출 완료 (4페이지 발견) |
+
+**URL 변환표**
+
+| 변경 전 | 변경 후 |
+|---------|---------|
+| `/main.html` | `/` |
+| `/course.html?id=...` | `/course?id=...` |
+| `/create.html` | `/create` |
+| `/login.html` | `/login` |
+| (그 외 동일 패턴) | |
+
+### R2 — 드래프트 로직 안정화 ✅
+
+| 항목 | 내용 |
+|------|------|
+| `DraftManager` 클래스 도입 | 자동저장·수동저장·복구·삭제 단일 진입점으로 통합 |
+| 드래프트 버전 v5 | 구버전(v4) 드래프트 자동 무효화 |
+| 바텀시트 복구 UI | 브라우저 `confirm()` → 자체 바텀시트 2단계 UI로 교체 |
+| 스냅샷 기반 dirty 판별 | 초기 로드 상태 스냅샷 저장 → 실제 변경 시에만 드래프트 저장 |
+| `beforeunload` 즉시 저장 | debounce pending 무관하게 이탈 직전 동기 저장 |
+| 수정 모드 썸네일 복원 | edit 모드 진입 시 기존 썸네일 정상 표시 |
+
+### R3 — OG 미리보기 ✅
+
+| 항목 | 내용 |
+|------|------|
+| `api/og.js` 신규 생성 | Vercel Edge Function |
+| 크롤러 판별 | `Mozilla/5.0` 시작 여부 기반 — 일반 브라우저(Chrome·Safari·인앱) 전부 통과, 그 외 크롤러 처리. `kakaotalk-scrap` 명시 예외 |
+| Supabase REST API 조회 | `courses` + `course_places` 테이블 (anon key, RLS 공개) |
+| thumbnail fallback | `thumbnail_url` 없으면 첫 번째 장소 `photo_url` 사용 |
+| 일반 유저 처리 | `course.html` 인라인 반환 (fetch 루프 방지) |
+| 캐시 설정 | `s-maxage=3600, stale-while-revalidate=86400` |
+| Vercel 환경변수 | `SUPABASE_URL`, `SUPABASE_ANON_KEY` 프로젝트 등록 완료 |
+| 검증 | 카카오톡 공유 디버거에서 썸네일·제목·소개글 정상 표시 확인 ✅ |
 
 ---
 

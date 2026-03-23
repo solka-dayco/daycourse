@@ -1,7 +1,7 @@
 # 데이코스 (DayCourse) 개발 플랜 v4
 
 > 기능 기획, 구현 현황, DB 설계, 작업 이력을 관리합니다.  
-> **최종 갱신: 2026.03.23 (섹션 7 전면 재작성 — 리팩토링 우선 순서 확정)**
+> **최종 갱신: 2026.03.23 (v4.1 — 1단계 리팩토링 완료)**
 
 ### 프로젝트 핵심 구조
 ```
@@ -24,7 +24,8 @@ Place → Course → Share
 | v1 | ~ 2026.03.09 | Firebase + 카카오맵 기반 초기 구현 |
 | v2 | 2026.03.14~15 | Supabase 전환 (PostgreSQL + Storage + Auth) |
 | v3 | 2026.03.15~17 | 유저 페이지, 북마크, 알림, 어드민, 참조 목록, 점수 시스템 |
-| **v4** | 2026.03.17~21 | 퍼널 로그 전면 보강, 임시저장 v4, SEO, 도메인 전환, 사진 필수 검증 |
+| v4 | 2026.03.17~21 | 퍼널 로그 전면 보강, 임시저장 v4, SEO, 도메인 전환, 사진 필수 검증 |
+| **v4.1** | 2026.03.23 | 1단계 리팩토링 완료: URL 구조 정리, 드래프트 안정화, OG 미리보기 |
 
 ---
 
@@ -287,9 +288,9 @@ comments.js, users.js, logs.js ← supabase.js
 
 ---
 
-## 1단계 — 리팩토링 (기능 개발 전 선행)
+## 1단계 — 리팩토링 ✅ 완료 (2026.03.23)
 
-### R1. URL 구조 정리 + Vercel 설정 ⬜
+### R1. URL 구조 정리 + Vercel 설정 ✅
 
 **목표**: 주소창에서 `.html` 제거, Google 색인 리다이렉션 오류 해결, 검색엔진 자연 노출 기반 마련.
 
@@ -359,7 +360,7 @@ daycourse.kr/login.html  →   daycourse.kr/login
 
 ---
 
-### R2. 임시저장(드래프트) 로직 안정화 ⬜
+### R2. 임시저장(드래프트) 로직 안정화 ✅
 
 **목표**: 코스 신규 작성·수정·인용 중 어떤 이탈 패턴에도 임시저장 데이터가 꼬이지 않고, 복구 시 정확한 데이터를 불러온다. R1과 독립적이므로 병행 진행 가능.
 
@@ -397,7 +398,7 @@ class DraftManager {
 
 ---
 
-### R3. OG 미리보기 — Vercel Edge Function ⬜
+### R3. OG 미리보기 — Vercel Edge Function ✅
 
 **목표**: 코스 링크 공유 시 카카오톡·슬랙·트위터 등에서 썸네일·제목·소개글 미리보기 카드 표시. **R1 완료 후 진행** (URL 구조가 확정되어야 OG URL도 확정).
 
@@ -417,7 +418,7 @@ class DraftManager {
 **구현 단계**
 
 1. **`api/og.js` 신규 작성** (Vercel Edge Function)
-   - `User-Agent`로 크롤러 판별 (Twitterbot, facebookexternalhit, Slackbot, Googlebot, Kakao 등)
+   - `User-Agent`로 크롤러 판별 — `Mozilla/5.0`으로 시작하면 일반 브라우저로 통과, 그 외는 크롤러로 처리. 카카오 인앱 브라우저 오탐 방지. `kakaotalk-scrap`만 예외적으로 명시
    - URL에서 `id` 파라미터 추출
    - Supabase REST API 호출 (anon key, RLS SELECT 공개)
      ```
@@ -451,16 +452,15 @@ class DraftManager {
 
 ---
 
-## 2단계 — 기능 개발 (리팩토링 완료 후)
+## 2단계 — 기능 개발 (기획 진행 중)
 
-> 구체적인 기획은 1단계 완료 후 별도 세션에서 진행.
+> 1단계 리팩토링 완료 후 다음 세션에서 우선순위 확정 예정.
 
-- 추후 논의할 기능들
-- 사이드바 알림 뱃지 실시간 갱신
-- 레벨 UI 노출
-- 카카오 로그인 활성화
-- 피드 스크롤 위치 복원
-- 기타 UX 개선
+- [ ] 사이드바 알림 뱃지 실시간 갱신 (`user?.unread_notification_count` 연결)
+- [ ] 레벨 UI 노출 (현재 `display:none`)
+- [ ] 카카오 로그인 활성화 (비즈 앱 전환 필요)
+- [ ] 피드 BFCache 스크롤 위치 복원
+- [ ] 수정 모드 썸네일 표시 버그 수정 ✅ (v4.1에서 완료)
 
 ---
 
@@ -488,3 +488,8 @@ class DraftManager {
 | 2026.03.17~19 | v4 | db.js 안정화 (session/anonymous_id 로깅). 지도 검색 알고리즘 버그 수정. 임시저장 기능 추가. UI 전반 세부 수정 |
 | 2026.03.19 | v4 | 코스 사진 필수 입력 검증. 썸네일 fallback (첫 번째 장소 사진 자동 복사). 댓글 수 표시 오류 수정 (`comment_count` 누락). 색상 명암비 조정 |
 | 2026.03.21 | v4 | 도메인 전환 (`daycourse.kr` CNAME). SEO 최적화 (메타 태그·sitemap·robots). Google Search Console 인증. SEO용 코스 링크 블록. 공유 카카오 카드 코스 제목 표시. 홈 링크 절대경로 통일 |
+| 2026.03.23 | v4.1 | **R1** `vercel.json` 신규 생성. URL 구조 정리 (`.html` 제거, 301 리다이렉트). `index.html`이 피드 직접 담당. `main.html` 삭제. 전체 내부 링크 경로 일괄 치환. `sitemap.xml` 업데이트 및 Google Search Console 재제출 (4페이지 발견) |
+| 2026.03.23 | v4.1 | **R2** `DraftManager` 클래스 도입으로 임시저장 로직 전면 재작성. 드래프트 복구 UI를 브라우저 `confirm()`에서 자체 바텀시트로 교체 (2단계 삭제 재확인 포함). 수정 모드 썸네일 미표시 버그 수정. 스냅샷 기반 dirty 판별로 불필요한 드래프트 저장 방지.
+| 2026.03.23 | v4.1 | **R3** `api/og.js` Vercel Edge Function 신규 작성. 크롤러 요청 시 Supabase REST API로 코스 데이터 조회 후 OG 태그 채운 HTML 반환. 카카오톡 공유 미리보기 썸네일·제목·소개글 표시 확인. Vercel 환경변수 `SUPABASE_URL`, `SUPABASE_ANON_KEY` 등록 |
+| 2026.03.23 | v4.1 | **RLS 점검** 중복 정책 3건 제거, `reports` INSERT 조건 강화. **DB 정합성** `like_count` 캐시 불일치 1건 수동 수정 |
+| 2026.03.23 | v4.1 | **R3 버그수정** OG Edge Function 크롤러 판별 로직을 `Mozilla/5.0` 기반으로 전환. 카카오 인앱 브라우저 오탐 수정. CDN 캐시 혼용 방지 (`Cache-Control: no-store` 전체 적용) |
