@@ -230,7 +230,7 @@ class DraftManager {
         _photoBlob:  null,
         _photoPreview: '',
       })),
-      thumbnailExistingUrl: this._mode === 'edit' ? '' : (thumbnailExistingUrl || ''),
+      thumbnailExistingUrl: thumbnailExistingUrl || '',
       savedAt: Date.now(),
     };
   }
@@ -425,10 +425,14 @@ function applySourceCourseToForm(course) {
       regionSubEl.value = course.region_sub || '';
     }
 
-    // 수정 시에는 기존 썸네일을 표시하지 않고 빈칸 유지
+    // 수정 시 기존 썸네일 불러오기 (없으면 빈칸)
     thumbnailBlob = null;
-    thumbnailExistingUrl = '';
-    clearThumbnailPreview();
+    thumbnailExistingUrl = course.thumbnail_url || '';
+    if (thumbnailExistingUrl) {
+      setThumbnailPreview(thumbnailExistingUrl);
+    } else {
+      clearThumbnailPreview();
+    }
   } else {
     if (courseNameEl) courseNameEl.value = '';
     if (courseDescEl) courseDescEl.value = '';
