@@ -177,14 +177,22 @@ class DraftManager {
   isSaved() { return this._saved; }
 
   // 초기 로드 직후 스냅샷 저장 — 이후 변경 여부 판단에 사용
-  takeSnapshot(payload) {
-    this._snapshot = JSON.stringify(payload);
+  // savedAt 제외한 비교용 페이로드 (스냅샷 전용)
+  _buildComparablePayload() {
+    const p = this._buildPayload();
+    delete p.savedAt;
+    return p;
+  }
+
+  // 초기 로드 직후 스냅샷 저장
+  takeSnapshot() {
+    this._snapshot = JSON.stringify(this._buildComparablePayload());
   }
 
   // 현재 상태가 스냅샷과 달라졌는지 여부
-  isDirtyFromSnapshot(currentPayload) {
-    if (!this._snapshot) return true; // 스냅샷 없으면 항상 dirty
-    return JSON.stringify(currentPayload) !== this._snapshot;
+  isDirtyFromSnapshot() {
+    if (!this._snapshot) return true;
+    return JSON.stringify(this._buildComparablePayload()) !== this._snapshot;
   }
 
   _hasContent(draft) {
@@ -403,17 +411,12 @@ function applyDraftToForm(draft) {
     : [];
 
   thumbnailBlob = null;
-
-  if (mode === 'edit') {
-    thumbnailExistingUrl = '';
-    clearThumbnailPreview();
+  // edit/copy 모두 드래프트에 저장된 thumbnailExistingUrl 복원
+  thumbnailExistingUrl = draft.thumbnailExistingUrl || '';
+  if (thumbnailExistingUrl) {
+    setThumbnailPreview(thumbnailExistingUrl);
   } else {
-    thumbnailExistingUrl = draft.thumbnailExistingUrl || '';
-    if (thumbnailExistingUrl) {
-      setThumbnailPreview(thumbnailExistingUrl);
-    } else {
-      clearThumbnailPreview();
-    }
+    clearThumbnailPreview();
   }
 
   renderPlaceList();
@@ -523,7 +526,7 @@ function hasDirtyContent() {
   if (!hasAnyContent) return false;
 
   // 스냅샷과 비교 — 초기 로드 상태에서 변경된 게 없으면 dirty 아님
-  return draft.isDirtyFromSnapshot(draft._buildPayload());
+  return draft.isDirtyFromSnapshot();
 }
 
 //────  사진 저장 함수  ────────────────────────
@@ -758,7 +761,7 @@ if (!redirectedToLatestDraft) {
 
 // 자동저장 활성화 + 초기 상태 스냅샷 (이후 변경 여부 판단 기준점)
 draft.enable();
-draft.takeSnapshot(draft._buildPayload());
+draft.takeSnapshot();
 
 // ── 소개글 글자수 카운터 ──────────────────────────────────
 if (courseDescEl && descCountEl) {
