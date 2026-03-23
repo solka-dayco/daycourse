@@ -69,17 +69,174 @@ let thumbnailExistingUrl = '';
 const MAX_PLACES = 10;
 const MIN_PLACES = 2;
 
-let draftTimer;
-let _draftEnabled = false;
-let _isSaved = false;
+const DRAFT_VERSION = 5;
 
-const DRAFT_VERSION = 4;
-const DRAFT_KEY =
-  mode === 'edit'
-    ? `dc_draft_edit_${sourceId}`
-    : mode === 'copy'
-      ? `dc_draft_copy_${sourceId}`
-      : 'dc_draft_new';
+// ── DraftManager ──────────────────────────────────────────
+// 자동저장·수동저장을 단일 진입점으로 통합.
+// - 키는 생성 시 1회 확정, 불변
+// - beforeunload 즉시 저장으로 비정상 이탈 대응
+// - 저장 완료 시 pending 타이머 강제 취소
+class DraftManager {
+  constructor(draftMode, draftSourceId) {
+    this._mode     = draftMode     || null;
+    this._sourceId = draftSourceId || null;
+    this._key =
+      draftMode === 'edit'
+        ? `dc_draft_edit_${draftSourceId}`
+        : draftMode === 'copy'
+          ? `dc_draft_copy_${draftSourceId}`
+          : 'dc_draft_new';
+    this._timer   = null;
+    this._enabled = false;
+    this._saved   = false;
+  }
+
+  // 즉시 저장 (debounce 없음)
+  save() {
+    try {
+      localStorage.setItem(this._key, JSON.stringify(this._buildPayload()));
+    } catch (e) {
+      console.warn('[DraftManager] save failed:', e);
+    }
+  }
+
+  // debounce 자동저장 — 항상 기존 타이머 취소 후 재설정
+  scheduleSave(delayMs = 800) {
+    if (!this._enabled) return;
+    clearTimeout(this._timer);
+    this._timer = setTimeout(() => { this.save(); }, delayMs);
+  }
+
+  // 저장 완료 시 pending 타이머 강제 취소
+  cancelScheduled() {
+    clearTimeout(this._timer);
+    this._timer = null;
+  }
+
+  // 로드 + version·mode·sourceId 한 번에 검증, 불일치 시 null
+  load() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(this._key) || 'null');
+      if (!raw || typeof raw !== 'object') return null;
+      if ((raw.mode || null) !== this._mode) return null;
+      if ((raw.sourceId || null) !== this._sourceId) return null;
+      if ((raw.version || 0) < 5) return null; // 구버전 드래프트 무효화
+      return this._normalize(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // 모든 dc_draft_ 키에서 가장 최근 의미있는 드래프트 반환
+  loadLatest() {
+    const all = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith('dc_draft_')) continue;
+        const raw = JSON.parse(localStorage.getItem(key) || 'null');
+        if (!raw || typeof raw !== 'object') continue;
+        if ((raw.version || 0) < 5) continue;
+        const draft = this._normalize(raw);
+        if (draft && this._hasContent(draft)) all.push({ ...draft, _key: key });
+      }
+    } catch (_) {}
+    all.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+    return all.length ? all[0] : null;
+  }
+
+  // 복구 제안 표시 여부 단일 판단
+  hasContent(draft) {
+    return this._hasContent(draft);
+  }
+
+  // 저장 완료 시 즉시 삭제
+  clear() {
+    try { localStorage.removeItem(this._key); } catch (_) {}
+  }
+
+  // 모든 드래프트 삭제
+  clearAll() {
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('dc_draft_')) keys.push(k);
+      }
+      keys.forEach(k => localStorage.removeItem(k));
+    } catch (_) {}
+  }
+
+  enable()  { this._enabled = true; }
+  disable() { this._enabled = false; }
+  markSaved() {
+    this._saved = true;
+    this.cancelScheduled();
+    this.clear();
+  }
+  isSaved() { return this._saved; }
+
+  _hasContent(draft) {
+    if (!draft) return false;
+    return Boolean(
+      (draft.courseName && draft.courseName.trim()) ||
+      (draft.courseDesc && draft.courseDesc.trim()) ||
+      draft.regionMain ||
+      draft.regionSub ||
+      (Array.isArray(draft.places) && draft.places.length > 0) ||
+      draft.thumbnailExistingUrl
+    );
+  }
+
+  _normalize(raw) {
+    const normalizedPlaces = Array.isArray(raw.places)
+      ? raw.places.map((p, idx) => normalizePlace(p, idx)).filter(Boolean)
+      : [];
+    return {
+      version:              raw.version || DRAFT_VERSION,
+      mode:                 raw.mode || null,
+      sourceId:             raw.sourceId || null,
+      courseName:           raw.courseName || '',
+      courseDesc:           raw.courseDesc || '',
+      regionMain:           raw.regionMain || '',
+      regionSub:            raw.regionSub  || '',
+      places:               normalizedPlaces,
+      thumbnailExistingUrl: raw.thumbnailExistingUrl || '',
+      savedAt:              Number.isFinite(Number(raw.savedAt)) ? Number(raw.savedAt) : 0,
+    };
+  }
+
+  _buildPayload() {
+    return {
+      version:    DRAFT_VERSION,
+      mode:       this._mode,
+      sourceId:   this._sourceId,
+      courseName: courseNameEl?.value || '',
+      courseDesc: courseDescEl?.value || '',
+      regionMain: regionMainEl?.value || '',
+      regionSub:  regionSubEl?.value  || '',
+      places: places.map((p, idx) => ({
+        name:        p.name        || '',
+        lat:         p.lat,
+        lng:         p.lng,
+        category:    p.category    || '',
+        address:     p.address     || '',
+        phone:       p.phone       || '',
+        place_url:   p.place_url   || '',
+        comment:     p.comment     || '',
+        stay_time:   p.stay_time   || null,
+        travel_time: idx === 0 ? null : (p.travel_time || null),
+        photo_url:   p.photo_url   || '',
+        _photoBlob:  null,
+        _photoPreview: '',
+      })),
+      thumbnailExistingUrl: this._mode === 'edit' ? '' : (thumbnailExistingUrl || ''),
+      savedAt: Date.now(),
+    };
+  }
+}
+
+const draft = new DraftManager(mode, sourceId);
 
 // ── DOM 캐시 ─────────────────────────────────────────────
 const courseNameEl = document.getElementById('courseName');
@@ -158,45 +315,8 @@ function normalizePlace(raw, index = 0) {
   };
 }
 
-function normalizeDraft(raw) {
-  if (!raw || typeof raw !== 'object') return null;
-
-  const normalizedPlaces = Array.isArray(raw.places)
-    ? raw.places.map((p, idx) => normalizePlace(p, idx)).filter(Boolean)
-    : [];
-
-  return {
-    version: raw.version || 1,
-    mode: raw.mode || null,
-    sourceId: raw.sourceId || null,
-    courseName: raw.courseName || '',
-    courseDesc: raw.courseDesc || '',
-    regionMain: raw.regionMain || '',
-    regionSub: raw.regionSub || '',
-    places: normalizedPlaces,
-    thumbnailExistingUrl: raw.thumbnailExistingUrl || '',
-    savedAt: Number.isFinite(Number(raw.savedAt)) ? Number(raw.savedAt) : 0,
-  };
-}
-
-function isDraftCompatible(draft) {
-  if (!draft) return false;
-  if ((draft.mode || null) !== (mode || null)) return false;
-  if ((draft.sourceId || null) !== (sourceId || null)) return false;
-  return true;
-}
-
-function hasMeaningfulDraft(draft) {
-  if (!draft) return false;
-  return Boolean(
-    (draft.courseName && draft.courseName.trim()) ||
-    (draft.courseDesc && draft.courseDesc.trim()) ||
-    draft.regionMain ||
-    draft.regionSub ||
-    (Array.isArray(draft.places) && draft.places.length > 0) ||
-    draft.thumbnailExistingUrl
-  );
-}
+// normalizeDraft, isDraftCompatible, hasMeaningfulDraft 는
+// DraftManager 내부 메서드로 통합됨
 
 function setDescCount(value) {
   if (descCountEl) descCountEl.textContent = String((value || '').length);
@@ -380,7 +500,7 @@ function hasDirtyContent() {
   const regionSub = regionSubEl?.value || '';
 
   return Boolean(
-    !_isSaved &&
+    !draft.isSaved() &&
       (
         name.trim() ||
         desc.trim() ||
@@ -421,110 +541,9 @@ async function ensureThumbnailFromFirstPlace(tempIdForUpload) {
   return '';
 }
 
-// ── draft 조회/삭제 ──────────────────────────────────────
-function loadAllDrafts() {
-  const drafts = [];
-
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (!key || !key.startsWith('dc_draft_')) continue;
-
-    const raw = safeJsonParse(localStorage.getItem(key) || 'null');
-    const draft = normalizeDraft(raw);
-    if (!hasMeaningfulDraft(draft)) continue;
-
-    drafts.push({
-      ...draft,
-      _key: key,
-    });
-  }
-
-  drafts.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
-  return drafts;
-}
-
-function loadLatestDraft() {
-  const drafts = loadAllDrafts();
-  return drafts.length ? drafts[0] : null;
-}
-
-function buildDraftPayload() {
-  return {
-    version: DRAFT_VERSION,
-    mode: mode || null,
-    sourceId: sourceId || null,
-    courseName: courseNameEl?.value || '',
-    courseDesc: courseDescEl?.value || '',
-    regionMain: regionMainEl?.value || '',
-    regionSub: regionSubEl?.value || '',
-    places: places.map((p, idx) => ({
-      name: p.name || '',
-      lat: p.lat,
-      lng: p.lng,
-      category: p.category || '',
-      address: p.address || '',
-      phone: p.phone || '',
-      place_url: p.place_url || '',
-      comment: p.comment || '',
-      stay_time: p.stay_time || null,
-      travel_time: idx === 0 ? null : (p.travel_time || null),
-      photo_url: p.photo_url || '',
-      _photoBlob: null,
-      _photoPreview: '',
-    })),
-    thumbnailExistingUrl: mode === 'edit' ? '' : (thumbnailExistingUrl || ''),
-    savedAt: Date.now(),
-  };
-}
-
-function saveDraft() {
-  try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(buildDraftPayload()));
-  } catch (e) {
-    console.warn('[draft] save failed:', e);
-  }
-}
-
-function loadDraft() {
-  const raw = safeJsonParse(localStorage.getItem(DRAFT_KEY) || 'null');
-  const draft = normalizeDraft(raw);
-  if (!isDraftCompatible(draft)) return null;
-  return {
-    ...draft,
-    _key: DRAFT_KEY,
-  };
-}
-
-function clearDraft() {
-  try {
-    localStorage.removeItem(DRAFT_KEY);
-  } catch (_) {}
-}
-
-function clearAllDrafts() {
-  try {
-    const keysToRemove = [];
-
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('dc_draft_')) {
-        keysToRemove.push(key);
-      }
-    }
-
-    keysToRemove.forEach((key) => {
-      localStorage.removeItem(key);
-    });
-  } catch (_) {}
-}
-
-function scheduleDraft() {
-  if (!_draftEnabled) return;
-  clearTimeout(draftTimer);
-  draftTimer = setTimeout(() => {
-    saveDraft();
-  }, 800);
-}
+// ── draft 헬퍼 (DraftManager 위임) ────────────────────────
+// scheduleDraft: 기존 호출부와 인터페이스 유지
+function scheduleDraft() { draft.scheduleSave(); }
 
 function indicateDraftSaved() {
   if (!draftSaveBtnEl) return;
@@ -546,9 +565,9 @@ logEvent('course_create_start', 'page', null, { mode: mode || 'new' });
 let redirectedToLatestDraft = false;
 
 if (!mode && !sourceId && !restoreLatest) {
-  const latest = loadLatestDraft();
+  const latest = draft.loadLatest();
 
-  if (latest && hasMeaningfulDraft(latest)) {
+  if (latest && draft.hasContent(latest)) {
     redirectedToLatestDraft = true;
 
     if ((latest.mode === 'edit' || latest.mode === 'copy') && latest.sourceId) {
@@ -561,13 +580,17 @@ if (!mode && !sourceId && !restoreLatest) {
 
 // ── 임시저장 버튼 ─────────────────────────────────────────
 draftSaveBtnEl?.addEventListener('click', () => {
-  saveDraft();
+  draft.save();
   indicateDraftSaved();
 });
 
-// 탭 닫기/새로고침 시 자동 임시저장
+// 탭 닫기/새로고침/비정상 이탈 시 즉시 저장
+// debounce pending 여부와 무관하게 항상 실행 (localStorage는 동기 API)
 window.addEventListener('beforeunload', () => {
-  if (hasDirtyContent()) saveDraft();
+  if (hasDirtyContent()) {
+    draft.cancelScheduled(); // pending 타이머 취소
+    draft.save();            // 동기 즉시 저장
+  }
 });
 
 // ── 초기 데이터 로드 ──────────────────────────────────────
@@ -575,15 +598,17 @@ if (!redirectedToLatestDraft) {
   let initialDraft = null;
 
   if (mode || sourceId) {
-    initialDraft = loadDraft();
+    // edit/copy 모드: 현재 키에 맞는 드래프트만 로드
+    initialDraft = draft.load();
   } else {
-    initialDraft = loadLatestDraft();
+    // 신규 모드: 가장 최근 드래프트 로드
+    initialDraft = draft.loadLatest();
   }
 
   let shouldRestoreDraft = false;
   let shouldResetToEmpty = false;
 
-  if (hasMeaningfulDraft(initialDraft)) {
+  if (draft.hasContent(initialDraft)) {
     const ago = Math.max(0, Math.round((Date.now() - (initialDraft.savedAt || 0)) / 60000));
 
     const msg =
@@ -596,8 +621,7 @@ if (!redirectedToLatestDraft) {
     shouldRestoreDraft = confirm(msg);
 
     if (!shouldRestoreDraft) {
-      clearAllDrafts();
-      clearDraft();
+      draft.clearAll();
       initialDraft = null;
       sourceCourse = null;
       shouldResetToEmpty = true;
@@ -624,7 +648,7 @@ if (!redirectedToLatestDraft) {
 }
 
 // 자동저장 활성화는 초기 세팅 후
-_draftEnabled = true;
+draft.enable();
 
 // ── 소개글 글자수 카운터 ──────────────────────────────────
 if (courseDescEl && descCountEl) {
@@ -1436,8 +1460,7 @@ saveBtnEl?.addEventListener('click', async () => {
       logEvent('course_create_complete', 'course', courseId);
     }
 
-    clearDraft();
-    _isSaved = true;
+    draft.markSaved(); // clearDraft + cancelScheduled + _saved = true 한 번에 처리
     location.href = `/course?id=${courseId}`;
   } catch (e) {
     console.error(e);
