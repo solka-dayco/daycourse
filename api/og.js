@@ -15,23 +15,19 @@ const CRAWLER_PATTERNS = [
   'discordbot',
   'telegrambot',
   'whatsapp',
-  'kakaotalk-scrap',
-  'kakao',
+  'kakaotalk-scrap',     // 카카오 공유 크롤러 (인앱 브라우저 'kakaotalk' 과 구분)
   'linkedinbot',
   'developers.google.com',
   'applebot',
   'ia_archiver',
-  'opengraph.xyz',       // opengraph.xyz 미리보기 툴
+  'opengraph.xyz',
   'ogp.me',
   'iframely',
   'embedly',
-  'quora link preview',
   'rogerbot',
   'vkshare',
-  'w3c_validator',
   'curl/',
   'python-requests',
-  'go-http-client',
 ];
 
 function isCrawler(userAgent) {
