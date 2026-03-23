@@ -14,7 +14,7 @@ export async function assertAdmin() {
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {
-    location.href = '../login.html';
+    location.href = '/login';
     return false;
   }
 
@@ -25,7 +25,7 @@ export async function assertAdmin() {
     .single();
 
   if (error || !user || user.role !== 'admin') {
-    location.href = '../main.html';
+    location.href = '/';
     return false;
   }
 
@@ -156,7 +156,7 @@ export function switchPanel(name) {
     } catch (err) {
       console.error('logout error', err);
     } finally {
-      location.href = '../main.html';
+      location.href = '/';
     }
   });
 
