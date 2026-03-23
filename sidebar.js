@@ -39,12 +39,12 @@ export async function initSidebar() {
             <div class="sidebar-nickname">${escHtml(user?.nickname ?? '')}</div>
           </div>
           <div class="sidebar-profile-btns">
-            <a href="profile.html" class="sidebar-profile-btn">마이페이지</a>
+            <a href="/profile" class="sidebar-profile-btn">마이페이지</a>
           </div>
         ` : `
           <div class="sidebar-login-prompt">
             <p>로그인하고 코스를 만들어보세요</p>
-            <a href="login.html" class="sidebar-login-btn">로그인 / 가입</a>
+            <a href="/login" class="sidebar-login-btn">로그인 / 가입</a>
           </div>
         `}
       </div>
@@ -52,16 +52,16 @@ export async function initSidebar() {
       <div class="sidebar-divider"></div>
 
       <nav class="sidebar-nav">
-        <a href="index.html" class="sidebar-nav-item ${isCurrentPage('main') ? 'active' : ''}">
+        <a href="/" class="sidebar-nav-item ${isCurrentPage('home') ? 'active' : ''}">
           <span class="sidebar-nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
           <span>홈</span>
         </a>
         ${session ? `
-          <a href="bookmarks.html" class="sidebar-nav-item ${isCurrentPage('bookmarks') ? 'active' : ''}">
-            <span class="sidebar-nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width=24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span>
+          <a href="/bookmarks" class="sidebar-nav-item ${isCurrentPage('bookmarks') ? 'active' : ''}">
+            <span class="sidebar-nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span>
             <span>북마크</span>
           </a>
-          <a href="notifications.html" class="sidebar-nav-item ${isCurrentPage('notifications') ? 'active' : ''}">
+          <a href="/notifications" class="sidebar-nav-item ${isCurrentPage('notifications') ? 'active' : ''}">
             <span class="sidebar-nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
             <span>알림</span>
             ${unreadBadge}
@@ -81,7 +81,7 @@ export async function initSidebar() {
   if (headerCreateBtn) {
     if (session) {
       headerCreateBtn.style.display = '';
-      headerCreateBtn.addEventListener('click', () => { location.href = 'create.html'; });
+      headerCreateBtn.addEventListener('click', () => { location.href = '/create'; });
     } else {
       headerCreateBtn.style.display = 'none';
     }
@@ -109,12 +109,15 @@ export async function initSidebar() {
   // 로그아웃
   document.getElementById('sidebarLogoutBtn')?.addEventListener('click', async () => {
     await supabase.auth.signOut();
-    location.href = 'main.html';
+    location.href = '/';
   });
 }
 
+// pathname 기반으로 현재 페이지 판별 (.html 없는 새 URL 구조 대응)
 function isCurrentPage(name) {
-  return location.pathname.includes(name + '.html');
+  const path = location.pathname;
+  if (name === 'home') return path === '/' || path === '/index.html';
+  return path === `/${name}` || path === `/${name}.html`;
 }
 
 function escHtml(str) {

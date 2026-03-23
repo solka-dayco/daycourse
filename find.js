@@ -153,7 +153,7 @@ document.getElementById('resetPwBtn').addEventListener('click', async () => {
       const { error } = await supabase.auth.updateUser({ password: newPw });
       if (error) { showMsg('findPwMsg', '비밀번호 변경 실패: ' + error.message); return; }
       showMsg('findPwMsg', '비밀번호가 변경되었습니다. 새 비밀번호로 로그인해주세요.', 'success');
-      setTimeout(() => { location.href = 'login.html'; }, 2000);
+      setTimeout(() => { location.href = '/login'; }, 2000);
     } else {
       // 비로그인 상태 — 가이드 안내
       showMsg('findPwMsg', '보안상 현재 로그인된 상태에서만 비밀번호를 변경할 수 있습니다. 로그인 후 다시 시도해주세요.', 'error');

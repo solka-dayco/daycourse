@@ -55,7 +55,7 @@ const params = new URLSearchParams(location.search);
 const courseId = params.get('id');
 
 if (!courseId) {
-  location.href = 'main.html';
+  location.href = '/';
 }
 
 // ── 상태 ─────────────────────────────────────────────────
@@ -83,7 +83,7 @@ const commentSubmitBtn = $id('commentSubmitBtn');
       spinner.style.display = 'none';
       showToast('코스를 찾을 수 없습니다');
       setTimeout(() => {
-        location.href = 'main.html';
+        location.href = '/';
       }, 1500);
       return;
     }
@@ -148,7 +148,7 @@ function renderCourseHeader() {
         page: 'course',
         course_id: courseId,
       });
-      location.href = `user.html?id=${course.author_id}`;
+      location.href = `/user?id=${course.author_id}`;
     });
   }
 
@@ -158,7 +158,7 @@ function renderCourseHeader() {
     if (refEl) {
       refEl.style.display = '';
       refEl.innerHTML =
-        `이 코스는 <a href="course.html?id=${escHtml(course.original_course_id)}">${escHtml(course.original_course_name || '원본 코스')}</a>를 참고하여 만들어졌습니다`;
+        `이 코스는 <a href="/course?id=${escHtml(course.original_course_id)}">${escHtml(course.original_course_name || '원본 코스')}</a>를 참고하여 만들어졌습니다`;
 
       refEl.querySelector('a')?.addEventListener('click', () => {
         logEvent('original_course_click', 'course', course.original_course_id, {
@@ -185,7 +185,7 @@ function renderCourseHeader() {
       logEvent('course_edit_click', 'course', courseId, {
         page: 'course',
       });
-      location.href = `create.html?mode=edit&id=${courseId}`;
+      location.href = `/create?mode=edit&id=${courseId}`;
     });
 
     deleteBtnEl?.addEventListener('click', () => {
@@ -216,7 +216,7 @@ function renderCourseHeader() {
         page: 'course',
       });
       await onCourseDeleted(courseId, course.parent_course_id);
-      location.href = 'main.html';
+      location.href = '/';
     } catch (e) {
       showToast('삭제 실패: ' + e.message);
     }
@@ -229,7 +229,7 @@ function renderCourseHeader() {
         page: 'course',
         action: 'reference',
       });
-      location.href = 'login.html';
+      location.href = '/login';
       return;
     }
 
@@ -237,7 +237,7 @@ function renderCourseHeader() {
       page: 'course',
     });
 
-    location.href = `create.html?mode=copy&id=${courseId}`;
+    location.href = `/create?mode=copy&id=${courseId}`;
   });
 
   // 공유 버튼
@@ -274,7 +274,7 @@ async function renderLikeBookmark() {
         page: 'course',
         action: 'like',
       });
-      location.href = 'login.html';
+      location.href = '/login';
       return;
     }
 
@@ -301,7 +301,7 @@ async function renderLikeBookmark() {
         page: 'course',
         action: 'bookmark',
       });
-      location.href = 'login.html';
+      location.href = '/login';
       return;
     }
 
@@ -682,7 +682,7 @@ async function renderReferencedCourses() {
           page: 'course',
           source_course_id: courseId,
         });
-        location.href = `course.html?id=${c.id}`;
+        location.href = `/course?id=${c.id}`;
       });
 
       grid.appendChild(card);
@@ -782,7 +782,7 @@ function buildCommentEl(c) {
         page: 'course',
         action: 'comment_like',
       });
-      location.href = 'login.html';
+      location.href = '/login';
       return;
     }
 
@@ -826,7 +826,7 @@ function buildCommentEl(c) {
         page: 'course',
         action: 'reply',
       });
-      location.href = 'login.html';
+      location.href = '/login';
       return;
     }
 
@@ -918,7 +918,7 @@ function bindReplyEvents(el) {
         page: 'course',
         action: 'reply_like',
       });
-      location.href = 'login.html';
+      location.href = '/login';
       return;
     }
 
@@ -1111,7 +1111,7 @@ function buildSeoDescription(course) {
 
 //코스 제목 노출
 function updateSeoTags() {
-  const canonicalUrl = `${location.origin}/course.html?id=${encodeURIComponent(courseId)}`;
+  const canonicalUrl = `${location.origin}/course?id=${encodeURIComponent(courseId)}`;
   const title = `${course.name} | 데이코스`;
   const description = buildSeoDescription(course);
   const image =
@@ -1199,7 +1199,7 @@ document.querySelectorAll('#reportSheet .bottom-sheet-item').forEach(item => {
         page: 'course',
         action: 'report',
       });
-      location.href = 'login.html';
+      location.href = '/login';
       return;
     }
 

@@ -4,5 +4,5 @@ import { supabase } from './supabase.js';
 
 const { data } = await supabase.auth.getSession();
 if (!data.session) {
-  location.replace('login.html?redirect=' + encodeURIComponent(location.pathname + location.search));
+  location.replace('/login?redirect=' + encodeURIComponent(location.pathname + location.search));
 }

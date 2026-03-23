@@ -7,7 +7,7 @@ import { upsertUserProfile, logEvent } from './db.js';
   const { data } = await supabase.auth.getSession();
   if (data.session) {
     const redirectTo = new URLSearchParams(location.search).get('redirect');
-    location.href = redirectTo || 'main.html';
+    location.href = redirectTo || '/';
   }
 })();
 
@@ -101,7 +101,7 @@ async function handleLogin() {
     }
 
     const redirectTo = new URLSearchParams(location.search).get('redirect');
-    location.href = redirectTo || 'main.html';
+    location.href = redirectTo || '/';
   } finally {
     loginBtn.disabled = false;
     loginBtn.textContent = '로그인';
@@ -202,7 +202,7 @@ async function handleSignup() {
     }
 
     // 닉네임 설정 페이지로
-    location.href = 'nickname.html';
+    location.href = '/nickname';
   } finally {
     signupBtn.disabled = false;
     signupBtn.textContent = '회원가입';
@@ -213,7 +213,7 @@ async function handleSignup() {
 // document.getElementById('kakaoLoginBtn')?.addEventListener('click', async () => {
 //   const { signInWithKakao } = await import('./db.js');
 //   try {
-//     await signInWithKakao(`${location.origin}/main.html`);
+//     await signInWithKakao(`${location.origin}/`);
 //   } catch (e) {
 //     showMsg('loginMsg', '카카오 로그인 실패: ' + e.message);
 //   }

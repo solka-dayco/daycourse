@@ -4,7 +4,7 @@ import { upsertUserProfile, logEvent } from './db.js';
 
 // ── 로그인 체크 ──────────────────────────────────────────
 const { data: sessionData } = await supabase.auth.getSession();
-if (!sessionData.session) { location.href = 'login.html'; }
+if (!sessionData.session) { location.href = '/login'; }
 
 logEvent('page_view', 'page', null, { page: 'nickname_setup' });
 const userId = sessionData.session.user.id;
@@ -84,7 +84,7 @@ async function save(skipNickname = false) {
 
     await upsertUserProfile(payload);
     await logEvent('profile_setup_complete', 'user', null, { nickname });
-    location.href = 'main.html';
+    location.href = '/';
   } catch (e) {
     showMsg('저장 실패: ' + e.message);
   } finally {

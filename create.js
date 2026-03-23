@@ -25,7 +25,7 @@ import { cropAndCompress } from './photo.js';
 // ── 인증 체크 ─────────────────────────────────────────────
 let currentUser = await getCurrentUser();
 if (!currentUser) {
-  location.href = 'login.html?redirect=' + encodeURIComponent(location.href);
+  location.href = '/login?redirect=' + encodeURIComponent(location.href);
 }
 
 // ── 지역 세부 매핑 ─────────────────────────────────────────
@@ -552,9 +552,9 @@ if (!mode && !sourceId && !restoreLatest) {
     redirectedToLatestDraft = true;
 
     if ((latest.mode === 'edit' || latest.mode === 'copy') && latest.sourceId) {
-      location.replace(`create.html?mode=${latest.mode}&id=${latest.sourceId}&restoreLatest=1`);
+      location.replace(`/create?mode=${latest.mode}&id=${latest.sourceId}&restoreLatest=1`);
     } else {
-      location.replace('create.html?restoreLatest=1');
+      location.replace('/create?restoreLatest=1');
     }
   }
 }
@@ -1438,7 +1438,7 @@ saveBtnEl?.addEventListener('click', async () => {
 
     clearDraft();
     _isSaved = true;
-    location.href = `course.html?id=${courseId}`;
+    location.href = `/course?id=${courseId}`;
   } catch (e) {
     console.error(e);
     showToast('저장 실패: ' + (e?.message || '알 수 없는 오류'));

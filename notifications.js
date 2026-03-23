@@ -18,7 +18,7 @@ const empty   = document.getElementById('notifEmpty');
 
 (async () => {
   currentUser = await getCurrentUser();
-  if (!currentUser) { location.href = 'login.html'; return; }
+  if (!currentUser) { location.href = '/login'; return; }
 
   // 알림 읽음 처리 (페이지 진입 시)
   await markNotificationsRead(currentUser.id);
@@ -89,7 +89,7 @@ function buildNotifItem(n) {
 
   const icon = iconMap[n.type] || '🔔';
   const msg  = msgMap[n.type]  || '';
-  const href = n.course_id ? `course.html?id=${n.course_id}` : '#';
+  const href = n.course_id ? `/course?id=${n.course_id}` : '#';
 
   const el = document.createElement('a');
   el.className = `notif-item${n.is_read ? '' : ' unread'}`;

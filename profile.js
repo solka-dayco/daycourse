@@ -26,7 +26,7 @@ const sectionState = {
 
 (async () => {
   const user = await getCurrentUser();
-  if (!user) { location.href = 'login.html'; return; }
+  if (!user) { location.href = '/login'; return; }
   myUserId = user.id;
 
   // 통계 (실패해도 계속 진행)
@@ -42,7 +42,7 @@ const sectionState = {
   document.getElementById('statCourses').textContent     = stats.course_count ?? 0;
   document.getElementById('statLikes').textContent       = stats.total_likes ?? 0;
   document.getElementById('statRefs').textContent        = stats.total_references ?? 0;
-  document.getElementById('viewPublicPage').href         = `user.html?id=${user.id}`;
+  document.getElementById('viewPublicPage').href         = `/user?id=${user.id}`;
 
   document.getElementById('spinner').style.display = 'none';
   document.getElementById('profileContent').style.display = '';
@@ -135,7 +135,7 @@ function buildCard(course) {
       </div>
     </div>
   `;
-  card.addEventListener('click', () => { location.href = `course.html?id=${course.id}`; });
+  card.addEventListener('click', () => { location.href = `/course?id=${course.id}`; });
   return card;
 }
 

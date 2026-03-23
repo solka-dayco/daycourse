@@ -18,7 +18,7 @@ const empty  = document.getElementById('bookmarkEmpty');
 
 (async () => {
   currentUser = await getCurrentUser();
-  if (!currentUser) { location.href = 'login.html'; return; }
+  if (!currentUser) { location.href = '/login'; return; }
 
   await loadBookmarks();
   setupInfiniteScroll();
@@ -96,14 +96,14 @@ function buildCard(course) {
   // 카드 클릭
   card.addEventListener('click', e => {
     if (e.target.closest('.feed-like-btn') || e.target.closest('.feed-author')) return;
-    location.href = `course.html?id=${course.id}`;
+    location.href = `/course?id=${course.id}`;
   });
 
   // 작성자 클릭
   card.querySelector('.feed-author')?.addEventListener('click', e => {
     e.stopPropagation();
     const uid = e.currentTarget.dataset.userId;
-    if (uid) location.href = `user.html?id=${uid}`;
+    if (uid) location.href = `/user?id=${uid}`;
   });
 
   // 좋아요

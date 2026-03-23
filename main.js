@@ -404,7 +404,7 @@ function renderSeoCourseLinks(courses, reset = false) {
   }
 
   const linksHtml = courses.map(course => `
-    <a href="/course.html?id=${encodeURIComponent(course.id)}">
+    <a href="/course?id=${encodeURIComponent(course.id)}">
       ${escHtml(course.name)}
     </a>
   `).join('');
@@ -538,7 +538,7 @@ function bindCardEvents(card, course) {
       author_id: course.author_id || null
     });
 
-    location.href = `course.html?id=${course.id}`;
+    location.href = `/course?id=${course.id}`;
   });
 
   // 작성자 클릭 → 유저 페이지
@@ -550,7 +550,7 @@ function bindCardEvents(card, course) {
       course_id: course.id
     });
 
-    location.href = `user.html?id=${course.author_id}`;
+    location.href = `/user?id=${course.author_id}`;
   });
 
   // 댓글 버튼
@@ -561,7 +561,7 @@ function bindCardEvents(card, course) {
       page: 'feed'
     });
 
-    location.href = `course.html?id=${course.id}#commentSection`;
+    location.href = `/course?id=${course.id}#commentSection`;
   });
 
   // 좋아요
@@ -573,7 +573,7 @@ function bindCardEvents(card, course) {
         page: 'feed',
         action: 'like'
       });
-      location.href = 'login.html';
+      location.href = '/login';
       return;
     }
 

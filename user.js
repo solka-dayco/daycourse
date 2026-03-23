@@ -206,7 +206,7 @@ function buildCard(course) {
       </div>
     </div>
   `;
-  card.addEventListener('click', () => { location.href = `course.html?id=${course.id}`; });
+  card.addEventListener('click', () => { location.href = `/course?id=${course.id}`; });
   return card;
 }
 
