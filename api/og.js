@@ -337,7 +337,10 @@ export default async function handler(req) {
   if (!isCrawler(userAgent)) {
     return new Response(COURSE_HTML, {
       status: 200,
-      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      headers: {
+        'Content-Type':  'text/html; charset=utf-8',
+        'Cache-Control': 'no-store',   // CDN 캐시 차단 — 크롤러/유저 혼용 방지
+      },
     });
   }
 
@@ -348,7 +351,7 @@ export default async function handler(req) {
     if (!course) {
       return new Response(COURSE_HTML, {
         status: 200,
-        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
       });
     }
 
@@ -359,14 +362,14 @@ export default async function handler(req) {
       status: 200,
       headers: {
         'Content-Type':  'text/html; charset=utf-8',
-        'Cache-Control': 's-maxage=3600, stale-while-revalidate=86400',
+        'Cache-Control': 'no-store',   // OG HTML도 캐시 차단
       },
     });
   } catch (e) {
     console.error('[og.js] error:', e);
     return new Response(COURSE_HTML, {
       status: 200,
-      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
     });
   }
 }
