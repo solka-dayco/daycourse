@@ -13,7 +13,7 @@ async function fetchAllCourseIds() {
 
   while (true) {
     const res = await fetch(
-      `${process.env.SUPABASE_URL}/rest/v1/courses?select=id,created_at&is_deleted=eq.false&order=created_at.desc&limit=${pageSize}&offset=${offset}`,
+      `${process.env.SUPABASE_URL}/rest/v1/courses?select=id,created_at&is_deleted=neq.true&order=created_at.desc&limit=${pageSize}&offset=${offset}`,
       {
         headers: {
           'apikey':        process.env.SUPABASE_ANON_KEY,
@@ -36,9 +36,8 @@ async function fetchAllCourseIds() {
 
 function buildSitemap(courses) {
   const staticUrls = [
-    { loc: `${BASE_URL}/`,        changefreq: 'daily',   priority: '1.0' },
-    { loc: `${BASE_URL}/login`,   changefreq: 'monthly', priority: '0.3' },
-    { loc: `${BASE_URL}/privacy`, changefreq: 'yearly',  priority: '0.2' },
+    { loc: `${BASE_URL}/`,        changefreq: 'daily',  priority: '1.0' },
+    { loc: `${BASE_URL}/privacy`, changefreq: 'yearly', priority: '0.2' },
   ];
 
   const courseUrls = courses.map(c => ({
