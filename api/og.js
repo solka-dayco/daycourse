@@ -21,6 +21,17 @@ const CRAWLER_PATTERNS = [
   'developers.google.com',
   'applebot',
   'ia_archiver',
+  'opengraph.xyz',       // opengraph.xyz 미리보기 툴
+  'ogp.me',
+  'iframely',
+  'embedly',
+  'quora link preview',
+  'rogerbot',
+  'vkshare',
+  'w3c_validator',
+  'curl/',
+  'python-requests',
+  'go-http-client',
 ];
 
 function isCrawler(userAgent) {
