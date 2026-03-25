@@ -22,6 +22,7 @@ import {
   _isAddingPlace,
 } from './map.js';
 import { cropAndCompress } from './photo.js';
+import { ICONS } from './icons.js';
 
 // ── 인증 체크 ─────────────────────────────────────────────
 let currentUser = await getCurrentUser();
@@ -61,11 +62,10 @@ let places = [];
 let myLat = null;
 let myLng = null;
 let mapInstance = null;
-let pendingStayIdx = null;
-let pendingTravelIdx = null;
 let sourceCourse = null;
 let thumbnailBlob = null;
 let thumbnailExistingUrl = '';
+let showDetail = false;
 
 const MAX_PLACES = 10;
 const MIN_PLACES = 2;
@@ -251,6 +251,7 @@ class DraftManager {
         _photoPreview: '',
       })),
       thumbnailExistingUrl: thumbnailExistingUrl || '',
+      totalTimeManual: parseTimeInput(document.getElementById('totalTimeTextInput')?.value || '') || 0,
       savedAt: Date.now(),
     };
   }
@@ -303,6 +304,68 @@ function safeJsonParse(value) {
   } catch (_) {
     return null;
   }
+}
+
+function haversineDist(a, b) {
+  const R = 6371000;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.lat * Math.PI / 180) *
+    Math.cos(b.lat * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+function formatDist(meters) {
+  if (meters == null || !Number.isFinite(meters)) return '';
+  if (meters < 1000) return `${Math.round(meters)}m`;
+  return `${(meters / 1000).toFixed(1)}km`;
+}
+
+// 자유 형식 시간 문자열 → 분(int) 변환
+// 지원 형식: "90", "90분", "1시간", "1시간30분", "1h30", "1h30m", "1:30"
+function parseTimeInput(str) {
+  if (!str) return null;
+  const s = str.trim();
+  if (!s) return null;
+
+  // 순수 숫자 → 분
+  if (/^\d+$/.test(s)) {
+    const v = parseInt(s, 10);
+    return v > 0 ? v : null;
+  }
+
+  // "X시간 Y분" / "Xh Ym" / "X:Y" 형식
+  const patterns = [
+    /^(\d+)\s*시간\s*(\d+)\s*분?$/,   // 1시간30분, 1시간 30분
+    /^(\d+)\s*h\s*(\d+)\s*m?$/i,      // 1h30m, 1h30
+    /^(\d+):(\d+)$/,                   // 1:30
+  ];
+  for (const re of patterns) {
+    const m = s.match(re);
+    if (m) {
+      const total = parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+      return total > 0 ? total : null;
+    }
+  }
+
+  // "X시간" / "Xh"
+  const hourOnly = s.match(/^(\d+)\s*시간$/) || s.match(/^(\d+)\s*h$/i);
+  if (hourOnly) {
+    const v = parseInt(hourOnly[1], 10) * 60;
+    return v > 0 ? v : null;
+  }
+
+  // "X분" / "Xm"
+  const minOnly = s.match(/^(\d+)\s*분$/) || s.match(/^(\d+)\s*m$/i);
+  if (minOnly) {
+    const v = parseInt(minOnly[1], 10);
+    return v > 0 ? v : null;
+  }
+
+  return null;
 }
 
 function normalizePlace(raw, index = 0) {
@@ -422,6 +485,12 @@ function applyDraftToForm(draft) {
 
   renderPlaceList();
   updateTotalTime();
+
+  // 드래프트에 저장된 총 소요시간 수동 입력값 복원
+  const totalTimeTextInput = document.getElementById('totalTimeTextInput');
+  if (totalTimeTextInput && draft.totalTimeManual) {
+    totalTimeTextInput.value = formatMinutes(draft.totalTimeManual);
+  }
 }
 
 function applySourceCourseToForm(course) {
@@ -487,6 +556,14 @@ function applySourceCourseToForm(course) {
 
   renderPlaceList();
   updateTotalTime();
+
+  // 수정 모드: 기존 total_time을 텍스트 input에 반영
+  if (mode === 'edit' && course.total_time) {
+    const totalTimeTextInput = document.getElementById('totalTimeTextInput');
+    if (totalTimeTextInput) {
+      totalTimeTextInput.value = formatMinutes(course.total_time);
+    }
+  }
 }
 
 function resetFormToEmpty() {
@@ -783,7 +860,43 @@ regionMainEl?.addEventListener('change', function () {
 
 regionSubEl?.addEventListener('change', scheduleDraft);
 
-// ── 썸네일 업로드 ────────────────────────────────────────
+// ── 총 소요시간 피커 연결 ─────────────────────────────────
+(function initTotalTimePicker() {
+  const inp = document.getElementById('totalTimeTextInput');
+  const btn = document.getElementById('totalTimePickBtn');
+  if (!inp) return;
+
+  inp.setAttribute('readonly', true);
+
+  function openPicker(e) {
+    e?.preventDefault();
+    const cur = parseTimeInput(inp.value) || 0;
+    openTimePicker('총 소요시간', cur, (val) => {
+      inp.value = formatMinutes(val);
+      scheduleDraft();
+    });
+  }
+
+  inp.addEventListener('click', openPicker);
+  inp.addEventListener('touchend', openPicker, { passive: false });
+  btn?.addEventListener('click', openPicker);
+  btn?.addEventListener('touchend', openPicker, { passive: false });
+})();
+
+// ── 세부사항 입력 토글 ────────────────────────────────────
+// 세부사항 열기: 장소별 체류/이동시간 버튼 + 총 소요시간 select 노출
+document.getElementById('toggleDetailBtn')?.addEventListener('click', () => {
+  showDetail = !showDetail;
+  const btn = document.getElementById('toggleDetailBtn');
+  const totalTimeRow = document.getElementById('totalTimeRow');
+  if (btn) btn.textContent = showDetail ? '세부사항 닫기' : '세부사항 입력';
+  // 세부사항 닫혔을 때 → 총 소요시간 직접 입력 노출
+  // 세부사항 열렸을 때 → 자동 계산되므로 UI 숨김
+  if (totalTimeRow) totalTimeRow.style.display = showDetail ? 'none' : '';
+  renderPlaceList();
+});
+
+
 (function initThumbnailUploader() {
   const wrap = document.getElementById('thumbnailWrap');
   const input = document.getElementById('thumbnailInput');
@@ -1223,11 +1336,44 @@ function renderPlaceList() {
   ul.innerHTML = '';
 
   places.forEach((p, i) => {
+    // ── 코스 아이템 사이 connector ──
+    if (i > 0) {
+      const connector = document.createElement('div');
+      connector.className = 'place-connector';
+      const dist = formatDist(haversineDist(places[i - 1], p));
+
+      // 세로선은 항상 표시, 이동시간 입력은 showDetail일 때 세로선 우측에 배치
+      connector.innerHTML = `
+        <div class="place-connector-content">
+          <div class="place-connector-line">
+            ${dist ? `<span class="place-connector-dist">${dist}</span>` : ''}
+          </div>
+          ${showDetail ? `
+          <div class="place-connector-right">
+            <div class="time-inline-label">이동 시간</div>
+            <div class="time-inline-row">
+              <input
+                type="text"
+                class="time-inline-input place-travel-input"
+                placeholder="직접 입력"
+                value="${p.travel_time ? formatMinutes(p.travel_time) : ''}"
+                data-idx="${i}"
+                autocomplete="off"
+              />
+              <button type="button" class="time-inline-pick-btn place-travel-pick" data-idx="${i}">${ICONS.clock(13)} 선택</button>
+            </div>
+          </div>
+          ` : ''}
+        </div>
+      `;
+      ul.appendChild(connector);
+    }
+
+    // ── 코스 아이템 ──────────────────────────────────────
     const li = document.createElement('li');
     li.className = 'create-place-item';
     li.dataset.idx = String(i);
 
-    const stayLabel = p.stay_time ? formatMinutes(p.stay_time) : '체류 시간 *';
     const photoSrc = p._photoPreview || p.photo_url || '';
 
     li.innerHTML = `
@@ -1238,24 +1384,18 @@ function renderPlaceList() {
           <div class="place-name">${escHtml(p.name)}</div>
           <div class="place-sub">${escHtml(p.category)}${p.address ? ` · ${escHtml(p.address)}` : ''}</div>
           <div style="position:relative">
-            <input
-              type="text"
+            <textarea
               class="place-comment-input"
               placeholder="한줄평 (선택, 최대 100자)"
-              value="${escHtml(p.comment)}"
               maxlength="100"
+              rows="2"
               data-idx="${i}"
-            />
+            >${escHtml(p.comment)}</textarea>
             <span
               class="place-comment-count"
               data-idx="${i}"
               style="position:absolute;right:0;bottom:-14px;font-size:10px;color:#ccc"
             >${(p.comment || '').length}/100</span>
-          </div>
-          <div class="place-times">
-            <button class="place-time-btn ${p.stay_time ? 'set' : ''}" data-type="stay" data-idx="${i}">
-              🕐 ${stayLabel}
-            </button>
           </div>
         </div>
         <div class="place-photo-slot" data-idx="${i}" title="사진 추가">
@@ -1268,19 +1408,21 @@ function renderPlaceList() {
         </div>
         <button class="place-delete-btn" data-idx="${i}" aria-label="삭제">✕</button>
       </div>
+      <div class="place-times" style="${showDetail ? '' : 'display:none'}">
+        <div class="time-inline-label">체류 시간</div>
+        <div class="time-inline-row">
+          <input
+            type="text"
+            class="time-inline-input place-stay-input"
+            placeholder="직접 입력"
+            value="${p.stay_time ? formatMinutes(p.stay_time) : ''}"
+            data-idx="${i}"
+            autocomplete="off"
+          />
+          <button type="button" class="time-inline-pick-btn place-stay-pick" data-idx="${i}">${ICONS.clock(13)} 선택</button>
+        </div>
+      </div>
     `;
-
-    if (i > 0) {
-      const travelRow = document.createElement('div');
-      travelRow.className = 'place-travel-row place-travel-above';
-      travelRow.innerHTML = `
-        <span>↓</span>
-        <button class="place-time-btn ${p.travel_time ? 'set' : ''}" data-type="travel" data-idx="${i}">
-          ${p.travel_time ? formatMinutes(p.travel_time) : '이동 시간 *'}
-        </button>
-      `;
-      li.insertBefore(travelRow, li.firstChild);
-    }
 
     ul.appendChild(li);
   });
@@ -1295,7 +1437,7 @@ function renderPlaceList() {
     ul._sortableInstance = Sortable.create(ul, {
       handle: '.place-drag-handle',
       animation: 150,
-      filter: '.place-time-btn, .place-comment-input, .place-photo-input',
+      filter: '.time-inline-input, .time-inline-pick-btn, .place-comment-input, .place-photo-input',
       preventOnFilter: false,
       forceFallback: true,
       fallbackTolerance: 5,
@@ -1332,22 +1474,76 @@ function bindPlaceListEvents(ul) {
     });
   });
 
-  ul.querySelectorAll('[data-type="stay"]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      pendingStayIdx = parseInt(btn.dataset.idx, 10);
-      const titleEl = document.getElementById('stayTimeModalTitle');
-      if (titleEl && places[pendingStayIdx]) {
-        titleEl.textContent = `체류 시간 — ${places[pendingStayIdx].name}`;
-      }
-      openModal('stayTimeModal');
-    });
+  // 체류 시간 — input 클릭/터치 → 피커 오픈 (readonly, 타이핑 불가)
+  ul.querySelectorAll('.place-stay-input').forEach((input) => {
+    const idx = parseInt(input.dataset.idx, 10);
+    input.setAttribute('readonly', true);
+    const openStay = (e) => {
+      e.preventDefault();
+      if (!places[idx]) return;
+      openTimePicker('체류 시간', places[idx].stay_time || 0, (val) => {
+        places[idx].stay_time = val;
+        input.value = formatMinutes(val);
+        updateTotalTime();
+        scheduleDraft();
+      });
+    };
+    input.addEventListener('click', openStay);
+    input.addEventListener('touchend', openStay, { passive: false });
   });
 
-  ul.querySelectorAll('[data-type="travel"]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      pendingTravelIdx = parseInt(btn.dataset.idx, 10);
-      openModal('travelTimeModal');
-    });
+  // 체류 시간 선택 버튼
+  ul.querySelectorAll('.place-stay-pick').forEach((btn) => {
+    const openStay = (e) => {
+      e.preventDefault();
+      const idx = parseInt(btn.dataset.idx, 10);
+      if (!places[idx]) return;
+      openTimePicker('체류 시간', places[idx].stay_time || 0, (val) => {
+        places[idx].stay_time = val;
+        const inp = document.querySelector(`.place-stay-input[data-idx="${idx}"]`);
+        if (inp) inp.value = formatMinutes(val);
+        updateTotalTime();
+        scheduleDraft();
+      });
+    };
+    btn.addEventListener('click', openStay);
+    btn.addEventListener('touchend', openStay, { passive: false });
+  });
+
+  // 이동 시간 — input 클릭/터치 → 피커 오픈
+  ul.querySelectorAll('.place-travel-input').forEach((input) => {
+    const idx = parseInt(input.dataset.idx, 10);
+    input.setAttribute('readonly', true);
+    const openTravel = (e) => {
+      e.preventDefault();
+      if (!places[idx]) return;
+      openTimePicker('이동 시간', places[idx].travel_time || 0, (val) => {
+        places[idx].travel_time = val;
+        input.value = formatMinutes(val);
+        updateTotalTime();
+        scheduleDraft();
+      });
+    };
+    input.addEventListener('click', openTravel);
+    input.addEventListener('touchend', openTravel, { passive: false });
+  });
+
+  // 이동 시간 선택 버튼
+  ul.querySelectorAll('.place-travel-pick').forEach((btn) => {
+    const openTravel = (e) => {
+      e.preventDefault();
+      const idx = parseInt(btn.dataset.idx, 10);
+      if (!places[idx]) return;
+      openTimePicker('이동 시간', places[idx].travel_time || 0, (val) => {
+        places[idx].travel_time = val;
+        const inp = document.querySelector(`.place-travel-input[data-idx="${idx}"]`);
+        if (inp) inp.value = formatMinutes(val);
+        updateTotalTime();
+        scheduleDraft();
+      });
+    };
+    btn.addEventListener('click', openTravel);
+    btn.addEventListener('touchend', openTravel, { passive: false });
   });
 
   ul.querySelectorAll('.place-photo-input').forEach((input) => {
@@ -1394,63 +1590,288 @@ function bindPlaceListEvents(ul) {
   });
 }
 
-// ── 시간 모달 ─────────────────────────────────────────────
+// ── 모달 유틸 (photoRequiredModal 전용으로만 유지) ────────
 function openModal(id) {
   document.getElementById(id)?.classList.add('show');
 }
-
 function closeModal(id) {
   document.getElementById(id)?.classList.remove('show');
 }
 
-document.querySelectorAll('#stayTimeChips .time-chip').forEach((chip) => {
-  chip.addEventListener('click', () => {
-    if (pendingStayIdx === null || !places[pendingStayIdx]) return;
-    places[pendingStayIdx].stay_time = parseInt(chip.dataset.min, 10);
-    pendingStayIdx = null;
-    closeModal('stayTimeModal');
-    renderPlaceList();
-    updateTotalTime();
-    scheduleDraft();
-  });
-});
-
-document.querySelectorAll('#travelTimeChips .time-chip').forEach((chip) => {
-  chip.addEventListener('click', () => {
-    if (pendingTravelIdx === null || !places[pendingTravelIdx]) return;
-    places[pendingTravelIdx].travel_time = parseInt(chip.dataset.min, 10);
-    pendingTravelIdx = null;
-    closeModal('travelTimeModal');
-    renderPlaceList();
-    updateTotalTime();
-    scheduleDraft();
-  });
-});
-
-['stayTimeModal', 'travelTimeModal', 'photoRequiredModal'].forEach((id) => {
-  document.getElementById(id)?.addEventListener('click', (e) => {
-    if (e.target.id === id) closeModal(id);
-  });
+document.getElementById('photoRequiredModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'photoRequiredModal') closeModal('photoRequiredModal');
 });
 
 photoRequiredConfirmBtn?.addEventListener('click', () => {
   closeModal('photoRequiredModal');
 });
 
+// ── 드럼롤 시간 피커 ──────────────────────────────────────
+const timePicker = (() => {
+  const ITEM_H  = 44;          // 항목 높이(px)
+  const VISIBLE = 5;           // 보이는 항목 수 (홀수)
+  const CENTER  = Math.floor(VISIBLE / 2); // 중앙 인덱스 = 2
+  const COL_H   = ITEM_H * VISIBLE;       // 컬럼 높이 = 220px
+  const HOUR_MAX = 30;
+  const MIN_MAX  = 59;
+
+  const overlay    = document.getElementById('timePickerOverlay');
+  const sheet      = document.getElementById('timePickerSheet');
+  const titleEl    = document.getElementById('timePickerTitle');
+  const hourColEl  = document.getElementById('timePickerHourCol');
+  const minColEl   = document.getElementById('timePickerMinCol');
+  const hourListEl = document.getElementById('timePickerHourList');
+  const minListEl  = document.getElementById('timePickerMinList');
+  const confirmBtn = document.getElementById('timePickerConfirmBtn');
+
+  let _onConfirm = null;
+
+  // ── 컬럼 클래스 ──────────────────────────────────────────
+  class DrumCol {
+    constructor(colEl, listEl, maxVal) {
+      this.colEl   = colEl;
+      this.listEl  = listEl;
+      this.maxVal  = maxVal;
+      this.curVal  = 0;
+      this._y      = 0;   // 현재 translateY (px, 양수 = 아래로)
+      this._drag   = false;
+      this._startY = 0;
+      this._startDragY = 0;
+      this._vel    = 0;
+      this._lastY  = 0;
+      this._lastT  = 0;
+      this._raf    = null;
+      this._items  = [];
+
+      this._build();
+      this._bindEvents();
+    }
+
+    _build() {
+      this.listEl.innerHTML = '';
+      this._items = [];
+      for (let i = 0; i <= this.maxVal; i++) {
+        const el = document.createElement('div');
+        el.className = 'time-picker-item';
+        el.textContent = String(i).padStart(2, '0');
+        this.listEl.appendChild(el);
+        this._items.push(el);
+      }
+    }
+
+    // translateY 범위 제한
+    _clamp(y) {
+      const minY = -(this.maxVal * ITEM_H);
+      const maxY = 0;
+      return Math.max(minY, Math.min(maxY, y));
+    }
+
+    // y값 → val
+    _yToVal(y) {
+      return Math.round(-y / ITEM_H);
+    }
+
+    // val → y값
+    _valToY(val) {
+      return -(val * ITEM_H);
+    }
+
+    // 현재 y에서 가장 가까운 스냅 위치로
+    _snapY(y) {
+      const val = Math.round(-y / ITEM_H);
+      return this._valToY(Math.max(0, Math.min(this.maxVal, val)));
+    }
+
+    _applyTransform(y) {
+      // 구분선 중앙 위치를 colEl 기준으로 계산
+      const selectorEl = document.getElementById('timePickerSelector');
+      const colRect  = this.colEl.getBoundingClientRect();
+      const selRect  = selectorEl ? selectorEl.getBoundingClientRect() : null;
+      // 구분선 중앙 y - 컬럼 상단 y = 선택 항목의 상단이 와야 할 위치
+      const offset = selRect
+        ? (selRect.top + selRect.height / 2 - ITEM_H / 2) - colRect.top
+        : (this.colEl.offsetHeight - ITEM_H) / 2;
+      this.listEl.style.transform = `translateY(${y + offset}px)`;
+      this._updateHighlight(this._yToVal(y));
+    }
+
+    _updateHighlight(val) {
+      this._items.forEach((el, i) => {
+        el.classList.toggle('selected', i === val);
+      });
+    }
+
+    setVal(val, animate = false) {
+      const targetY = this._valToY(Math.max(0, Math.min(this.maxVal, val)));
+      if (animate) {
+        this._animateTo(targetY);
+      } else {
+        this._y = targetY;
+        this._applyTransform(this._y);
+      }
+      this.curVal = Math.max(0, Math.min(this.maxVal, val));
+    }
+
+    getVal() {
+      return Math.max(0, Math.min(this.maxVal, this._yToVal(this._y)));
+    }
+
+    _animateTo(targetY, duration = 180) {
+      cancelAnimationFrame(this._raf);
+      const startY = this._y;
+      const diff   = targetY - startY;
+      const start  = performance.now();
+      const tick = (now) => {
+        const t = Math.min(1, (now - start) / duration);
+        // ease-out cubic
+        const ease = 1 - Math.pow(1 - t, 3);
+        this._y = startY + diff * ease;
+        this._applyTransform(this._y);
+        if (t < 1) {
+          this._raf = requestAnimationFrame(tick);
+        } else {
+          this._y = targetY;
+          this._applyTransform(this._y);
+          this.curVal = this.getVal();
+        }
+      };
+      this._raf = requestAnimationFrame(tick);
+    }
+
+    _bindEvents() {
+      // 마우스 휠 — 1단위
+      this.colEl.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        cancelAnimationFrame(this._raf);
+        const delta = e.deltaY > 0 ? -1 : 1;
+        const targetVal = Math.max(0, Math.min(this.maxVal, this.getVal() - delta));
+        this._animateTo(this._valToY(targetVal));
+      }, { passive: false });
+
+      // 드래그 공통 로직
+      const onStart = (clientY) => {
+        cancelAnimationFrame(this._raf);
+        this._drag = true;
+        this._startY = clientY;
+        this._startDragY = this._y;
+        this._vel = 0;
+        this._lastY = clientY;
+        this._lastT = performance.now();
+      };
+      const onMove = (clientY) => {
+        if (!this._drag) return;
+        const dy = clientY - this._startY;
+        const now = performance.now();
+        const dt = now - this._lastT || 1;
+        this._vel = (clientY - this._lastY) / dt;
+        this._lastY = clientY;
+        this._lastT = now;
+        this._y = this._clamp(this._startDragY + dy);
+        this._applyTransform(this._y);
+      };
+      const onEnd = () => {
+        if (!this._drag) return;
+        this._drag = false;
+        const momentum = this._vel * 80;
+        const targetY = this._snapY(this._clamp(this._y + momentum));
+        this._animateTo(targetY);
+      };
+
+      // Pointer 이벤트 (데스크탑 + 일부 모바일)
+      this.colEl.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        this.colEl.setPointerCapture(e.pointerId);
+        onStart(e.clientY);
+      }, { passive: false });
+      this.colEl.addEventListener('pointermove', (e) => {
+        onMove(e.clientY);
+      }, { passive: false });
+      this.colEl.addEventListener('pointerup',     onEnd);
+      this.colEl.addEventListener('pointercancel', onEnd);
+
+      // Touch 이벤트 (모바일 폴백)
+      this.colEl.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        onStart(e.touches[0].clientY);
+      }, { passive: false });
+      this.colEl.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        onMove(e.touches[0].clientY);
+      }, { passive: false });
+      this.colEl.addEventListener('touchend',    onEnd, { passive: false });
+      this.colEl.addEventListener('touchcancel', onEnd, { passive: false });
+    }
+  }
+
+  // ── 두 컬럼 생성 ─────────────────────────────────────────
+  const hourCol = new DrumCol(hourColEl, hourListEl, HOUR_MAX);
+  const minCol  = new DrumCol(minColEl,  minListEl,  MIN_MAX);
+
+  // 오버레이 클릭 → 닫기
+  overlay.addEventListener('click', () => _close(false));
+  confirmBtn.addEventListener('click', () => _close(true));
+
+  function open(title, initMinutes, onConfirm) {
+    _onConfirm = onConfirm;
+    titleEl.textContent = title;
+
+    const h = Math.min(Math.floor((initMinutes || 0) / 60), HOUR_MAX);
+    const m = (initMinutes || 0) % 60;
+
+    overlay.classList.add('show');
+    sheet.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    // 렌더 완료 후 초기값 설정
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        hourCol.setVal(h, false);
+        minCol.setVal(m, false);
+      });
+    });
+  }
+
+  function _close(confirm) {
+    if (confirm && _onConfirm) {
+      const h = hourCol.getVal();
+      const m = minCol.getVal();
+      const total = h * 60 + m;
+      if (total > 0) _onConfirm(total);
+    }
+    overlay.classList.remove('show');
+    sheet.classList.remove('open');
+    document.body.style.overflow = '';
+    _onConfirm = null;
+  }
+
+  return { open };
+})();
+
+// ── 피커 오픈 헬퍼 ───────────────────────────────────────
+function openTimePicker(title, initMinutes, onConfirm) {
+  timePicker.open(title, initMinutes, onConfirm);
+}
+
 // ── 총 소요시간 계산 ──────────────────────────────────────
 function updateTotalTime() {
-  const total = places.reduce((sum, p) => sum + (p.stay_time || 0) + (p.travel_time || 0), 0);
+  const autoTotal = places.reduce((sum, p) => sum + (p.stay_time || 0) + (p.travel_time || 0), 0);
+  const toggleDetailBtn = document.getElementById('toggleDetailBtn');
+  const totalTimeRow = document.getElementById('totalTimeRow');
 
-  const wrap = document.getElementById('totalTimeDisplay');
-  const text = document.getElementById('totalTimeText');
-  if (!wrap || !text) return;
+  // 장소가 생기면 세부사항 버튼 노출
+  if (toggleDetailBtn) {
+    toggleDetailBtn.style.display = places.length > 0 ? '' : 'none';
+  }
 
-  if (total > 0) {
-    wrap.style.display = '';
-    text.textContent = formatMinutes(total);
-  } else {
-    wrap.style.display = 'none';
-    text.textContent = '';
+  // 총 소요시간 행: 세부사항 닫혔을 때만 노출, 열렸을 때는 자동 계산이므로 숨김
+  if (totalTimeRow) {
+    totalTimeRow.style.display = (places.length > 0 && !showDetail) ? '' : 'none';
+  }
+
+  // 세부사항 열린 상태에서 자동 계산값이 있으면 텍스트 input에 반영
+  if (showDetail && autoTotal > 0) {
+    const inp = document.getElementById('totalTimeTextInput');
+    if (inp && !inp.value.trim()) inp.value = formatMinutes(autoTotal);
   }
 }
 
@@ -1488,25 +1909,22 @@ saveBtnEl?.addEventListener('click', async () => {
     return;
   }
 
-  const noStay = places.findIndex((p) => !p.stay_time);
-  if (noStay >= 0) {
-    showToast(`${places[noStay].name}의 체류 시간을 설정해주세요`);
-    return;
-  }
-
-  const noTravel = places.slice(1).findIndex((p) => !p.travel_time);
-  if (noTravel >= 0) {
-    showToast(`${places[noTravel + 1].name}의 이동 시간을 설정해주세요`);
-    return;
-  }
-
   const noPhoto = getFirstPlaceWithoutPhotoIndex();
   if (noPhoto >= 0) {
     openPhotoRequiredModal(noPhoto);
     return;
   }
 
-  if (!saveBtnEl) return;
+  const totalTimeRaw = document.getElementById('totalTimeTextInput')?.value || '';
+  const autoCalculated = places.reduce((sum, p) => sum + (p.stay_time || 0) + (p.travel_time || 0), 0);
+  // 세부사항 열림: 자동 계산값 사용 / 닫힘: 텍스트 입력값 파싱
+  const totalTime = showDetail ? autoCalculated : (parseTimeInput(totalTimeRaw) || 0);
+
+  if (!totalTime) {
+    showToast('총 소요시간을 입력해주세요');
+    document.getElementById('totalTimeTextInput')?.focus();
+    return;
+  }
 
   saveBtnEl.disabled = true;
   saveBtnEl.textContent = '저장 중…';
@@ -1523,8 +1941,6 @@ saveBtnEl?.addEventListener('click', async () => {
         p._photoPreview = '';
       }
     }
-
-    const totalTime = places.reduce((sum, p) => sum + (p.stay_time || 0) + (p.travel_time || 0), 0);
 
     // 썸네일이 비어 있으면 첫 번째 코스 사진을 썸네일로 사용
     const finalThumbnailUrl = (await ensureThumbnailFromFirstPlace(tempId)) || '';
@@ -1550,8 +1966,10 @@ saveBtnEl?.addEventListener('click', async () => {
       place_url: p.place_url || null,
       comment: p.comment || null,
       photo_url: p.photo_url || null,
-      stay_time: p.stay_time || null,
-      travel_time: i === 0 ? null : (p.travel_time || null),
+      // 세부사항 닫힌 상태: 체류/이동시간 저장 안 함 (총 소요시간만 저장)
+      // 세부사항 열린 상태: 입력된 체류/이동시간 그대로 저장
+      stay_time:   showDetail ? (p.stay_time   || null) : null,
+      travel_time: showDetail ? (i === 0 ? null : (p.travel_time || null)) : null,
       order_index: i,
     }));
 

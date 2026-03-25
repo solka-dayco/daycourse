@@ -509,14 +509,15 @@ function renderTimeline() {
   container.innerHTML = '';
 
   places.forEach((p, i) => {
-    if (i > 0 && p.travel_time) {
+    if (i > 0) {
       const travelEl = document.createElement('div');
       travelEl.className = 'tl-travel';
-      const dist = i > 0 ? haversineDist(places[i - 1], p) : null;
+      const dist = haversineDist(places[i - 1], p);
       travelEl.innerHTML = `
-        <span>↓</span>
-        <span>이동 ${formatMinutes(p.travel_time)}</span>
-        ${dist !== null ? `<span>· ${dist} km</span>` : ''}
+        <div class="tl-travel-line-area">
+          <span class="tl-travel-dist">${formatDist(dist)}</span>
+        </div>
+        ${p.travel_time ? `<span class="tl-travel-time">이동 ${formatMinutes(p.travel_time)}</span>` : ''}
       `;
       container.appendChild(travelEl);
     }
@@ -544,7 +545,7 @@ function renderTimeline() {
             : `<div class="tl-photo-empty"></div>`
           }
         </div>
-        ${p.comment ? `<div class="tl-comment">${escHtml(p.comment)}</div>` : ''}
+        ${p.comment ? `<div class="tl-comment">${escHtml(p.comment).replace(/\n/g, '<hr class="tl-comment-rule"/>')}</div>` : ''}
       </div>
     `;
 
@@ -570,7 +571,7 @@ function renderTimeline() {
     'timelineSummary',
     `
       <span>총 <strong>${places.length}개</strong> 장소</span>
-      <span>총 소요 <strong>${formatMinutes(course.total_time)}</strong></span>
+      ${course.total_time ? `<span>총 소요 <strong>${formatMinutes(course.total_time)}</strong></span>` : ''}
     `
   );
 }
@@ -1250,7 +1251,7 @@ document.addEventListener('keydown', e => {
 
 // ── 유틸 ─────────────────────────────────────────────────
 function haversineDist(a, b) {
-  const R = 6371;
+  const R = 6371000; // 반환값: 미터 단위
   const dLat = (b.lat - a.lat) * Math.PI / 180;
   const dLng = (b.lng - a.lng) * Math.PI / 180;
   const x =
@@ -1258,7 +1259,13 @@ function haversineDist(a, b) {
     Math.cos(a.lat * Math.PI / 180) *
     Math.cos(b.lat * Math.PI / 180) *
     Math.sin(dLng / 2) ** 2;
-  return (R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x))).toFixed(1);
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+function formatDist(meters) {
+  if (meters == null || !Number.isFinite(meters)) return '';
+  if (meters < 1000) return `${Math.round(meters)}m`;
+  return `${(meters / 1000).toFixed(1)}km`;
 }
 
 function escHtml(str) {

@@ -102,55 +102,46 @@
     <div class="create-card">
       <div class="create-list-header">
         <div class="create-card-label"> 코스 목록 <span class="create-place-count" id="placeCount">0곳</span></div>
-        <button class="create-save-btn" id="saveBtn">저장하기</button>
+        <div class="create-list-header-right">
+          <button type="button" class="create-detail-link" id="toggleDetailBtn" style="display:none;font-size:11px;color:#bbb;background:none;border:none;cursor:pointer;padding:0 4px;">세부사항 입력</button>
+          <button class="create-save-btn" id="saveBtn">저장하기</button>
+        </div>
       </div>
       <ul class="create-place-list" id="placeList"></ul>
       <div class="create-places-empty" id="placesEmpty">
         장소를 검색하거나 지도를 클릭해 추가하세요
       </div>
-      <div class="create-total-time" id="totalTimeDisplay" style="display:none">
-        ⏱ 총 소요시간 <strong id="totalTimeText"></strong>
+
+      <!-- 총 소요시간 (세부사항 닫혔을 때 노출: 직접 입력) -->
+      <div class="create-total-time-row" id="totalTimeRow" style="display:none">
+        <label class="create-card-label" for="totalTimeTextInput">총 소요시간 <span class="required">*</span></label>
+        <div class="time-inline-row">
+          <input type="text" id="totalTimeTextInput" class="time-inline-input" placeholder="직접 입력" autocomplete="off"/>
+          <button type="button" class="time-inline-pick-btn" id="totalTimePickBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 선택
+          </button>
+        </div>
       </div>
     </div>
 
   </main>
 
-  <!-- 체류 시간 모달 -->
-  <div class="modal-overlay" id="stayTimeModal">
-    <div class="modal-box">
-      <div class="modal-title" id="stayTimeModalTitle">체류 시간</div>
-      <div class="time-chips" id="stayTimeChips">
-        <button class="time-chip" data-min="10">10분</button>
-        <button class="time-chip" data-min="20">20분</button>
-        <button class="time-chip" data-min="30">30분</button>
-        <button class="time-chip" data-min="60">1시간</button>
-        <button class="time-chip" data-min="90">1시간 30분</button>
-        <button class="time-chip" data-min="120">2시간</button>
-        <button class="time-chip" data-min="150">2시간 30분</button>
-        <button class="time-chip" data-min="180">3시간</button>
-        <button class="time-chip" data-min="240">4시간</button>
-        <button class="time-chip" data-min="300">5시간 이상</button>
+  <!-- 드럼롤 시간 피커 바텀시트 -->
+  <div class="bottom-sheet-overlay" id="timePickerOverlay"></div>
+  <div class="bottom-sheet time-picker-sheet" id="timePickerSheet" role="dialog" aria-modal="true">
+    <div class="time-picker-handle"></div>
+    <div class="time-picker-title" id="timePickerTitle">시간 선택</div>
+    <div class="time-picker-body">
+      <div class="time-picker-col" id="timePickerHourCol">
+        <div class="time-picker-list" id="timePickerHourList"></div>
       </div>
-    </div>
-  </div>
-
-  <!-- 이동 시간 모달 -->
-  <div class="modal-overlay" id="travelTimeModal">
-    <div class="modal-box">
-      <div class="modal-title">이동 시간</div>
-      <div class="time-chips" id="travelTimeChips">
-        <button class="time-chip" data-min="5">5분</button>
-        <button class="time-chip" data-min="10">10분</button>
-        <button class="time-chip" data-min="15">15분</button>
-        <button class="time-chip" data-min="20">20분</button>
-        <button class="time-chip" data-min="30">30분</button>
-        <button class="time-chip" data-min="45">45분</button>
-        <button class="time-chip" data-min="60">1시간</button>
-        <button class="time-chip" data-min="90">1시간 30분</button>
-        <button class="time-chip" data-min="120">2시간</button>
-        <button class="time-chip" data-min="180">3시간 이상</button>
+      <div class="time-picker-sep">:</div>
+      <div class="time-picker-col" id="timePickerMinCol">
+        <div class="time-picker-list" id="timePickerMinList"></div>
       </div>
+      <div class="time-picker-selector" id="timePickerSelector"></div>
     </div>
+    <button class="time-picker-confirm-btn" id="timePickerConfirmBtn">확인</button>
   </div>
 
   <!-- 사진 업로드 안내 모달 -->

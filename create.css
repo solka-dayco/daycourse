@@ -237,16 +237,16 @@
   flex-direction: column;
   background: var(--bg);
   border-radius: 12px;
-  margin-bottom: 6px;
   border: 1.5px solid var(--border);
   overflow: hidden;
+  /* margin 제거 — connector가 gap 없이 붙도록 */
 }
 
 .place-main-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 10px 12px 18px;
 }
 
 .place-travel-row {
@@ -256,6 +256,71 @@
   padding: 6px 12px 0 48px;
   font-size: 11px;
   color: var(--sub);
+}
+
+/* ── 코스 아이템 사이 connector ─────────────────────────── */
+.place-connector {
+  position: relative;
+}
+
+.place-connector-content {
+  display: flex;
+  align-items: stretch;
+  min-height: 80px; /* 기존 대비 2배 */
+}
+
+/* 좌측 영역 (flex 1) — 이동시간 입력이 없을 때도 공간 확보 */
+.place-connector-left {
+  flex: 1;
+}
+
+/* 우측 세로선 — 항상 표시, 고정 너비 */
+.place-connector-line {
+  width: 48px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+/* 세로선 자체 */
+.place-connector-line::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1.5px;
+  background: var(--border-dark);
+}
+
+/* 거리 텍스트 — 세로선 위에 겹치는 뱃지 */
+.place-connector-dist {
+  position: relative;
+  z-index: 1;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-light);
+  background: #fff;
+  padding: 3px 5px;
+  white-space: nowrap;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* 이동시간 입력 영역 — 세로선 우측 */
+.place-connector-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 10px 12px 10px 8px;
+  gap: 4px;
 }
 
 .place-drag-handle {
@@ -288,11 +353,21 @@
   font-size: 12px; color: var(--sub); background: transparent;
   padding: 4px 0; margin-top: 4px;
   border-bottom: 1px dashed var(--border);
+  resize: none;
+  line-height: 1.5;
+  overflow: hidden;
 }
 .place-comment-input::placeholder { color: #ccc; }
 .place-comment-input:focus { border-bottom-color: var(--primary); }
 
-.place-times { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.place-times {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px 12px 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 14px; /* 0/100 카운터와 구분선 사이 여백 */
+}
 
 .place-time-btn {
   display: flex; align-items: center; gap: 4px;
@@ -498,4 +573,234 @@
 .draft-btn-danger {
   background: #e53935;
   color: #fff;
+}
+/* ── 코스 목록 헤더 우측 ────────────────────────────────── */
+.create-list-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 세부사항 입력 텍스트 버튼 */
+.create-detail-link {
+  font-size: 11px;
+  color: var(--text-light);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  transition: color var(--transition);
+  white-space: nowrap;
+}
+.create-detail-link:hover { color: var(--sub); }
+
+/* ── 총 소요시간 행 ─────────────────────────────────────── */
+.create-total-time-row {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.create-total-time-row .create-card-label { margin-bottom: 8px; }
+
+/* ── 인라인 시간 입력 ────────────────────────────────────── */
+.time-inline-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.time-inline-input {
+  width: 90px;
+  flex: none;
+  padding: 6px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--dark);
+  background: #fff;
+  outline: none;
+  transition: border-color .15s;
+  min-width: 0;
+}
+.time-inline-input:focus { border-color: var(--primary); }
+.time-inline-input::placeholder { color: var(--text-light); }
+
+/* 이동시간은 동일 너비 */
+.place-travel-input { width: 90px; }
+
+/* 선택 버튼 — 시계 아이콘 + 선택 텍스트, 테두리형 */
+.time-inline-pick-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sub);
+  background: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: border-color .15s, color .15s;
+}
+.time-inline-pick-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.time-inline-pick-btn svg { display: block; }
+
+/* ── 장소 이동 거리 ─────────────────────────────────────── */
+.place-travel-dist {
+  font-size: 11px;
+  color: var(--text-light);
+  font-weight: 500;
+  white-space: nowrap;
+  margin-left: 2px;
+}
+
+/* ── 시간 입력 라벨 (인라인 위 좌측) ──────────────────────── */
+.time-inline-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+
+/* ── 드럼롤 시간 피커 바텀시트 ─────────────────────────── */
+.time-picker-sheet {
+  border-radius: 20px 20px 0 0;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  user-select: none;
+}
+
+.time-picker-handle {
+  width: 36px; height: 4px;
+  background: var(--border-dark);
+  border-radius: 2px;
+  margin: 12px auto 0;
+}
+
+.time-picker-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  padding: 14px 20px 8px;
+}
+
+.time-picker-body {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  position: relative;
+  height: 220px;
+  padding: 0 20px;
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* 선택 영역 하이라이트 */
+.time-picker-selector {
+  position: absolute;
+  left: 20px; right: 20px;
+  top: 50%; transform: translateY(-50%);
+  height: 44px;
+  border-top: 1.5px solid var(--primary);
+  border-bottom: 1.5px solid var(--primary);
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 4px;
+}
+
+/* 위아래 그라디언트 페이드 */
+.time-picker-body::before,
+.time-picker-body::after {
+  content: '';
+  position: absolute;
+  left: 20px; right: 20px;
+  height: 88px;
+  z-index: 3;
+  pointer-events: none;
+}
+.time-picker-body::before {
+  top: 0;
+  background: linear-gradient(to bottom, rgba(255,255,255,.97) 0%, rgba(255,255,255,0) 100%);
+}
+.time-picker-body::after {
+  bottom: 0;
+  background: linear-gradient(to top, rgba(255,255,255,.97) 0%, rgba(255,255,255,0) 100%);
+}
+
+.time-picker-col {
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  cursor: grab;
+  user-select: none;
+}
+.time-picker-col:active { cursor: grabbing; }
+
+/* transform으로 이동하는 리스트 래퍼 */
+.time-picker-list {
+  position: absolute;
+  top: 0;
+  left: 0; right: 0;
+  will-change: transform;
+}
+
+.time-picker-item {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-light);
+  transition: color .12s, font-size .12s;
+  pointer-events: none;
+}
+.time-picker-item.selected {
+  color: var(--dark);
+  font-size: 25px;
+}
+
+.time-picker-sep {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--dark);
+  padding: 0 10px;
+  flex-shrink: 0;
+  align-self: center;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.time-picker-confirm-btn {
+  display: block;
+  width: calc(100% - 40px);
+  margin: 12px 20px 0;
+  padding: 14px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.time-picker-confirm-btn:hover { opacity: .88; }
+
+/* readonly 시간 input — 클릭 커서 표시 */
+.time-inline-input[readonly] {
+  cursor: pointer;
+  caret-color: transparent;
+}
+.time-inline-input[readonly]:focus {
+  border-color: var(--primary);
+  outline: none;
 }
