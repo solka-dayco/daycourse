@@ -62,6 +62,8 @@ let places = [];
 let myLat = null;
 let myLng = null;
 let mapInstance = null;
+let pendingStayIdx = null;
+let pendingTravelIdx = null;
 let sourceCourse = null;
 let thumbnailBlob = null;
 let thumbnailExistingUrl = '';
@@ -860,7 +862,7 @@ regionMainEl?.addEventListener('change', function () {
 
 regionSubEl?.addEventListener('change', scheduleDraft);
 
-// ── 총 소요시간 피커 연결 ─────────────────────────────────
+// ── 총 소요시간 피커/모달 연결 ───────────────────────────
 (function initTotalTimePicker() {
   const inp = document.getElementById('totalTimeTextInput');
   const btn = document.getElementById('totalTimePickBtn');
@@ -868,7 +870,8 @@ regionSubEl?.addEventListener('change', scheduleDraft);
 
   inp.setAttribute('readonly', true);
 
-  function openPicker(e) {
+  // input 클릭 → 드럼롤 피커
+  function openDrum(e) {
     e?.preventDefault();
     const cur = parseTimeInput(inp.value) || 0;
     openTimePicker('총 소요시간', cur, (val) => {
@@ -876,11 +879,16 @@ regionSubEl?.addEventListener('change', scheduleDraft);
       scheduleDraft();
     });
   }
+  inp.addEventListener('click', openDrum);
+  inp.addEventListener('touchend', openDrum, { passive: false });
 
-  inp.addEventListener('click', openPicker);
-  inp.addEventListener('touchend', openPicker, { passive: false });
-  btn?.addEventListener('click', openPicker);
-  btn?.addEventListener('touchend', openPicker, { passive: false });
+  // 선택 버튼 → 칩 모달
+  function openChip(e) {
+    e?.preventDefault();
+    openModal('totalTimeModal');
+  }
+  btn?.addEventListener('click', openChip);
+  btn?.addEventListener('touchend', openChip, { passive: false });
 })();
 
 // ── 세부사항 입력 토글 ────────────────────────────────────
@@ -1474,11 +1482,11 @@ function bindPlaceListEvents(ul) {
     });
   });
 
-  // 체류 시간 — input 클릭/터치 → 피커 오픈 (readonly, 타이핑 불가)
+  // 체류 시간 — input 클릭/터치 → 드럼롤 피커
   ul.querySelectorAll('.place-stay-input').forEach((input) => {
     const idx = parseInt(input.dataset.idx, 10);
     input.setAttribute('readonly', true);
-    const openStay = (e) => {
+    const openDrum = (e) => {
       e.preventDefault();
       if (!places[idx]) return;
       openTimePicker('체류 시간', places[idx].stay_time || 0, (val) => {
@@ -1488,33 +1496,27 @@ function bindPlaceListEvents(ul) {
         scheduleDraft();
       });
     };
-    input.addEventListener('click', openStay);
-    input.addEventListener('touchend', openStay, { passive: false });
+    input.addEventListener('click', openDrum);
+    input.addEventListener('touchend', openDrum, { passive: false });
   });
 
-  // 체류 시간 선택 버튼
+  // 체류 시간 선택 버튼 → 칩 모달
   ul.querySelectorAll('.place-stay-pick').forEach((btn) => {
-    const openStay = (e) => {
+    const idx = parseInt(btn.dataset.idx, 10);
+    const openChip = (e) => {
       e.preventDefault();
-      const idx = parseInt(btn.dataset.idx, 10);
-      if (!places[idx]) return;
-      openTimePicker('체류 시간', places[idx].stay_time || 0, (val) => {
-        places[idx].stay_time = val;
-        const inp = document.querySelector(`.place-stay-input[data-idx="${idx}"]`);
-        if (inp) inp.value = formatMinutes(val);
-        updateTotalTime();
-        scheduleDraft();
-      });
+      pendingStayIdx = idx;
+      openModal('stayTimeModal');
     };
-    btn.addEventListener('click', openStay);
-    btn.addEventListener('touchend', openStay, { passive: false });
+    btn.addEventListener('click', openChip);
+    btn.addEventListener('touchend', openChip, { passive: false });
   });
 
-  // 이동 시간 — input 클릭/터치 → 피커 오픈
+  // 이동 시간 — input 클릭/터치 → 드럼롤 피커
   ul.querySelectorAll('.place-travel-input').forEach((input) => {
     const idx = parseInt(input.dataset.idx, 10);
     input.setAttribute('readonly', true);
-    const openTravel = (e) => {
+    const openDrum = (e) => {
       e.preventDefault();
       if (!places[idx]) return;
       openTimePicker('이동 시간', places[idx].travel_time || 0, (val) => {
@@ -1524,26 +1526,20 @@ function bindPlaceListEvents(ul) {
         scheduleDraft();
       });
     };
-    input.addEventListener('click', openTravel);
-    input.addEventListener('touchend', openTravel, { passive: false });
+    input.addEventListener('click', openDrum);
+    input.addEventListener('touchend', openDrum, { passive: false });
   });
 
-  // 이동 시간 선택 버튼
+  // 이동 시간 선택 버튼 → 칩 모달
   ul.querySelectorAll('.place-travel-pick').forEach((btn) => {
-    const openTravel = (e) => {
+    const idx = parseInt(btn.dataset.idx, 10);
+    const openChip = (e) => {
       e.preventDefault();
-      const idx = parseInt(btn.dataset.idx, 10);
-      if (!places[idx]) return;
-      openTimePicker('이동 시간', places[idx].travel_time || 0, (val) => {
-        places[idx].travel_time = val;
-        const inp = document.querySelector(`.place-travel-input[data-idx="${idx}"]`);
-        if (inp) inp.value = formatMinutes(val);
-        updateTotalTime();
-        scheduleDraft();
-      });
+      pendingTravelIdx = idx;
+      openModal('travelTimeModal');
     };
-    btn.addEventListener('click', openTravel);
-    btn.addEventListener('touchend', openTravel, { passive: false });
+    btn.addEventListener('click', openChip);
+    btn.addEventListener('touchend', openChip, { passive: false });
   });
 
   ul.querySelectorAll('.place-photo-input').forEach((input) => {
@@ -1597,6 +1593,58 @@ function openModal(id) {
 function closeModal(id) {
   document.getElementById(id)?.classList.remove('show');
 }
+
+// 칩 선택 → 체류시간 저장 후 인라인 input 값 동기화
+document.querySelectorAll('#stayTimeChips .time-chip').forEach((chip) => {
+  chip.addEventListener('click', () => {
+    if (pendingStayIdx === null || !places[pendingStayIdx]) return;
+    const val = parseInt(chip.dataset.min, 10);
+    places[pendingStayIdx].stay_time = val;
+    const inp = document.querySelector(`.place-stay-input[data-idx="${pendingStayIdx}"]`);
+    if (inp) inp.value = formatMinutes(val);
+    pendingStayIdx = null;
+    closeModal('stayTimeModal');
+    updateTotalTime();
+    scheduleDraft();
+  });
+});
+
+// 칩 선택 → 이동시간 저장 후 인라인 input 값 동기화
+document.querySelectorAll('#travelTimeChips .time-chip').forEach((chip) => {
+  chip.addEventListener('click', () => {
+    if (pendingTravelIdx === null || !places[pendingTravelIdx]) return;
+    const val = parseInt(chip.dataset.min, 10);
+    places[pendingTravelIdx].travel_time = val;
+    const inp = document.querySelector(`.place-travel-input[data-idx="${pendingTravelIdx}"]`);
+    if (inp) inp.value = formatMinutes(val);
+    pendingTravelIdx = null;
+    closeModal('travelTimeModal');
+    updateTotalTime();
+    scheduleDraft();
+  });
+});
+
+// 칩 선택 → 총 소요시간 저장
+document.querySelectorAll('#totalTimeChips .time-chip').forEach((chip) => {
+  chip.addEventListener('click', () => {
+    const val = parseInt(chip.dataset.min, 10);
+    const inp = document.getElementById('totalTimeTextInput');
+    if (inp) inp.value = formatMinutes(val);
+    closeModal('totalTimeModal');
+    scheduleDraft();
+  });
+});
+
+// 오버레이 클릭 → 모달 닫기
+['stayTimeModal', 'travelTimeModal', 'totalTimeModal', 'photoRequiredModal'].forEach((id) => {
+  document.getElementById(id)?.addEventListener('click', (e) => {
+    if (e.target.id === id) {
+      if (id === 'stayTimeModal')   pendingStayIdx   = null;
+      if (id === 'travelTimeModal') pendingTravelIdx = null;
+      closeModal(id);
+    }
+  });
+});
 
 document.getElementById('photoRequiredModal')?.addEventListener('click', (e) => {
   if (e.target.id === 'photoRequiredModal') closeModal('photoRequiredModal');
