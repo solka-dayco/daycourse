@@ -1,5 +1,5 @@
 // user.js — 유저 페이지 (v3)
-import { fetchUserById, fetchUserStats, fetchCoursesByUser, logEvent, getCurrentUser } from './db.js';
+import { fetchUserById, fetchUserStats, fetchCoursesByUser, logEvent, getCurrentUser, isFollowing, followUser, unfollowUser } from './db.js';
 import { initSidebar } from './sidebar.js';
 import { initIcons, initSidebarIcons } from './icons.js';
 
@@ -14,7 +14,25 @@ const spinner    = document.getElementById('spinner');
 const userContent = document.getElementById('userContent');
 const userError  = document.getElementById('userError');
 
-const LEVEL_NAMES = ['탐험가', '코스 메이커', '로컬 가이드', '트렌드 세터', '마스터 플래너'];
+const LEVEL_THRESHOLDS = [0,1000,2000,3000,4000,5000,6250,7500,8750,10000,
+  13500,17000,20500,24000,27500,31250,35000,38750,42500,46250,
+  51250,56250,61250,66250,71250,77500,83750,90000,96250,102500,
+  113000,123500,134000,144500,155000,167000,179000,191000,203000,215000,
+  239000,263000,287000,311000,335000,361000,387000,413000,439000,465000,
+  999999999];
+const LEVEL_TITLES = ['Walker', 'Runner', 'Rider', 'Traveler', 'Driver', 'Cruiser'];
+
+function getLevelTitle(lv) {
+  if (lv === 50) return 'Cruiser';
+  return LEVEL_TITLES[Math.floor((lv - 1) / 10)];
+}
+
+function calcLevel(xp) {
+  for (let i = 0; i < 50; i++) {
+    if (xp < LEVEL_THRESHOLDS[i + 1]) return i + 1;
+  }
+  return 50;
+}
 
 const PAGE_SIZE = 20;
 let courseState = { page: 0, loading: false, allLoaded: false };
@@ -39,13 +57,42 @@ let userId_ = null;
     document.getElementById('userAvatar').textContent = user.nickname[0]?.toUpperCase() ?? '?';
     document.getElementById('userNickname').textContent = user.nickname;
 
-    // const levelIdx = Math.min((user.level || 1) - 1, LEVEL_NAMES.length - 1);
-    // document.getElementById('userLevel').textContent = `Lv${user.level || 1} ${LEVEL_NAMES[levelIdx]}`;
-    document.getElementById('userLevel').style.display = 'none';
+    const lv = user.level || calcLevel(user.user_xp || 0);
+    document.getElementById('userLevel').textContent = `Lv${lv} ${getLevelTitle(lv)}`;
+    document.getElementById('userLevel').style.display = '';
 
     document.getElementById('statCourses').textContent = stats.course_count;
     document.getElementById('statLikes').textContent   = stats.total_likes;
     document.getElementById('statRefs').textContent    = stats.total_references;
+
+    // 팔로우 버튼
+    const me = await getCurrentUser();
+    if (me && me.id !== userId) {
+      const followBtn = document.getElementById('followBtn');
+      let following = await isFollowing(me.id, userId);
+
+      function renderFollowBtn() {
+        followBtn.textContent = following ? '팔로잉' : '팔로우';
+        followBtn.className = following ? 'follow-btn follow-btn-active' : 'follow-btn';
+        followBtn.style.display = '';
+      }
+      renderFollowBtn();
+
+      followBtn.addEventListener('click', async () => {
+        followBtn.disabled = true;
+        try {
+          if (following) {
+            await unfollowUser(me.id, userId);
+            following = false;
+          } else {
+            await followUser(me.id, userId);
+            following = true;
+          }
+          renderFollowBtn();
+        } catch (_) {}
+        followBtn.disabled = false;
+      });
+    }
 
     spinner.style.display = 'none';
     userContent.style.display = '';

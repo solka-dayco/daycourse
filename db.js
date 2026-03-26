@@ -66,7 +66,7 @@ export async function upsertUserProfile({
 export async function fetchUserById(userId) {
   const { data, error } = await supabase
     .from('users')
-    .select('id, nickname, user_score, level, created_at')
+    .select('id, nickname, user_xp, level, bio, profile_image_url, created_at')
     .eq('id', userId)
     .single();
 
@@ -81,7 +81,7 @@ export async function fetchUserStats(userId) {
   });
 
   if (error) throw error;
-  return data?.[0] ?? { course_count: 0, total_likes: 0, total_references: 0 };
+  return data?.[0] ?? { course_count: 0, total_likes: 0, total_references: 0, follower_count: 0, following_count: 0 };
 }
 
 // ─── 피드 / 코스 목록 ─────────────────────────────────────
@@ -318,9 +318,9 @@ export async function createCourse(courseData, places) {
   try {
     const session = await getSession();
     if (session) {
-      await supabase.rpc('add_user_score', {
+      await supabase.rpc('add_user_xp', {
         p_user_id: session.user.id,
-        p_delta: 10,
+        p_delta: 750,
       });
     }
   } catch (_) {}
@@ -397,9 +397,9 @@ export async function toggleCourseLike(courseId, userId) {
         .single();
 
       if (course) {
-        await supabase.rpc('add_user_score', {
+        await supabase.rpc('add_user_xp', {
           p_user_id: course.author_id,
-          p_delta: -1,
+          p_delta: -5,
         });
       }
     } catch (_) {}
@@ -423,9 +423,9 @@ export async function toggleCourseLike(courseId, userId) {
       .single();
 
     if (course) {
-      await supabase.rpc('add_user_score', {
+      await supabase.rpc('add_user_xp', {
         p_user_id: course.author_id,
-        p_delta: 1,
+        p_delta: 5,
       });
 
       const { data: actor } = await supabase
@@ -608,9 +608,9 @@ export async function addComment({ courseId, authorId, nickname, content }) {
   await supabase.rpc('increment_comment_count', { p_course_id: courseId });
 
   try {
-    await supabase.rpc('add_user_score', {
+    await supabase.rpc('add_user_xp', {
       p_user_id: authorId,
-      p_delta: 2,
+      p_delta: 50,
     });
 
     const { data: course } = await supabase
@@ -688,9 +688,9 @@ export async function addReply({ commentId, authorId, nickname, content }) {
 
   // comment_count +1 (답글도 카운트) + 알림
   try {
-    await supabase.rpc('add_user_score', {
+    await supabase.rpc('add_user_xp', {
       p_user_id: authorId,
-      p_delta: 2,
+      p_delta: 50,
     });
 
     const { data: comment } = await supabase
@@ -767,6 +767,15 @@ export async function toggleReplyLike(replyId, userId) {
     reply_id: replyId,
     user_id: userId,
   });
+
+  try {
+    await supabase.rpc('add_user_xp_capped', {
+      p_user_id: userId,
+      p_delta: 1,
+      p_action: 'bookmark_add',
+      p_daily_cap: 20,
+    });
+  } catch (_) {}
 
   return true;
 }
@@ -1071,4 +1080,78 @@ export async function publishPlanCourse(courseId, courseData, places) {
 /** 계획 코스 삭제 */
 export async function deletePlanCourse(courseId) {
   return deleteCourse(courseId);
+}
+
+// ─── 팔로우 (R5) ──────────────────────────────────────────
+
+export async function isFollowing(followerId, followingId) {
+  const { data } = await supabase
+    .from('follows')
+    .select('follower_id')
+    .eq('follower_id', followerId)
+    .eq('following_id', followingId)
+    .maybeSingle();
+  return !!data;
+}
+
+export async function followUser(followerId, followingId) {
+  const { error } = await supabase
+    .from('follows')
+    .insert({ follower_id: followerId, following_id: followingId });
+  if (error) throw error;
+}
+
+export async function unfollowUser(followerId, followingId) {
+  const { error } = await supabase
+    .from('follows')
+    .delete()
+    .eq('follower_id', followerId)
+    .eq('following_id', followingId);
+  if (error) throw error;
+}
+
+export async function fetchFollowStats(userId) {
+  const { data, error } = await supabase.rpc('get_follow_stats', {
+    p_user_id: userId,
+  });
+  if (error) throw error;
+  return data?.[0] ?? { follower_count: 0, following_count: 0 };
+}
+
+// ─── @mention 자동완성 (R5) ───────────────────────────────
+
+export async function searchUsersForMention(actorId, keyword) {
+  if (!keyword || keyword.length < 1) return [];
+  const { data, error } = await supabase.rpc('search_users_for_mention', {
+    p_actor_id: actorId,
+    p_keyword: keyword,
+    p_limit: 5,
+  });
+  if (error) return [];
+  return data || [];
+}
+
+// ─── 유저 프로필 수정 (R5) ────────────────────────────────
+
+export async function updateUserProfile(userId, { nickname, bio, profile_image_url } = {}) {
+  const payload = {};
+  if (nickname !== undefined) payload.nickname = nickname;
+  if (bio !== undefined) payload.bio = bio;
+  if (profile_image_url !== undefined) payload.profile_image_url = profile_image_url;
+
+  const { error } = await supabase
+    .from('users')
+    .update(payload)
+    .eq('id', userId);
+  if (error) throw error;
+}
+
+export async function uploadProfileImage(blob, userId) {
+  const path = `profiles/${userId}/avatar.webp`;
+  const { error } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .upload(path, blob, { contentType: 'image/webp', upsert: true });
+  if (error) throw error;
+  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
 }

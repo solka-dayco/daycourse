@@ -17,6 +17,7 @@ import {
   onCourseDeleted,
   logEvent,
   submitReport,
+  searchUsersForMention,
 } from './db.js';
 import { initSidebar } from './sidebar.js';
 import { initIcons, initSidebarIcons } from './icons.js';
@@ -861,7 +862,14 @@ function buildCommentEl(c) {
     }
   });
 
+  const replyMentionBox = createMentionDropdown(replyInput);
+
   replyInput?.addEventListener('keydown', e => {
+    if (replyMentionBox.isOpen() && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter')) {
+      e.preventDefault();
+      replyMentionBox.handleKey(e.key);
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       replySubmit.click();
@@ -908,7 +916,104 @@ function buildReplyHtml(r) {
     </div>
   `;
 }
+// ── @mention 자동완성 ─────────────────────────────────────
+function createMentionDropdown(inputEl) {
+  let dropdown = null;
+  let items = [];
+  let selectedIdx = -1;
+  let mentionStart = -1;
+  let debounceTimer = null;
 
+  function open(list) {
+    close();
+    if (!list.length) return;
+    items = list;
+    selectedIdx = -1;
+
+    dropdown = document.createElement('ul');
+    dropdown.className = 'mention-dropdown';
+    list.forEach((u, i) => {
+      const li = document.createElement('li');
+      li.className = 'mention-item';
+      li.textContent = u.nickname;
+      li.addEventListener('mousedown', e => {
+        e.preventDefault();
+        select(i);
+      });
+      dropdown.appendChild(li);
+    });
+
+    inputEl.parentElement.style.position = 'relative';
+    inputEl.parentElement.appendChild(dropdown);
+  }
+
+  function close() {
+    dropdown?.remove();
+    dropdown = null;
+    items = [];
+    selectedIdx = -1;
+    mentionStart = -1;
+  }
+
+  function highlight(idx) {
+    dropdown?.querySelectorAll('.mention-item').forEach((el, i) => {
+      el.classList.toggle('mention-item-active', i === idx);
+    });
+  }
+
+  function select(idx) {
+    if (!items[idx]) return;
+    const before = inputEl.value.slice(0, mentionStart);
+    const after  = inputEl.value.slice(inputEl.selectionStart);
+    inputEl.value = `${before}@${items[idx].nickname} ${after}`;
+    close();
+    inputEl.focus();
+  }
+
+  inputEl.addEventListener('input', () => {
+    const val = inputEl.value;
+    const cursor = inputEl.selectionStart;
+    const atIdx = val.lastIndexOf('@', cursor - 1);
+
+    if (atIdx === -1 || (atIdx > 0 && !/\s/.test(val[atIdx - 1]))) {
+      close();
+      return;
+    }
+
+    const keyword = val.slice(atIdx + 1, cursor);
+    if (/\s/.test(keyword)) { close(); return; }
+
+    mentionStart = atIdx;
+
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(async () => {
+      if (!currentUser) return;
+      const results = await searchUsersForMention(currentUser.id, keyword);
+      open(results);
+    }, 200);
+  });
+
+  document.addEventListener('click', e => {
+    if (!dropdown?.contains(e.target) && e.target !== inputEl) close();
+  });
+
+  return {
+    isOpen: () => !!dropdown,
+    handleKey(key) {
+      if (!dropdown) return;
+      if (key === 'ArrowDown') {
+        selectedIdx = Math.min(selectedIdx + 1, items.length - 1);
+        highlight(selectedIdx);
+      } else if (key === 'ArrowUp') {
+        selectedIdx = Math.max(selectedIdx - 1, 0);
+        highlight(selectedIdx);
+      } else if (key === 'Enter') {
+        if (selectedIdx >= 0) select(selectedIdx);
+        else close();
+      }
+    },
+  };
+}
 function bindReplyEvents(el) {
   const rId = el.dataset.id;
   const cId = el.dataset.commentId;
@@ -970,8 +1075,15 @@ function setupCommentInput() {
   if (commentInputBound) return;
   commentInputBound = true;
 
+  const mentionBox = createMentionDropdown(commentInput);
+
   commentSubmitBtn.addEventListener('click', submitComment);
   commentInput.addEventListener('keydown', e => {
+    if (mentionBox.isOpen() && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter')) {
+      e.preventDefault();
+      mentionBox.handleKey(e.key);
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       submitComment();

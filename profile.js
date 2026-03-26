@@ -4,6 +4,7 @@ import {
   fetchLikedCourses, fetchBookmarkedCourses, fetchCoursesByUser,
   fetchPlanCourses,
   logEvent,
+  updateUserProfile, uploadProfileImage,
 } from './db.js';
 import { initSidebar } from './sidebar.js';
 import { initIcons, initSidebarIcons } from './icons.js';
@@ -17,7 +18,25 @@ const PAGE_SIZE = 18;
 let myUserId = null;
 let activeTab = 'myCourse';
 
-const LEVEL_NAMES = ['탐험가', '코스 메이커', '로컬 가이드', '트렌드 세터', '마스터 플래너'];
+const LEVEL_THRESHOLDS = [0,1000,2000,3000,4000,5000,6250,7500,8750,10000,
+  13500,17000,20500,24000,27500,31250,35000,38750,42500,46250,
+  51250,56250,61250,66250,71250,77500,83750,90000,96250,102500,
+  113000,123500,134000,144500,155000,167000,179000,191000,203000,215000,
+  239000,263000,287000,311000,335000,361000,387000,413000,439000,465000,
+  999999999];
+const LEVEL_TITLES = ['Walker', 'Runner', 'Rider', 'Traveler', 'Driver', 'Cruiser'];
+
+function getLevelTitle(lv) {
+  if (lv === 50) return 'Cruiser';
+  return LEVEL_TITLES[Math.floor((lv - 1) / 10)];
+}
+
+function calcLevel(xp) {
+  for (let i = 0; i < 50; i++) {
+    if (xp < LEVEL_THRESHOLDS[i + 1]) return i + 1;
+  }
+  return 50;
+}
 
 const sectionState = {
   liked:    { page: 0, loading: false, allLoaded: false, loaded: false },
@@ -38,13 +57,101 @@ const sectionState = {
   // 내 정보 렌더
   document.getElementById('profileAvatar').textContent   = user.nickname?.[0]?.toUpperCase() ?? '?';
   document.getElementById('profileNickname').textContent = user.nickname;
-  // const lvIdx = Math.min((user.level || 1) - 1, LEVEL_NAMES.length - 1);
-  // document.getElementById('profileLevel').textContent = `Lv${user.level || 1} ${LEVEL_NAMES[lvIdx]}`;
-  document.getElementById('profileLevel').style.display = 'none';
+  const xp  = user.user_xp || 0;
+  const lv  = user.level || calcLevel(xp);
+  const title = getLevelTitle(lv);
+  const curFloor = LEVEL_THRESHOLDS[lv - 1];
+  const nextFloor = LEVEL_THRESHOLDS[lv];
+  const pct = nextFloor === 999999999 ? 100
+    : Math.round((xp - curFloor) / (nextFloor - curFloor) * 100);
+
+  document.getElementById('profileLevel').textContent = `Lv${lv} ${title}`;
+  document.getElementById('profileLevel').style.display = '';
+  document.getElementById('profileXpWrap').style.display = '';
+  document.getElementById('profileXpFill').style.width = `${pct}%`;
+
+  /* 필요경험치 차감 방식 : 밑에 2줄 대신에 주석 코드로 교체
+  const xpInLevel = xp - curFloor;
+  const xpNeeded = nextFloor - curFloor;
+  document.getElementById('profileXpLabel').textContent =
+    lv === 50 ? `MAX` : `${xpInLevel.toLocaleString()} / ${xpNeeded.toLocaleString()} XP`; 
+  */
+  document.getElementById('profileXpLabel').textContent =
+    lv === 50 ? `${xp.toLocaleString()} XP` : `${xp.toLocaleString()} / ${nextFloor.toLocaleString()} XP`;
+
+
   document.getElementById('statCourses').textContent     = stats.course_count ?? 0;
-  document.getElementById('statLikes').textContent       = stats.total_likes ?? 0;
-  document.getElementById('statRefs').textContent        = stats.total_references ?? 0;
+  document.getElementById('statFollowers').textContent   = stats.follower_count ?? 0;
+  document.getElementById('statFollowing').textContent   = stats.following_count ?? 0;
   document.getElementById('viewPublicPage').href         = `/user?id=${user.id}`;
+
+  // 소개글
+  const bioEl = document.getElementById('profileBio');
+  bioEl.textContent = user.bio || '소개글을 입력해주세요';
+  bioEl.addEventListener('click', () => {
+    const cur = user.bio || '';
+    const input = prompt('소개글 수정 (최대 80자)', cur);
+    if (input === null) return;
+    const trimmed = input.trim().slice(0, 80);
+    updateUserProfile(user.id, { bio: trimmed }).then(() => {
+      user.bio = trimmed;
+      bioEl.textContent = trimmed || '소개글을 입력해주세요';
+    }).catch(() => showToast('저장 실패'));
+  });
+
+  // 닉네임 수정
+  const nicknameEl    = document.getElementById('profileNickname');
+  const nicknameInput = document.getElementById('nicknameInput');
+  const nicknameEditBtn = document.getElementById('nicknameEditBtn');
+
+  nicknameEditBtn.addEventListener('click', () => {
+    nicknameEl.style.display    = 'none';
+    nicknameEditBtn.style.display = 'none';
+    nicknameInput.value         = user.nickname;
+    nicknameInput.style.display = '';
+    nicknameInput.focus();
+  });
+
+  async function saveNickname() {
+    const val = nicknameInput.value.trim();
+    if (!val || val === user.nickname) {
+      nicknameInput.style.display   = 'none';
+      nicknameEl.style.display      = '';
+      nicknameEditBtn.style.display = '';
+      return;
+    }
+    try {
+      await updateUserProfile(user.id, { nickname: val });
+      user.nickname = val;
+      nicknameEl.textContent        = val;
+    } catch (_) { showToast('저장 실패'); }
+    nicknameInput.style.display   = 'none';
+    nicknameEl.style.display      = '';
+    nicknameEditBtn.style.display = '';
+  }
+
+  nicknameInput.addEventListener('blur', saveNickname);
+  nicknameInput.addEventListener('keydown', e => { if (e.key === 'Enter') nicknameInput.blur(); });
+
+  // 프로필 이미지 업로드
+  const avatarEl    = document.getElementById('profileAvatar');
+  const imageInput  = document.getElementById('profileImageInput');
+
+  if (user.profile_image_url) {
+    avatarEl.innerHTML = `<img src="${e(user.profile_image_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
+  }
+
+  avatarEl.addEventListener('click', () => imageInput.click());
+  imageInput.addEventListener('change', async () => {
+    const file = imageInput.files[0];
+    if (!file) return;
+    try {
+      const blob = await centerCropToBlob(file);
+      const url  = await uploadProfileImage(blob, user.id);
+      await updateUserProfile(user.id, { profile_image_url: url });
+      avatarEl.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
+    } catch (_) { showToast('이미지 업로드 실패'); }
+  });
 
   document.getElementById('spinner').style.display = 'none';
   document.getElementById('profileContent').style.display = '';
@@ -184,7 +291,25 @@ function setupInfiniteScroll() {
     io.observe(el);
   });
 }
-
+// 정사각형 중앙 크롭 → WebP blob
+async function centerCropToBlob(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const size = Math.min(img.width, img.height);
+      const sx = (img.width  - size) / 2;
+      const sy = (img.height - size) / 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 300;
+      canvas.getContext('2d').drawImage(img, sx, sy, size, size, 0, 0, 300, 300);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('blob fail')), 'image/webp', 0.85);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
 function e(str) {
   if (!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

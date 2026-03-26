@@ -17,13 +17,13 @@ export async function initSidebar() {
   if (session) {
     const { data: u } = await supabase
       .from('users')
-      .select('id, nickname')
+      .select('id, nickname, unread_notification_count')
       .eq('id', session.user.id)
       .single();
     user = u;
   }
 
-  const unreadCount = 0; // TODO: schema_v3_additions.sql 실행 후 user?.unread_notification_count ?? 0 으로 변경
+  const unreadCount = user?.unread_notification_count ?? 0;
   const unreadBadge = unreadCount > 0
     ? `<span class="notif-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>`
     : '';
@@ -35,7 +35,10 @@ export async function initSidebar() {
 
         ${session ? `
           <div class="sidebar-profile">
-            <div class="sidebar-avatar">${escFirstChar(user?.nickname ?? '?')}</div>
+            <div class="sidebar-avatar" style="position:relative">
+              ${escFirstChar(user?.nickname ?? '?')}
+              ${unreadCount > 0 ? `<span class="sidebar-red-dot"></span>` : ''}
+            </div>
             <div class="sidebar-nickname">${escHtml(user?.nickname ?? '')}</div>
           </div>
           <div class="sidebar-profile-btns">
