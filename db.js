@@ -112,7 +112,8 @@ export async function fetchCourses({ //DB courses 데이터 불러오는 함수)
          course_places(order_index, name, photo_url)`,
         { count: 'exact' }
       )
-      .neq('is_deleted', true);
+      .neq('is_deleted', true)
+      .eq('is_plan', false);
 
     if (regionMain) query = query.eq('region_main', regionMain);
     if (regionSub) query = query.eq('region_sub', regionSub);
@@ -238,6 +239,7 @@ export async function fetchCoursesByUser(
     )
     .eq('author_id', userId)
     .eq('is_deleted', false)
+    .eq('is_plan', false)
     .order('created_at', { ascending: false });
 
   if (onlyReferenced) {
@@ -1029,4 +1031,44 @@ export async function onCourseDeleted(courseId, parentCourseId) {
       });
     }
   }
+}
+// ─── 계획 코스 ───────────────────────────────────────────
+
+/** 내 계획 코스 목록 조회 (본인만) */
+export async function fetchPlanCourses(
+  userId,
+  { page = 0, pageSize = 20 } = {}
+) {
+  const { data, error, count } = await supabase
+    .from('courses')
+    .select(
+      `id, name, description, region_main, region_sub, total_time,
+       thumbnail_url, author_id, author_nickname, created_at,
+       course_places(order_index, name, photo_url)`,
+      { count: 'exact' }
+    )
+    .eq('author_id', userId)
+    .eq('is_plan', true)
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false })
+    .range(page * pageSize, (page + 1) * pageSize - 1);
+
+  if (error) throw error;
+  return { courses: data || [], total: count || 0 };
+}
+
+/** 계획 코스 생성 */
+export async function createPlanCourse(courseData, places) {
+  return createCourse({ ...courseData, is_plan: true }, places);
+}
+
+/** 계획 코스 → 경험 코스로 전환 (is_plan = false) */
+export async function publishPlanCourse(courseId, courseData, places) {
+  await updateCourse(courseId, { ...courseData, is_plan: false }, places);
+  return courseId;
+}
+
+/** 계획 코스 삭제 */
+export async function deletePlanCourse(courseId) {
+  return deleteCourse(courseId);
 }

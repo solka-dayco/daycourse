@@ -21,7 +21,7 @@ import {
   coordsToAddress,
   _isAddingPlace,
 } from './map.js';
-import { cropAndCompress } from './photo.js';
+import { cropAndCompress, reopenCrop } from './photo.js';
 import { ICONS } from './icons.js';
 
 // ── 인증 체크 ─────────────────────────────────────────────
@@ -53,9 +53,14 @@ const REGION_SUB = {
 
 // ── URL 파라미터 ────────────────────────────────────────────
 const params = new URLSearchParams(location.search);
-const mode = params.get('mode'); // 'edit' | 'copy' | null
+const mode = params.get('mode'); // 'edit' | 'copy' | 'plan' | null
 const sourceId = params.get('id');
 const restoreLatest = params.get('restoreLatest') === '1';
+const isPublish = params.get('publish') === '1'; // plan → 경험 코스 전환
+const isPlanMode = mode === 'plan' || (mode === 'edit' && !isPublish && (() => {
+  // edit 모드에서 원본이 is_plan=true인지는 fetchCourseById 후 판별
+  return false;
+})());
 
 // ── 상태 ─────────────────────────────────────────────────
 let places = [];
@@ -68,6 +73,7 @@ let sourceCourse = null;
 let thumbnailBlob = null;
 let thumbnailExistingUrl = '';
 let showDetail = false;
+let effectivePlanMode = false;
 
 const MAX_PLACES = 10;
 const MIN_PLACES = 2;
@@ -249,8 +255,10 @@ class DraftManager {
         stay_time:   p.stay_time   || null,
         travel_time: idx === 0 ? null : (p.travel_time || null),
         photo_url:   p.photo_url   || '',
-        _photoBlob:  null,
-        _photoPreview: '',
+        _photoPreview: p._photoBase64 || p._photoPreview || '',
+        _photoBase64: p._photoBase64 || '',
+        _originalBase64: p._originalBase64 || '',
+        _blurRegions: p._blurRegions || [],
       })),
       thumbnailExistingUrl: thumbnailExistingUrl || '',
       totalTimeManual: parseTimeInput(document.getElementById('totalTimeTextInput')?.value || '') || 0,
@@ -279,6 +287,15 @@ function formatMinutes(min) {
   const h = Math.floor(min / 60);
   const m = min % 60;
   return m ? `${h ? `${h}시간 ` : ''}${m}분` : `${h}시간`;
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 function escHtml(str) {
@@ -396,7 +413,10 @@ function normalizePlace(raw, index = 0) {
           : null,
     photo_url: raw.photo_url || '',
     _photoBlob: null,
-    _photoPreview: raw._photoPreview || '',
+    _photoPreview: raw._photoBase64 || raw._photoPreview || '',
+    _photoBase64: raw._photoBase64 || '',
+    _originalBase64: raw._originalBase64 || '',
+    _blurRegions: Array.isArray(raw._blurRegions) ? raw._blurRegions : [],
   };
 }
 
@@ -654,6 +674,38 @@ function indicateDraftSaved() {
 // ── 페이지 제목 ───────────────────────────────────────────
 if (mode === 'edit') document.title = '코스 수정 — 데이코스';
 if (mode === 'copy') document.title = '참조 코스 만들기 — 데이코스';
+if (mode === 'plan') document.title = '코스 계획 — 데이코스';
+
+// ── Plan 모드 UI 초기화 ────────────────────────────────────
+// plan 모드이거나, edit 모드인데 원본이 계획 코스인 경우 적용
+// (원본 is_plan 여부는 sourceCourse 로드 후 재판별)
+function applyPlanModeUI(isPlan) {
+  if (!isPlan) return;
+
+  // 지도 카드 전체화면 확장
+  document.querySelector('.create-page')?.classList.add('plan-mode');
+
+  // 썸네일 영역 숨김
+  document.getElementById('thumbnailWrap')?.closest('.create-card')
+    ?.querySelector('.create-thumbnail-wrap')?.parentElement
+    ?.querySelectorAll('.create-thumbnail-wrap, .create-divider:first-of-type')
+    ?.forEach(el => el.style.display = 'none');
+  const thumbnailWrap = document.getElementById('thumbnailWrap');
+  if (thumbnailWrap) thumbnailWrap.style.display = 'none';
+  // thumbnailWrap 다음 divider도 숨김
+  const thumbnailDivider = thumbnailWrap?.nextElementSibling;
+  if (thumbnailDivider?.classList.contains('create-divider')) {
+    thumbnailDivider.style.display = 'none';
+  }
+
+  // 소개글 placeholder 변경
+  const descEl = document.getElementById('courseDesc');
+  if (descEl) descEl.placeholder = '계획 소개글 (선택)';
+
+  // 게시하기 숨김, 저장하기 텍스트 유지
+  const publishBtn = document.getElementById('publishBtn');
+  if (publishBtn) publishBtn.style.display = 'none';
+}
 
 logEvent('course_create_start', 'page', null, { mode: mode || 'new' });
 
@@ -837,6 +889,11 @@ if (!redirectedToLatestDraft) {
   } else if (sourceCourse) {
     applySourceCourseToForm(sourceCourse);
   }
+
+  // plan 모드 UI 적용
+  // mode=plan 이거나, edit 모드인데 원본이 계획 코스인 경우
+  effectivePlanMode = mode === 'plan' || (mode === 'edit' && sourceCourse?.is_plan === true);
+  applyPlanModeUI(effectivePlanMode);
 }
 
 // 자동저장 활성화 + 초기 상태 스냅샷 (이후 변경 여부 판단 기준점)
@@ -921,6 +978,25 @@ document.getElementById('toggleDetailBtn')?.addEventListener('click', () => {
     thumbnailExistingUrl = '';
     clearThumbnailPreview();
     scheduleDraft();
+  });
+
+  wrap.addEventListener('click', async (e) => {
+    if (e.target === removeBtn || removeBtn.contains(e.target)) return;
+    if (thumbnailBlob || thumbnailExistingUrl) {
+      e.preventDefault();
+      try {
+        const dataUrl = thumbnailBlob
+          ? await blobToDataUrl(thumbnailBlob)
+          : thumbnailExistingUrl;
+        const result = await reopenCrop(dataUrl);
+        thumbnailBlob = result.blob;
+        thumbnailExistingUrl = '';
+        setThumbnailPreview(URL.createObjectURL(thumbnailBlob));
+        scheduleDraft();
+      } catch (err) {
+        if (err.message !== '취소됨') showToast('사진 처리 오류');
+      }
+    }
   });
 
   input.addEventListener('change', async () => {
@@ -1394,7 +1470,7 @@ function renderPlaceList() {
           <div style="position:relative">
             <textarea
               class="place-comment-input"
-              placeholder="한줄평 (선택, 최대 100자)"
+              placeholder="${effectivePlanMode ? '메모 (최대 100자)' : '한줄평 (최대 100자)'}"
               maxlength="100"
               rows="2"
               data-idx="${i}"
@@ -1542,18 +1618,50 @@ function bindPlaceListEvents(ul) {
     btn.addEventListener('touchend', openChip, { passive: false });
   });
 
+  ul.querySelectorAll('.place-photo-slot').forEach((wrap) => {
+    wrap.addEventListener('click', async (e) => {
+      const input = wrap.querySelector('.place-photo-input');
+      const idx = parseInt(wrap.dataset.idx ?? input?.dataset.idx, 10);
+      if (!places[idx]) return;
+      if (places[idx]._photoBlob || places[idx].photo_url || places[idx]._photoPreview) {
+        e.preventDefault();
+        try {
+          const dataUrl = places[idx]._originalBase64
+            || (places[idx]._photoBlob ? await blobToDataUrl(places[idx]._photoBlob) : null)
+            || places[idx]._photoPreview
+            || places[idx].photo_url;
+          const result = await reopenCrop(dataUrl, places[idx]._blurRegions || []);
+          if (result.changedOriginal) places[idx]._originalBase64 = result.changedOriginal;
+          places[idx]._photoBlob = result.blob;
+          places[idx]._blurRegions = result.blurRegions;
+          places[idx]._photoPreview = URL.createObjectURL(result.blob);
+          places[idx]._photoBase64 = await blobToDataUrl(result.blob);
+          places[idx].photo_url = '';
+          renderPlaceList();
+          scheduleDraft();
+        } catch (err) {
+          if (err.message !== '취소됨') showToast('사진 처리 오류');
+        }
+      }
+    });
+  });
+
   ul.querySelectorAll('.place-photo-input').forEach((input) => {
     input.addEventListener('change', async (e) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
       try {
-        const blob = await cropAndCompress(file);
+        const result = await cropAndCompress(file);
         const idx = parseInt(input.dataset.idx, 10);
         if (!places[idx]) return;
 
-        places[idx]._photoBlob = blob;
-        places[idx]._photoPreview = URL.createObjectURL(blob);
+        const originalBase64 = await blobToDataUrl(file);
+        places[idx]._originalBase64 = places[idx]._originalBase64 || originalBase64;
+        places[idx]._photoBlob = result.blob;
+        places[idx]._blurRegions = result.blurRegions;
+        places[idx]._photoPreview = URL.createObjectURL(result.blob);
+        places[idx]._photoBase64 = await blobToDataUrl(result.blob);
         places[idx].photo_url = '';
         renderPlaceList();
         scheduleDraft();
@@ -1936,12 +2044,15 @@ function updateMap() {
   fitMapToBounds(mapInstance, places);
 }
 
-// ── 저장 ─────────────────────────────────────────────────
-saveBtnEl?.addEventListener('click', async () => {
+// ── 저장 공통 로직 ───────────────────────────────────────
+async function doSave({ isPublishing = false } = {}) {
   const name = courseNameEl?.value.trim() || '';
   const desc = courseDescEl?.value.trim() || '';
   const regionMain = regionMainEl?.value || '';
   const regionSub = regionSubEl?.value || '';
+
+  // plan 모드 여부 판별 (저장 시점 기준)
+  const currentPlanMode = mode === 'plan' || (mode === 'edit' && sourceCourse?.is_plan === true);
 
   if (!name) {
     showToast('코스 이름을 입력해주세요');
@@ -1957,51 +2068,64 @@ saveBtnEl?.addEventListener('click', async () => {
     return;
   }
 
-  const noPhoto = getFirstPlaceWithoutPhotoIndex();
-  if (noPhoto >= 0) {
-    openPhotoRequiredModal(noPhoto);
-    return;
+  // plan 모드가 아닐 때만 사진 필수 검증
+  if (!currentPlanMode) {
+    const noPhoto = getFirstPlaceWithoutPhotoIndex();
+    if (noPhoto >= 0) {
+      openPhotoRequiredModal(noPhoto);
+      return;
+    }
   }
 
   const totalTimeRaw = document.getElementById('totalTimeTextInput')?.value || '';
   const autoCalculated = places.reduce((sum, p) => sum + (p.stay_time || 0) + (p.travel_time || 0), 0);
-  // 세부사항 열림: 자동 계산값 사용 / 닫힘: 텍스트 입력값 파싱
   const totalTime = showDetail ? autoCalculated : (parseTimeInput(totalTimeRaw) || 0);
 
-  if (!totalTime) {
+  // plan 모드에서는 총 소요시간 선택 안 해도 됨
+  if (!currentPlanMode && !totalTime) {
     showToast('총 소요시간을 입력해주세요');
     document.getElementById('totalTimeTextInput')?.focus();
     return;
   }
 
-  saveBtnEl.disabled = true;
-  saveBtnEl.textContent = '저장 중…';
+  const btn = isPublishing
+    ? document.getElementById('publishBtn')
+    : saveBtnEl;
+  if (!btn) return;
+  btn.disabled = true;
+  btn.textContent = isPublishing ? '게시 중…' : '저장 중…';
 
   try {
     const tempId = mode === 'edit' ? sourceId : `tmp_${Date.now()}`;
 
-    for (let i = 0; i < places.length; i++) {
-      const p = places[i];
-      if (p._photoBlob) {
-        const path = `${tempId}/place_${i}_${Date.now()}.webp`;
-        p.photo_url = await uploadPhoto(p._photoBlob, path);
-        p._photoBlob = null;
-        p._photoPreview = '';
+    // plan 모드가 아닐 때만 사진 업로드
+    if (!currentPlanMode) {
+      for (let i = 0; i < places.length; i++) {
+        const p = places[i];
+        if (p._photoBlob) {
+          const path = `${tempId}/place_${i}_${Date.now()}.webp`;
+          p.photo_url = await uploadPhoto(p._photoBlob, path);
+          p._photoBlob = null;
+          p._photoPreview = '';
+        }
       }
     }
 
-    // 썸네일이 비어 있으면 첫 번째 코스 사진을 썸네일로 사용
-    const finalThumbnailUrl = (await ensureThumbnailFromFirstPlace(tempId)) || '';
+    const finalThumbnailUrl = currentPlanMode
+      ? (thumbnailExistingUrl || null)
+      : ((await ensureThumbnailFromFirstPlace(tempId)) || '');
 
     const courseData = {
       name,
       description: desc || null,
       region_main: regionMain,
       region_sub: regionSub || '',
-      total_time: totalTime,
+      total_time: totalTime || null,
       thumbnail_url: finalThumbnailUrl || null,
       author_id: currentUser.id,
       author_nickname: currentUser.nickname,
+      // 게시하기면 is_plan=false, 저장하기면 plan 모드 여부 반영
+      is_plan: isPublishing ? false : (currentPlanMode ? true : false),
     };
 
     const placeRows = places.map((p, i) => ({
@@ -2013,9 +2137,7 @@ saveBtnEl?.addEventListener('click', async () => {
       phone: p.phone || null,
       place_url: p.place_url || null,
       comment: p.comment || null,
-      photo_url: p.photo_url || null,
-      // 세부사항 닫힌 상태: 체류/이동시간 저장 안 함 (총 소요시간만 저장)
-      // 세부사항 열린 상태: 입력된 체류/이동시간 그대로 저장
+      photo_url: currentPlanMode ? null : (p.photo_url || null),
       stay_time:   showDetail ? (p.stay_time   || null) : null,
       travel_time: showDetail ? (i === 0 ? null : (p.travel_time || null)) : null,
       order_index: i,
@@ -2026,7 +2148,7 @@ saveBtnEl?.addEventListener('click', async () => {
     if (mode === 'edit') {
       await updateCourse(sourceId, courseData, placeRows);
       courseId = sourceId;
-      logEvent('course_edit', 'course', courseId);
+      logEvent(isPublishing ? 'plan_publish' : 'course_edit', 'course', courseId);
     } else if (mode === 'copy' && sourceCourse) {
       courseData.parent_course_id = sourceCourse.id;
       courseData.parent_course_name = sourceCourse.name;
@@ -2034,21 +2156,34 @@ saveBtnEl?.addEventListener('click', async () => {
       courseData.original_course_id = sourceCourse.original_course_id || sourceCourse.id;
       courseData.original_course_name = sourceCourse.original_course_name || sourceCourse.name;
       courseData.original_author_nickname = sourceCourse.original_author_nickname || sourceCourse.author_nickname;
-
       courseId = await createReferenceCourse(courseData, placeRows, sourceCourse.id);
       logEvent('course_reference', 'course', sourceCourse.id);
     } else {
       courseId = await createCourse(courseData, placeRows);
-      logEvent('course_create_complete', 'course', courseId);
+      logEvent(currentPlanMode ? 'plan_create' : 'course_create_complete', 'course', courseId);
     }
 
-    draft.markSaved(); // clearDraft + cancelScheduled + _saved = true 한 번에 처리
-    location.href = `/course?id=${courseId}`;
+    draft.markSaved();
+
+    // 게시하기: 피드 상세로, 저장하기: plan 목록으로
+    if (isPublishing) {
+      location.href = `/course?id=${courseId}`;
+    } else if (currentPlanMode) {
+      location.href = `/plan-detail?id=${courseId}`;
+    } else {
+      location.href = `/course?id=${courseId}`;
+    }
   } catch (e) {
     console.error(e);
     showToast('저장 실패: ' + (e?.message || '알 수 없는 오류'));
   } finally {
-    saveBtnEl.disabled = false;
-    saveBtnEl.textContent = '저장하기';
+    btn.disabled = false;
+    btn.textContent = isPublishing ? '게시하기' : '저장하기';
   }
-});
+}
+
+// ── 저장 ─────────────────────────────────────────────────
+saveBtnEl?.addEventListener('click', () => doSave({ isPublishing: false }));
+
+// ── 게시 (plan → 경험 코스) ──────────────────────────────
+document.getElementById('publishBtn')?.addEventListener('click', () => doSave({ isPublishing: true }));

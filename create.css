@@ -804,3 +804,25 @@
   border-color: var(--primary);
   outline: none;
 }
+
+/* ── Plan 모드 전용 ──────────────────────────────────────── */
+
+/* 게시하기 버튼 — 저장하기와 동일하되 outline 스타일 */
+.create-save-btn-plan {
+  background: #fff;
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+  margin-right: 6px;
+}
+.create-save-btn-plan:hover { background: var(--primary-light); opacity: 1; }
+
+/* plan 모드: 지도 카드 화면 꽉 채우기 */
+.create-page.plan-mode .create-map-card {
+  border-radius: 0;
+  margin: 0 -14px;
+  padding: 14px 14px 0;
+}
+.create-page.plan-mode .create-map {
+  height: calc(100vh - var(--header-h) - 60px);
+  border-radius: 0;
+}

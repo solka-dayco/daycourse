@@ -2,6 +2,7 @@
 import {
   getCurrentUser, fetchUserStats,
   fetchLikedCourses, fetchBookmarkedCourses, fetchCoursesByUser,
+  fetchPlanCourses,
   logEvent,
 } from './db.js';
 import { initSidebar } from './sidebar.js';
@@ -22,6 +23,7 @@ const sectionState = {
   liked:    { page: 0, loading: false, allLoaded: false, loaded: false },
   bookmark: { page: 0, loading: false, allLoaded: false, loaded: false },
   myCourse: { page: 0, loading: false, allLoaded: false, loaded: false },
+  plan:     { page: 0, loading: false, allLoaded: false, loaded: false },
 };
 
 (async () => {
@@ -64,7 +66,7 @@ const sectionState = {
 // ── 탭 전환 ───────────────────────────────────────────────
 function switchTab(tab) {
   activeTab = tab;
-  ['liked', 'bookmark', 'myCourse'].forEach(key => {
+  ['liked', 'bookmark', 'myCourse', 'plan'].forEach(key => {
     document.getElementById(`panel-${key}`).style.display = key === tab ? '' : 'none';
   });
   if (!sectionState[tab].loaded) loadSection(tab);
@@ -77,9 +79,8 @@ async function loadSection(key) {
   st.loading = true;
   st.loaded  = true;
 
-  const spId   = `${key}Spinner`;
-  const gridId = `${key}Grid`;
-  const empId  = `${key}Empty`;
+  const spId  = `${key}Spinner`;
+  const empId = `${key}Empty`;
 
   document.getElementById(spId).style.display = '';
 
@@ -89,17 +90,23 @@ async function loadSection(key) {
       courses = await fetchLikedCourses(myUserId, { page: st.page, pageSize: PAGE_SIZE });
     } else if (key === 'bookmark') {
       courses = await fetchBookmarkedCourses(myUserId, { page: st.page, pageSize: PAGE_SIZE });
+    } else if (key === 'plan') {
+      const res = await fetchPlanCourses(myUserId, { page: st.page, pageSize: PAGE_SIZE });
+      courses = res.courses;
     } else {
       const res = await fetchCoursesByUser(myUserId, { page: st.page, pageSize: PAGE_SIZE });
       courses = res.courses;
     }
 
+    const gridId = key === 'plan' ? 'planListProfile' : `${key}Grid`;
     const grid = document.getElementById(gridId);
     if (courses.length === 0 && st.page === 0) {
       document.getElementById(empId).style.display = '';
     } else {
       const frag = document.createDocumentFragment();
-      courses.forEach(c => frag.appendChild(buildCard(c)));
+      courses.forEach(c => frag.appendChild(
+        key === 'plan' ? buildPlanItem(c) : buildCard(c)
+      ));
       grid.appendChild(frag);
     }
 
@@ -139,6 +146,28 @@ function buildCard(course) {
   return card;
 }
 
+// ── 계획 코스 리스트 아이템 ───────────────────────────────
+function buildPlanItem(course) {
+  const region = [course.region_main, course.region_sub].filter(Boolean).join(' · ');
+  const time   = course.total_time
+    ? (() => { const h = Math.floor(course.total_time/60); const m = course.total_time%60; return m ? `${h?`${h}시간 `:''}${m}분` : `${h}시간`; })()
+    : '';
+
+  const li = document.createElement('li');
+  li.className = 'plan-list-item';
+  li.innerHTML = `
+    <div class="plan-item-title">${e(course.name || '(이름 없음)')}</div>
+    ${course.description ? `<div class="plan-item-desc">${e(course.description)}</div>` : ''}
+    <div class="plan-item-meta">
+      ${region ? `<span>${e(region)}</span>` : ''}
+      ${region && time ? `<span class="plan-item-meta-dot">·</span>` : ''}
+      ${time ? `<span>예상 ${time}</span>` : ''}
+    </div>
+  `;
+  li.addEventListener('click', () => { location.href = `/create?mode=edit&id=${course.id}`; });
+  return li;
+}
+
 // ── 무한 스크롤 ───────────────────────────────────────────
 function setupInfiniteScroll() {
   const io = new IntersectionObserver(entries => {
@@ -149,7 +178,7 @@ function setupInfiniteScroll() {
     });
   }, { rootMargin: '200px' });
 
-  ['liked', 'bookmark', 'myCourse'].forEach(key => {
+  ['liked', 'bookmark', 'myCourse', 'plan'].forEach(key => {
     const el = document.getElementById(`${key}Sentinel`);
     el.dataset.key = key;
     io.observe(el);

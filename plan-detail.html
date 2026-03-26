@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>코스 계획 상세 — 데이코스</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="course.css"/>
+  <link rel="stylesheet" href="plan-detail.css"/>
+  <script type="text/javascript"
+    src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=725e3b5f43c47c651837511245861cc8&libraries=services&autoload=false">
+  </script>
+</head>
+<body>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <header class="header">
+    <button class="header-menu" onclick="history.back()" aria-label="뒤로">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    </button>
+    <a class="header-title" href="/">데이코스</a>
+    <div class="header-right">
+      <button id="headerCreateBtn" style="display:none" aria-label="코스 만들기">+</button>
+    </div>
+  </header>
+
+  <div class="page-wrap" id="pageWrap">
+    <div class="spinner-wrap" id="spinner"><div class="spinner"></div></div>
+
+    <div id="detailContent" style="display:none">
+
+      <!-- 코스 헤더 -->
+      <div class="course-header">
+        <div class="course-meta-top">
+          <span class="course-region" id="courseRegion"></span>
+          <span class="course-time-badge" id="courseTime"></span>
+        </div>
+        <div class="course-name" id="courseName"></div>
+        <div class="course-desc" id="courseDesc"></div>
+        <div class="course-meta-bottom">
+          <span class="course-date" id="courseDate"></span>
+          <span id="editBtn" style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--sub);cursor:pointer;margin-right:12px"></span>
+          <span id="publishBtn" style="font-size:13px;color:var(--primary);font-weight:700;cursor:pointer;margin-left:auto"></span>
+        </div>
+
+      <!-- 타임라인 -->
+      <div class="detail-section">
+        <div class="section-label">장소 타임라인</div>
+        <div class="timeline" id="timeline"></div>
+        <div class="timeline-summary" id="timelineSummary"></div>
+      </div>
+
+      <!-- 지도 -->
+      <div class="detail-section" style="position:relative">
+        <div class="section-label" style="margin-bottom:12px">동선 지도</div>
+        <div class="detail-map" id="detailMap"></div>
+        <button class="map-location-btn" id="myLocationBtn" title="내 위치">
+          <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script type="module" src="plan-detail.js"></script>
+</body>
+</html>

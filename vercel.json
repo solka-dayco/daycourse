@@ -45,6 +45,14 @@
       "destination": "/notifications.html"
     },
     {
+      "source": "/plan",
+      "destination": "/plan.html"
+    },
+    {
+      "source": "/plan-detail",
+      "destination": "/plan-detail.html"
+    },
+    {
       "source": "/privacy",
       "destination": "/privacy.html"
     },
@@ -112,6 +120,16 @@
     {
       "source": "/notifications.html",
       "destination": "/notifications",
+      "permanent": true
+    },
+    {
+      "source": "/plan.html",
+      "destination": "/plan",
+      "permanent": true
+    },
+    {
+      "source": "/plan-detail.html",
+      "destination": "/plan-detail",
       "permanent": true
     },
     {
