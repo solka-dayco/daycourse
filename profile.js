@@ -292,11 +292,7 @@ function setupEditSheet(user) {
 
   // 편집 아바타 초기 렌더
   function renderEditAvatar(url) {
-    if (url) {
-      editAvatar.innerHTML = `<img src="${e(url)}" alt="프로필"/>`;
-    } else {
-      editAvatar.textContent = user.nickname?.[0]?.toUpperCase() ?? '?';
-    }
+    editAvatar.innerHTML = `<img src="${e(url || '/image/profile_icon.png')}" alt="프로필"/>`;
   }
   renderEditAvatar(user.profile_image_url);
 
