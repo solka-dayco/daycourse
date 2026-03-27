@@ -2,6 +2,7 @@
 import {
   fetchCourses,
   fetchFollowingCourses,
+  fetchNonFollowingCourses,
   fetchFollowings,
   autocompleteSearch,
   isCourseLiked,
@@ -489,7 +490,6 @@ async function loadFeed(isFirstPage) {
     let courses = [], total = 0;
 
     if (state.tab === 'following') {
-      // 팔로잉 코스 먼저, 소진 후 전체 최신순
       if (!state.followingDone) {
         const result = await fetchFollowingCourses(state.followingIds, {
           page: state.followingPage,
@@ -498,25 +498,29 @@ async function loadFeed(isFirstPage) {
         courses = result.courses;
         state.followingTotal = result.total;
 
-        if (courses.length < PAGE_SIZE || (state.followingPage + 1) * PAGE_SIZE >= state.followingTotal) {
+        const isLastFollowingPage =
+          courses.length < PAGE_SIZE ||
+          (state.followingPage + 1) * PAGE_SIZE >= state.followingTotal;
+
+        if (isLastFollowingPage) {
           state.followingDone = true;
-          state.page = 0; // 전체 피드 페이지 초기화
+          state.page = 0;
         } else {
           state.followingPage += 1;
         }
-        total = state.followingTotal + 999; // allLoaded 방지용
+        // allLoaded는 절대 true로 만들지 않음 — 전체 피드가 남아있음
+        total = 999999;
       } else {
-        // 팔로잉 소진 → 전체 최신순 (팔로잉 제외)
-        const result = await fetchCourses({
+        // 팔로잉 소진 → 전체 최신순 (팔로잉 유저 DB에서 직접 제외)
+        const result = await fetchNonFollowingCourses(state.followingIds, {
           keyword: state.keyword,
           regionMain: state.regionMain,
           regionSub: state.regionSub,
           maxTime: state.maxTime,
-          sort: 'latest',
           page: state.page,
           pageSize: PAGE_SIZE,
         });
-        courses = result.courses.filter(c => !state.followingIds.includes(c.author_id));
+        courses = result.courses;
         total = result.total;
       }
     } else {
@@ -569,14 +573,17 @@ async function loadFeed(isFirstPage) {
     }
 
     if (state.tab === 'following') {
-      if (state.followingDone) {
+      if (!state.followingDone) {
+        // followingPage는 위에서 이미 처리 — 아무것도 안 함
+      } else if (total !== 999999) {
+        // 전체 피드 구간 — 정확한 total 기반으로 판정
         if (courses.length < PAGE_SIZE || (state.page + 1) * PAGE_SIZE >= total) {
           state.allLoaded = true;
         } else {
           state.page += 1;
         }
       }
-      // followingDone이 false면 followingPage는 위에서 이미 증가
+      // total===999999: 팔로잉 마지막 턴, 다음 턴에 전체 피드 로드
     } else {
       if (courses.length < PAGE_SIZE || (state.page + 1) * PAGE_SIZE >= total) {
         state.allLoaded = true;

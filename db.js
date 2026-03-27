@@ -1234,3 +1234,42 @@ export async function fetchFollowingCourses(followingIds, { page = 0, pageSize =
   if (error) throw error;
   return { courses: data || [], total: count || 0 };
 }
+/**
+ * 팔로잉 제외한 전체 코스 조회
+ * @param {string[]} excludeIds - 제외할 author_id 목록
+ * @param {{ keyword?, regionMain?, regionSub?, maxTime?, page?, pageSize? }} options
+ */
+export async function fetchNonFollowingCourses(excludeIds, {
+  keyword = '',
+  regionMain = '',
+  regionSub = '',
+  maxTime = 0,
+  page = 0,
+  pageSize = 20,
+} = {}) {
+  let query = supabase
+    .from('courses')
+    .select(
+      `id, name, description, region_main, region_sub, total_time,
+       like_count, comment_count, reference_count, thumbnail_url,
+       author_id, author_nickname, created_at,
+       course_places(order_index, name, photo_url, lat, lng)`,
+      { count: 'exact' }
+    )
+    .neq('is_deleted', true)
+    .eq('is_plan', false)
+    .order('created_at', { ascending: false });
+
+  if (excludeIds && excludeIds.length > 0) {
+    query = query.not('author_id', 'in', `(${excludeIds.join(',')})`);
+  }
+  if (regionMain) query = query.eq('region_main', regionMain);
+  if (regionSub) query = query.eq('region_sub', regionSub);
+  if (maxTime > 0) query = query.lte('total_time', maxTime);
+
+  query = query.range(page * pageSize, (page + 1) * pageSize - 1);
+
+  const { data, error, count } = await query;
+  if (error) throw error;
+  return { courses: data || [], total: count || 0 };
+}
