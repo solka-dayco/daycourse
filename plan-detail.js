@@ -1,5 +1,5 @@
 // plan-detail.js — 계획 코스 상세 (본인만 열람)
-import { getCurrentUser, fetchCourseById, logEvent } from './db.js';
+import { getCurrentUser, fetchCourseById, logEvent, publishPlanCourse } from './db.js';
 import { initSidebar } from './sidebar.js';
 import { initIcons, ICONS } from './icons.js';
 import { createMap, addCourseMarker, drawCoursePolyline, fitMapToBounds } from './map.js';
@@ -146,7 +146,43 @@ document.getElementById('editBtn')?.addEventListener('click', () => {
   location.href = `/create?mode=edit&id=${courseId}`;
 });
 
-// 게시하러 가기 → 바텀시트
-document.getElementById('publishBtn')?.addEventListener('click', () => {
-  location.href = `/create?mode=edit&id=${courseId}&publish=1`;
+document.getElementById('publishBtn')?.addEventListener('click', async () => {
+  const btn = document.getElementById('publishBtn');
+  btn.style.pointerEvents = 'none';
+  btn.textContent = '게시 중…';
+  try {
+    const courseData = {
+      name: course.name,
+      description: course.description || null,
+      region_main: course.region_main,
+      region_sub: course.region_sub || '',
+      total_time: course.total_time || null,
+      thumbnail_url: course.thumbnail_url || null,
+      author_id: currentUser.id,
+      author_nickname: currentUser.nickname,
+      is_plan: false,
+    };
+    const placeRows = places.map((p, i) => ({
+      name: p.name,
+      lat: p.lat,
+      lng: p.lng,
+      category: p.category || null,
+      address: p.address || null,
+      phone: p.phone || null,
+      place_url: p.place_url || null,
+      comment: p.comment || null,
+      photo_url: p.photo_url || null,
+      stay_time: p.stay_time || null,
+      travel_time: i === 0 ? null : (p.travel_time || null),
+      order_index: i,
+    }));
+    await publishPlanCourse(courseId, courseData, placeRows);
+    location.href = `/course?id=${courseId}`;
+  } catch (e) {
+    console.error(e);
+    const toast = document.getElementById('toast');
+    if (toast) { toast.textContent = '게시 실패: ' + (e?.message || '알 수 없는 오류'); toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+    btn.style.pointerEvents = '';
+    btn.textContent = '게시하기';
+  }
 });
