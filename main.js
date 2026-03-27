@@ -1,6 +1,8 @@
 // main.js — 피드 페이지 (v4 — 원본 유지 + 퍼널 로그 보강)
 import {
   fetchCourses,
+  fetchFollowingCourses,
+  fetchFollowings,
   autocompleteSearch,
   isCourseLiked,
   toggleCourseLike,
@@ -32,6 +34,11 @@ let state = {
   allLoaded: false,
   userLat: null,
   userLng: null,
+  tab: 'all',           // 'all' | 'following'
+  followingIds: [],     // 팔로잉 유저 ID 목록
+  followingDone: false, // 팔로잉 코스 소진 여부
+  followingPage: 0,
+  followingTotal: 0,
 };
 
 let currentUser = null;
@@ -51,7 +58,14 @@ const filterBadge = document.getElementById('filterBadge');
   currentUser = await getCurrentUser();
   if (currentUser) {
     document.getElementById('headerCreateBtn').style.display = '';
+    // 팔로잉 목록 미리 로드
+    try {
+      const followings = await fetchFollowings(currentUser.id, { pageSize: 200 });
+      console.log('[followings sample]', followings[0]); // 필드 확인용
+state.followingIds = followings.map(f => f.user_id).filter(Boolean);
+    } catch (_) {}
   }
+  bindTabEvents();
   loadFeed(true);
 })();
 
@@ -410,6 +424,9 @@ observer.observe(sentinel);
 async function reload() {
   state.page = 0;
   state.allLoaded = false;
+  state.followingPage = 0;
+  state.followingTotal = 0;
+  state.followingDone = false;
   feedGrid.innerHTML = '';
   if (seoCourseLinks) seoCourseLinks.innerHTML = '';
   await loadFeed(true);
@@ -430,7 +447,27 @@ function renderSeoCourseLinks(courses, reset = false) {
 
   seoCourseLinks.insertAdjacentHTML('beforeend', linksHtml);
 }
+// ── 피드 탭 ───────────────────────────────────────────────
+function bindTabEvents() {
+  const tabs = document.querySelectorAll('.feed-tab');
+  if (!tabs.length) return;
 
+  // 비로그인 시 팔로잉 탭 숨김
+  if (!currentUser) {
+    document.getElementById('feedTabs').style.display = 'none';
+    return;
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      if (tab.dataset.tab === state.tab) return;
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      state.tab = tab.dataset.tab;
+      reload();
+    });
+  });
+}
 async function loadFeed(isFirstPage) {
   if (state.loading || state.allLoaded) return;
 
@@ -441,19 +478,56 @@ async function loadFeed(isFirstPage) {
   }
 
   try {
-    const { courses, total } = await fetchCourses({
-      keyword: state.keyword,
-      regionMain: state.regionMain,
-      regionSub: state.regionSub,
-      maxTime: state.maxTime,
-      sort: state.sort,
-      page: state.page,
-      pageSize: PAGE_SIZE,
-    });
+    let courses = [], total = 0;
+
+    if (state.tab === 'following') {
+      // 팔로잉 코스 먼저, 소진 후 전체 최신순
+      if (!state.followingDone) {
+        const result = await fetchFollowingCourses(state.followingIds, {
+          page: state.followingPage,
+          pageSize: PAGE_SIZE,
+        });
+        courses = result.courses;
+        state.followingTotal = result.total;
+
+        if (courses.length < PAGE_SIZE || (state.followingPage + 1) * PAGE_SIZE >= state.followingTotal) {
+          state.followingDone = true;
+          state.page = 0; // 전체 피드 페이지 초기화
+        } else {
+          state.followingPage += 1;
+        }
+        total = state.followingTotal + 999; // allLoaded 방지용
+      } else {
+        // 팔로잉 소진 → 전체 최신순 (팔로잉 제외)
+        const result = await fetchCourses({
+          keyword: state.keyword,
+          regionMain: state.regionMain,
+          regionSub: state.regionSub,
+          maxTime: state.maxTime,
+          sort: 'latest',
+          page: state.page,
+          pageSize: PAGE_SIZE,
+        });
+        courses = result.courses.filter(c => !state.followingIds.includes(c.author_id));
+        total = result.total;
+      }
+    } else {
+      const result = await fetchCourses({
+        keyword: state.keyword,
+        regionMain: state.regionMain,
+        regionSub: state.regionSub,
+        maxTime: state.maxTime,
+        sort: state.sort,
+        page: state.page,
+        pageSize: PAGE_SIZE,
+      });
+      courses = result.courses;
+      total = result.total;
+    }
 
     state.total = total;
 
-    if (courses.length === 0 && state.page === 0) {
+    if (courses.length === 0 && isFirstPage) {
       feedEmpty.style.display = '';
     } else {
       // 병렬로 좋아요 상태 조회
@@ -486,10 +560,21 @@ async function loadFeed(isFirstPage) {
       renderSeoCourseLinks(courses, isFirstPage);
     }
 
-    if (courses.length < PAGE_SIZE || (state.page + 1) * PAGE_SIZE >= total) {
-      state.allLoaded = true;
+    if (state.tab === 'following') {
+      if (state.followingDone) {
+        if (courses.length < PAGE_SIZE || (state.page + 1) * PAGE_SIZE >= total) {
+          state.allLoaded = true;
+        } else {
+          state.page += 1;
+        }
+      }
+      // followingDone이 false면 followingPage는 위에서 이미 증가
     } else {
-      state.page += 1;
+      if (courses.length < PAGE_SIZE || (state.page + 1) * PAGE_SIZE >= total) {
+        state.allLoaded = true;
+      } else {
+        state.page += 1;
+      }
     }
 
   } catch (e) {

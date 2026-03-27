@@ -1204,3 +1204,33 @@ export async function uploadProfileImage(blob, userId) {
   const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
   return `${data.publicUrl}?t=${Date.now()}`;
 }
+// ─── 팔로잉 피드 ──────────────────────────────────────────
+
+/**
+ * 팔로잉한 유저들의 코스 조회
+ * @param {string[]} followingIds
+ * @param {{ page?, pageSize? }} options
+ */
+export async function fetchFollowingCourses(followingIds, { page = 0, pageSize = 20 } = {}) {
+  if (!followingIds || followingIds.length === 0) {
+    return { courses: [], total: 0 };
+  }
+
+  const { data, error, count } = await supabase
+    .from('courses')
+    .select(
+      `id, name, description, region_main, region_sub, total_time,
+       like_count, comment_count, reference_count, thumbnail_url,
+       author_id, author_nickname, created_at,
+       course_places(order_index, name, photo_url, lat, lng)`,
+      { count: 'exact' }
+    )
+    .in('author_id', followingIds)
+    .neq('is_deleted', true)
+    .eq('is_plan', false)
+    .order('created_at', { ascending: false })
+    .range(page * pageSize, (page + 1) * pageSize - 1);
+
+  if (error) throw error;
+  return { courses: data || [], total: count || 0 };
+}

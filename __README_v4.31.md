@@ -1,0 +1,244 @@
+# 데이코스 (DayCourse) — 설정 & 배포 가이드 v4.3
+
+> **배포 도메인**: https://daycourse.kr (GitHub Pages)  
+> **저장소**: https://github.com/solka-dayco/daycourse  
+> **최종 갱신**: 2026.03.27 (v4.2 — R1~R5 완료)
+
+---
+
+## 1. 빠른 시작 체크리스트
+
+### 1-1. Supabase 프로젝트 생성
+
+1. https://supabase.com → New project 생성
+2. **SQL Editor**에서 아래 순서대로 실행:
+   ```
+   1) schema.sql               ← 기본 테이블 + RLS + 기본 RPC
+   2) schema_v3_additions.sql  ← v3/v4 신규 테이블·컬럼·RPC (멱등성 보장)
+   3) schema_R5.sql            ← v4.2 follows, bio, profile_image_url, XP/레벨 RPC [v4.2]
+   ```
+3. **Storage** → New bucket: `course-photos` (Public ON)
+4. (선택) **Authentication** → Providers → Kakao 활성화
+
+### 1-2. config.js 수정
+
+```js
+export const SUPABASE_URL      = 'https://YOUR_PROJECT.supabase.co';
+export const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+export const KAKAO_APP_KEY     = 'YOUR_KAKAO_APP_KEY';
+export const STORAGE_BUCKET    = 'course-photos';
+```
+
+### 1-3. 로컬 실행
+
+```bash
+python -m http.server 8080
+# 브라우저: http://localhost:8080
+```
+
+> ⚠️ Supabase 무료 플랜은 **1주일 미활동 시 자동 중지**됩니다.
+
+---
+
+## 2. 파일 구조
+
+```
+daycourse/
+│
+├── index.html              # 피드 (비로그인 열람 가능)
+├── style.css               # 공통 스타일
+│
+├── course.html / .css / .js    # 코스 상세
+├── create.html / .css / .js    # 코스 만들기 (plan 모드 분기 포함) [v4.2]
+├── plan.html / .css / .js      # 코스 계획 목록 [v4.2 신규]
+├── plan-detail.html / .css / .js # 코스 계획 상세 [v4.2 신규]
+│
+├── login.html / .js            # 로그인 + 회원가입
+├── signup.html                 # → /login#signup 리다이렉트
+├── nickname.html / .js         # 프로필 설정 (가입 직후)
+├── find.html / .js             # 아이디·비밀번호 찾기
+├── auth.css                    # 인증 페이지 공통 스타일
+│
+├── user.html / .css / .js      # 공개 유저 페이지 [v4.2: 팔로우, 소개글, 레벨]
+├── profile.html / .css / .js   # 마이페이지 [v4.2: XP바, 프로필 편집 바텀시트, 계획 탭]
+├── bookmarks.html / .js        # 북마크 목록
+├── notifications.html / .js    # 알림 목록 [v4.2: follow 알림 타입 추가]
+│
+├── privacy.html                # 개인정보처리방침
+│
+├── sidebar.js      # 공통 사이드바 [v4.2: 프로필 아이콘 동적 주입, red dot, 드롭다운]
+├── icons.js        # SVG 아이콘 초기화
+├── map.js          # 카카오맵 유틸
+├── photo.js        # 크롭/블러/WebP [v4.2: 전면 재작성 v7 — letterbox, 블러, 재편집]
+├── app.js          # 비로그인 체크 진입점
+│
+├── db.js           # DB/Storage 추상화 [v4.2: XP, 팔로우, 계획 코스 함수 추가]
+├── supabase.js     # Supabase 클라이언트
+├── config.js       # 환경 변수
+│
+├── schema.sql
+├── schema_v3_additions.sql
+├── schema_R5.sql               # [v4.2 신규] follows, bio, profile_image_url, XP RPC
+│
+├── sitemap.xml / robots.txt / CNAME
+├── vercel.json     # [v4.2: /plan, /plan-detail 라우팅 추가]
+│
+├── api/
+│   └── og.js       # OG 미리보기 Edge Function
+│
+└── admin/          # 어드민 패널 (admin.html + 서브 모듈)
+```
+
+---
+
+## 3. 버전별 변경 사항 요약
+
+### v4.1 (2026.03.23) — 리팩토링
+
+| 항목 | 내용 |
+|------|------|
+| URL 구조 | `.html` 제거, 301 리다이렉트, `vercel.json` 신규 |
+| 드래프트 | `DraftManager` 클래스, 바텀시트 복구 UI, 스냅샷 dirty 판별 |
+| OG 미리보기 | `api/og.js` Vercel Edge Function, 카카오톡 공유 썸네일 정상 표시 |
+| RLS 점검 | 중복 정책 3건 제거, `reports` INSERT 강화 |
+
+### v4.2 (2026.03.27) — 기능 확장
+
+| 항목 | 내용 |
+|------|------|
+| **코스 제작 UX** | 체류/이동시간 선택으로 전환, 세부사항 토글, 드럼롤 피커, 칩 모달 |
+| **코스 계획** | `is_plan` 컬럼, plan/plan-detail 페이지 신규, 사이드바 메뉴, "계획 담기" |
+| **이미지 처리** | letterbox 크롭, 블러 기능(타원형 드래그+Stack Blur), 사진 재편집, 원본 보존 |
+| **레벨/XP** | LV1~50, 칭호 6단계, `user_xp` 컬럼, pg_cron 30초 갱신, XP 바 UI |
+| **커뮤니티** | `follows` 테이블, 팔로우/언팔로우, @mention 자동완성, 프로필 편집 바텀시트, 알림 red dot |
+| **버그픽스** | 피드 거리순 정렬(GPS+Haversine), 지하철역 검색 상단 노출 |
+
+### v4.31 (2026.03.27) — 팔로잉 피드
+
+| 항목 | 내용 |
+|------|------|
+| **피드 탭** | 전체 / 팔로잉 탭 분리, 비로그인 시 탭 숨김 |
+| **팔로잉 탭 정책** | 팔로잉 코스 최신순 우선 → 소진 후 전체 최신순 혼합 노출 |
+| **신규 함수** | `fetchFollowingCourses` (db.js) |
+| **변경 파일** | index.html, main.css, main.js, db.js |
+---
+
+## 4. DB 스키마 요약
+
+### 4-1. 테이블 목록
+
+| 테이블 | 설명 |
+|--------|------|
+| `users` | id, username, nickname, gender, birth_year, age, region, **user_xp**, level, **bio**, **profile_image_url**, unread_notification_count, role |
+| `courses` | name, description, region_main, region_sub, total_time, like_count, comment_count, reference_count, thumbnail_url, author_id, author_nickname, parent_course_id, original_course_id, **is_plan**, is_deleted |
+| `course_places` | order_index, name, address, lat, lng, category, phone, place_url, comment, stay_time(선택), travel_time(선택), photo_url |
+| `follows` | follower_id, following_id, created_at (복합PK, self-follow CHECK) **[v4.2]** |
+| `course_likes` | unique: course_id + user_id |
+| `bookmarks` | unique: user_id + course_id |
+| `comments` / `comment_likes` | 댓글 + 좋아요 |
+| `replies` / `reply_likes` | 답글 + 좋아요 |
+| `notifications` | 알림 (aggregation, is_read, agg_count) |
+| `reports` | 신고 (target_type: course/comment, status: pending/resolved) |
+| `event_logs` | 행동 로그 (user_id nullable, anonymous_id, session_id, event_name, jsonb) |
+
+### 4-2. 주요 RPC 함수
+
+| 함수 | 설명 |
+|------|------|
+| `search_courses(...)` | 키워드 + 지역 + 시간 + 정렬 복합 검색 |
+| `autocomplete_search(p_keyword, p_limit)` | 자동완성 |
+| `get_user_stats(p_user_id)` | 유저 통계 (follower_count, following_count 포함) |
+| `get_followers(p_user_id)` | 팔로워 목록 |
+| `get_followings(p_user_id)` | 팔로잉 목록 |
+| `search_users_for_mention(p_keyword, p_current_user_id)` | @mention 검색 |
+| `get_referenced_courses(p_course_id)` | 참조한 코스 목록 |
+| `get_liked_courses` / `get_bookmarked_courses` | 좋아요·북마크 코스 |
+| `add_user_xp(p_user_id, p_delta)` | XP 증감 |
+| `add_user_xp_capped(...)` | 일일 한도 XP |
+| `calculate_level(p_xp)` | XP → 레벨 |
+| `upsert_notification(...)` | 알림 생성·집계 |
+| `mark_notifications_read(p_user_id)` | 알림 일괄 읽음 |
+| `increment/decrement_like_count` | 좋아요 캐시 |
+| `increment/decrement_comment_count` | 댓글 캐시 |
+| `increment/decrement_reference_count` | 참조 캐시 |
+
+### 4-3. RLS 정책
+
+| 테이블 | SELECT | INSERT | UPDATE | DELETE |
+|--------|--------|--------|--------|--------|
+| `courses` | 누구나 | user | 작성자+admin | 작성자+admin |
+| `course_places` | 누구나 | 코스 작성자 | 코스 작성자 | 코스 작성자 |
+| `follows` | 누구나 | 본인 | ❌ | 본인 |
+| `course_likes` | 누구나 | user(본인) | ❌ | user(본인) |
+| `bookmarks` | 본인 | user(본인) | ❌ | user(본인) |
+| `comments` / `replies` | 누구나 | user | admin | 작성자+admin |
+| `notifications` | 본인 | (RPC) | 본인 | ❌ |
+| `reports` | admin | user(본인) | admin | admin |
+| `event_logs` | admin | 누구나 | ❌ | admin |
+| `users` | 누구나(공개 필드) | Supabase Auth | 본인+admin | ❌ |
+
+---
+
+## 5. 행동 로그 이벤트 목록
+
+<!-- 다음 세션 참조 필요 — 피드/상세/create 이벤트 모두 포함 -->
+
+`logEvent(eventName, targetType, targetId, metadata)` 로 기록.
+
+**피드 (main.js)**: `page_view`, `page_restore`, `search`, `search_clear`, `autocomplete_select`, `filter_change`, `sort_change`, `filter_reset`, `feed_refresh`, `course_view`, `author_click`, `comment_cta_click`, `like_click`, `like_cancel`, `login_required_click`
+
+**코스 상세 (course.js)**: `course_view`, `author_click`, `original_course_click`, `course_edit_click`, `course_delete_confirm`, `course_reference`, `report_open`, `report_submit`, `like_click`, `like_cancel`, `bookmark_add`, `bookmark_remove`, `carousel_open`, `carousel_nav`, `carousel_swipe`, `timeline_photo_jump`, `viewer_nav`, `place_link_click`, `map_my_location`, `referenced_course_click`, `comment_sort_change`, `comment_create`, `comment_delete`, `comment_like`, `reply_input_open`, `reply_create`, `reply_delete`, `reply_like`, `share_click`, `share_copy_link`, `share_kakao`, `comment_cta_click`, `login_required_click`
+
+**코스 만들기 (create.js)**: `course_create_start`, `place_add`, `course_create_complete`, `course_edit`, `course_reference`
+
+---
+
+## 6. 개발 워크플로우
+
+```
+1. config.js 수정 → python -m http.server 8080
+2. 기능 개발 + 테스트
+3. git add → git commit (feat:/fix:/refactor:)
+4. git push → GitHub Pages 자동 배포 (~1~2분) → https://daycourse.kr
+```
+
+---
+
+## 7. 개발 컨벤션
+
+- DB 접근 로직은 `db.js`로 완전 분리
+- 카카오맵 SDK: `autoload=false` 방식
+- 검색 마커(`searchMarkers`)와 코스 마커(`courseMarkers`) 배열 분리
+- 모든 좋아요 버튼: `♥` 텍스트, liked 시 `#333`
+- 커밋 이름: `feat:`, `fix:`, `refactor:` 컨벤션
+- 카카오 로그인: 구현 완료, 현재 주석 처리 (비즈 앱 전환 후 활성화)
+
+---
+
+## 8. 미완료 / 향후 작업
+
+### 기능
+- [ ] **@mention 알림** — `comment_mention` 타입 알림 발송 (addComment/addReply 멘션 파싱)
+- [ ] **팔로워/팔로잉 목록에서 언팔로우 버튼**
+- [ ] **동적 sitemap** — `api/sitemap.js` Edge Function
+- [ ] **카카오 로그인 활성화** (비즈 앱 전환 필요)
+- [ ] **피드 BFCache 스크롤 위치 복원**
+- [ ] **사진 도용 대응** — 우클릭/드래그 방지, 워터마크 오버레이(`@username`, `데이코스`)
+
+### 운영
+- [ ] Supabase 1주일 미활동 자동 중지 대응 (cron ping)
+- [ ] **pg_cron 스케줄 등록** — `refresh-user-ages`, 레벨 30초 갱신
+- [ ] 카운터 캐시 정합성 월 1회 점검
+  ```sql
+  SELECT c.id, c.name, c.like_count AS cached, count(cl.user_id) AS actual
+  FROM public.courses c
+  LEFT JOIN public.course_likes cl ON cl.course_id = c.id
+  GROUP BY c.id, c.name, c.like_count
+  HAVING c.like_count <> count(cl.user_id);
+  ```
+
+### Post-MVP
+- [ ] 피드 팔로잉 기반 필터
+- [ ] 공개/비공개 코스 설정
+- [ ] 개인화 추천 알고리즘
+- [ ] 해시태그 기능

@@ -1054,3 +1054,27 @@ button svg {
   padding: 1px 6px;
   border-radius: 10px;
 }
+/* ── 피드 탭 ──────────────────────────────────────────── */
+.feed-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin: 0 0 2px;
+  background: var(--bg);
+  position: sticky;
+  top: var(--header-h);
+  z-index: 100;
+}
+.feed-tab {
+  flex: 1;
+  padding: 12px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  transition: color var(--transition), border-color var(--transition);
+}
+.feed-tab.active {
+  color: var(--primary);
+  font-weight: 700;
+  border-bottom-color: var(--primary);
+}
