@@ -894,7 +894,7 @@ if (!redirectedToLatestDraft) {
 
   // plan 모드 UI 적용
   // mode=plan 이거나, edit 모드인데 원본이 계획 코스인 경우
-  effectivePlanMode = mode === 'plan' || (mode === 'edit' && sourceCourse?.is_plan === true);
+  effectivePlanMode = (mode === 'plan') || (mode === 'edit' && sourceCourse?.is_plan === true && !isPublish);
   applyPlanModeUI(effectivePlanMode);
 }
 
