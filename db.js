@@ -1025,6 +1025,16 @@ export async function createReferenceCourse(
 }
 
 export async function onCourseDeleted(courseId, parentCourseId) {
+  try {
+    const session = await getSession();
+    if (session) {
+      await supabase.rpc('add_user_xp', {
+        p_user_id: session.user.id,
+        p_delta: -750,
+      });
+    }
+  } catch (_) {}
+
   await deleteCourse(courseId);
 
   if (parentCourseId) {
