@@ -93,7 +93,9 @@ function buildNotifItem(n) {
 
   const icon = iconMap[n.type] || '🔔';
   const msg  = msgMap[n.type]  || '';
-  const href = n.course_id ? `/course?id=${n.course_id}` : '#';
+  const href = n.type === 'follow'
+    ? `/user?id=${n.actor_user_id}`
+    : n.course_id ? `/course?id=${n.course_id}` : '#';
 
   const el = document.createElement('a');
   el.className = `notif-item${n.is_read ? '' : ' unread'}`;
