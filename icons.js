@@ -108,6 +108,7 @@ export function initIcons() {
     if (t === 'myCourse') tab.innerHTML = `${ICONS.pencil(14)} 내 코스`;
     if (t === 'bookmark') tab.innerHTML = `${ICONS.bookmark(14)} 북마크`;
     if (t === 'liked')    tab.innerHTML = `${ICONS.heart(14)} 좋아요`;
+    if (t === 'plan')     tab.innerHTML = `${ICONS['map-pin'](14)} 코스 계획`;
   });
 }
 
