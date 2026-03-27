@@ -1,70 +1,131 @@
-/* user.css — 유저 페이지 */
+/* user.css — 유저 페이지 v4.2 */
 
 .user-profile-section {
-  background: #fff;
-  padding: 24px 20px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 24px 20px 16px;
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border);
 }
 
+/* 좌측 */
+.user-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 88px;
+}
+
 .user-avatar {
-  width: 72px; height: 72px;
+  width: 76px; height: 76px;
   background: var(--primary);
   color: #fff;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 30px;
-  font-weight: 700;
-  margin: 0 auto 14px;
+  font-size: 28px; font-weight: 700;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
-.user-info {
+.user-left-meta {
+  margin-top: 10px;
   text-align: center;
-  margin-bottom: 16px;
+  width: 100%;
 }
 
 .user-nickname {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 15px; font-weight: 700;
   color: var(--text);
-  margin-bottom: 4px;
+  word-break: break-all;
+  margin-left: 6px;
 }
 
 .user-level {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
-  font-weight: 500;
+  margin-top: 3px;
+}
+
+/* 우측 */
+.user-right {
+  width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.user-bio {
+  font-size: 13px;
+  color: var(--sub);
+  line-height: 1.5;
+  word-break: break-word;
+  min-height: 20px;
+  margin-left: 6px;
+  white-space: pre-wrap;
 }
 
 .user-stats-row {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0;
+  align-items: left;
 }
 
 .user-stat {
-  flex: 1;
-  text-align: center;
-  padding: 8px 0;
+  flex: 1; text-align: left; 
 }
-
 .user-stat-num {
   display: block;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.2;
+  font-size: 16px; font-weight: 700;
+  color: var(--text); line-height: 1.2;
+  margin-left: 6px
 }
-
 .user-stat-label {
   display: block;
-  font-size: 12px;
-  color: var(--text-muted);
+  font-size: 12px; color: var(--text-muted);
   margin-top: 2px;
+  margin-left: 6px;
+}
+.user-stat-divider {
+  width: 1px; height: 28px;
+  background: var(--border);
+  margin-right: 6px;
+}
+/* 팔로우 버튼 */
+#followBtn {
+  width: 120px;
+  height: 34px;
+  padding: 0;
+  align-self: flex-start;
+  font-size: 13px; font-weight: 600;
+  border: 1.5px solid var(--primary);
+  border-radius: var(--radius-sm);
+  color: var(--primary);
+  background: var(--bg);
+  transition: background var(--transition), color var(--transition);
+}
+#followBtn.follow-btn-active {
+  background: var(--primary);
+  color: #fff;
 }
 
-.user-stat-divider {
-  width: 1px;
-  height: 32px;
-  background: var(--border);
+/* 탭 바 */
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+  position: sticky;
+  top: var(--header-h);
+  z-index: 100;
 }
+.tab-btn {
+  flex: 1; padding: 13px 4px;
+  font-size: 13px; font-weight: 600;
+  color: var(--sub);
+  border: none; border-bottom: 2px solid transparent;
+  background: none; cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+.tab-btn:hover:not(.active) { color: var(--dark); }

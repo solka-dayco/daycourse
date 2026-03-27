@@ -84,13 +84,14 @@ img { display: block; max-width: 100%; }
 }
 
 .header-right {
-  width: 36px;
   display: flex; align-items: center; justify-content: flex-end;
+  gap: 4px;
+  padding-right: 4px;
 }
 
 /* 헤더 + 버튼 */
 #headerCreateBtn {
-  width: 32px; height: 32px;
+  width: 36px; height: 36px;
   background: var(--primary);
   color: #fff;
   border-radius: 50%;
@@ -98,6 +99,7 @@ img { display: block; max-width: 100%; }
   font-weight: 300;
   display: flex; align-items: center; justify-content: center;
   transition: transform var(--transition), background var(--transition);
+  flex-shrink: 0;
 }
 #headerCreateBtn:hover { background: var(--accent); transform: scale(1.08); }
 
@@ -983,4 +985,67 @@ button svg {
   background: var(--primary);
   border-radius: 50%;
   border: 1.5px solid var(--bg);
+}
+/* ── 헤더 프로필 아이콘 ───────────────────────────────── */
+.header-profile-icon {
+  position: relative;
+  line-height: 0;
+  padding: 0;
+  flex-shrink: 0;
+}
+.header-profile-img {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.header-profile-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.header-profile-guest {
+  background: var(--border-dark);
+  color: var(--sub);
+}
+.header-red-dot {
+  position: absolute;
+  top: 0; right: 0;
+  width: 8px; height: 8px;
+  background: var(--primary);
+  border-radius: 50%;
+  border: 1.5px solid var(--bg);
+}
+/* ── 프로필 드롭다운 ──────────────────────────────────── */
+#profileDropdown {
+  display: none;
+  position: fixed;
+  background: var(--bg-card);
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  z-index: 1000;
+  min-width: 130px;
+  overflow: hidden;
+}
+#profileDropdown.show { display: block; }
+.profile-dropdown-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 11px 14px;
+  font-size: 14px; font-weight: 500;
+  color: var(--dark);
+  text-decoration: none;
+  transition: background var(--transition);
+}
+.profile-dropdown-item:hover { background: var(--bg-section); }
+.profile-dropdown-badge {
+  margin-left: auto;
+  background: var(--accent2);
+  color: #fff;
+  font-size: 11px; font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
 }

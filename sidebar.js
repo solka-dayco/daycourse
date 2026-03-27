@@ -12,12 +12,13 @@ export async function initSidebar() {
 
   const { data } = await supabase.auth.getSession();
   const session = data.session;
+  const currentPath = location.pathname;
 
   let user = null;
   if (session) {
     const { data: u } = await supabase
       .from('users')
-      .select('id, nickname, unread_notification_count')
+      .select('id, nickname, unread_notification_count, profile_image_url')
       .eq('id', session.user.id)
       .single();
     user = u;
@@ -27,7 +28,23 @@ export async function initSidebar() {
   const unreadBadge = unreadCount > 0
     ? `<span class="notif-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>`
     : '';
+  const profileImgHtml = session
+    ? (user?.profile_image_url
+        ? `<img src="${escHtml(user.profile_image_url)}" class="header-profile-img" alt="프로필"/>`
+        : `<img src="/image/profile_icon.png" class="header-profile-img" alt="프로필"/>`)
+    : `<img src="/image/profile_icon.png" class="header-profile-img" alt="프로필"/>`;
 
+  // 헤더 프로필 아이콘 주입 (sidebar.innerHTML 이전에 DOM 직접 조작)
+  const headerRight = document.querySelector('.header-right');
+  if (headerRight && !document.getElementById('headerProfileBtn')) {
+    const profileBtn = document.createElement('button');
+    profileBtn.id = 'headerProfileBtn';
+    profileBtn.className = 'header-profile-icon';
+    profileBtn.setAttribute('aria-label', '프로필');
+    profileBtn.style.position = 'relative';
+    profileBtn.innerHTML = profileImgHtml + (unreadCount > 0 ? `<span class="header-red-dot"></span>` : '');
+    headerRight.insertBefore(profileBtn, headerRight.firstChild);
+  }  
   sidebar.innerHTML = `
     <div class="sidebar-inner">
       <div class="sidebar-top">
@@ -35,8 +52,10 @@ export async function initSidebar() {
 
         ${session ? `
           <div class="sidebar-profile">
-            <div class="sidebar-avatar" style="position:relative">
-              ${escFirstChar(user?.nickname ?? '?')}
+            <div class="sidebar-avatar" style="position:relative;overflow:hidden">
+              ${user?.profile_image_url
+                ? `<img src="${escHtml(user.profile_image_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="프로필"/>`
+                : `<img src="/image/profile_icon.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="프로필"/>`}
               ${unreadCount > 0 ? `<span class="sidebar-red-dot"></span>` : ''}
             </div>
             <div class="sidebar-nickname">${escHtml(user?.nickname ?? '')}</div>
@@ -83,6 +102,37 @@ export async function initSidebar() {
       </div>
     </div>
   `;
+
+  // 프로필 아이콘 클릭 — 드롭다운 모달
+  const profileBtn = document.getElementById('headerProfileBtn');
+  if (profileBtn) {
+    // 드롭다운 생성
+    const dropdown = document.createElement('div');
+    dropdown.id = 'profileDropdown';
+    dropdown.innerHTML = `
+      <a href="/notifications" class="profile-dropdown-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        알림
+        ${unreadCount > 0 ? `<span class="profile-dropdown-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>` : ''}
+      </a>
+      <a href="/profile" class="profile-dropdown-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        프로필
+      </a>
+    `;
+    document.body.appendChild(dropdown);
+
+    profileBtn.addEventListener('click', e => {
+      if (!session) { location.href = '/login'; return; }
+      e.stopPropagation();
+      const rect = profileBtn.getBoundingClientRect();
+      dropdown.style.top  = `${rect.bottom + 6}px`;
+      dropdown.style.right = `${window.innerWidth - rect.right}px`;
+      dropdown.classList.toggle('show');
+    });
+
+    document.addEventListener('click', () => dropdown.classList.remove('show'));
+  }
 
   // 헤더 + 버튼
   if (headerCreateBtn) {

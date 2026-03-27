@@ -1004,7 +1004,8 @@ document.getElementById('toggleDetailBtn')?.addEventListener('click', () => {
     if (!file) return;
 
     try {
-      thumbnailBlob = await cropAndCompress(file);
+      const result = await cropAndCompress(file);
+      thumbnailBlob = result.blob;
       thumbnailExistingUrl = '';
       const previewUrl = URL.createObjectURL(thumbnailBlob);
       setThumbnailPreview(previewUrl);
@@ -1130,7 +1131,11 @@ async function doSearch() {
       };
     }
 
-    const results = await searchPlaces(keyword, searchCenter);
+    const raw = await searchPlaces(keyword, searchCenter);
+    const results = [
+      ...raw.filter(r => r.category_group_code === 'SW8'),
+      ...raw.filter(r => r.category_group_code !== 'SW8'),
+    ];
     showKeywordResults(results);
   } catch (e) {
     showToast('검색 오류: ' + (e?.message || '알 수 없는 오류'));

@@ -78,6 +78,7 @@ function buildNotifItem(n) {
     course_comment:   '💬',
     comment_reply:    '↩️',
     course_reference: '🔄',
+    follow:           '👤',
   };
 
   const msgMap = {
@@ -85,6 +86,7 @@ function buildNotifItem(n) {
     course_comment:   buildCommentMsg(n),
     comment_reply:    buildReplyMsg(n),
     course_reference: buildReferenceMsg(n),
+    follow:           buildFollowMsg(n),
   };
 
   const icon = iconMap[n.type] || '🔔';
@@ -133,6 +135,11 @@ function buildReferenceMsg(n) {
     return `${actor} 외 ${n.agg_count - 1}명이 ${course}를 참조했습니다`;
   }
   return `${actor}님이 ${course}를 참조했습니다`;
+}
+
+function buildFollowMsg(n) {
+  const actor = `<strong>${escHtml(n.actor_nickname)}</strong>`;
+  return `${actor}님이 회원님을 팔로우했습니다`;
 }
 
 // ── 무한 스크롤 ───────────────────────────────────────────

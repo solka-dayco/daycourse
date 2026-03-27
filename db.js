@@ -109,7 +109,7 @@ export async function fetchCourses({ //DB courses 데이터 불러오는 함수)
         `id, name, description, region_main, region_sub, total_time,
          like_count, comment_count, reference_count, thumbnail_url,
          author_id, author_nickname, created_at,
-         course_places(order_index, name, photo_url)`,
+         course_places(order_index, name, photo_url, lat, lng)`,
         { count: 'exact' }
       )
       .neq('is_deleted', true)
@@ -171,7 +171,7 @@ export async function fetchCourses({ //DB courses 데이터 불러오는 함수)
   if (courseIds.length > 0) {
     const { data: places, error: placesError } = await supabase
       .from('course_places')
-      .select('course_id, order_index, name, photo_url')
+      .select('course_id, order_index, name, photo_url, lat, lng')
       .in('course_id', courseIds);
 
     if (placesError) throw placesError;
@@ -1099,6 +1099,25 @@ export async function followUser(followerId, followingId) {
     .from('follows')
     .insert({ follower_id: followerId, following_id: followingId });
   if (error) throw error;
+
+  // 팔로우 알림
+  try {
+    const { data: actor } = await supabase
+      .from('users')
+      .select('nickname')
+      .eq('id', followerId)
+      .single();
+
+    await supabase.rpc('upsert_notification', {
+      p_actor_user_id:  followerId,
+      p_actor_nickname: actor?.nickname ?? '',
+      p_target_user_id: followingId,
+      p_type:           'follow',
+      p_course_id:      null,
+      p_course_name:    null,
+      p_comment_id:     null,
+    });
+  } catch (_) {}
 }
 
 export async function unfollowUser(followerId, followingId) {
@@ -1116,6 +1135,25 @@ export async function fetchFollowStats(userId) {
   });
   if (error) throw error;
   return data?.[0] ?? { follower_count: 0, following_count: 0 };
+}
+export async function fetchFollowers(userId, { page = 0, pageSize = 20 } = {}) {
+  const { data, error } = await supabase.rpc('get_followers', {
+    p_user_id: userId,
+    p_limit:   pageSize,
+    p_offset:  page * pageSize,
+  });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function fetchFollowings(userId, { page = 0, pageSize = 20 } = {}) {
+  const { data, error } = await supabase.rpc('get_followings', {
+    p_user_id: userId,
+    p_limit:   pageSize,
+    p_offset:  page * pageSize,
+  });
+  if (error) throw error;
+  return data || [];
 }
 
 // ─── @mention 자동완성 (R5) ───────────────────────────────
@@ -1152,6 +1190,7 @@ export async function uploadProfileImage(blob, userId) {
     .from(STORAGE_BUCKET)
     .upload(path, blob, { contentType: 'image/webp', upsert: true });
   if (error) throw error;
+  // cache bust: 업로드마다 새 URL 강제
   const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  return `${data.publicUrl}?t=${Date.now()}`;
 }

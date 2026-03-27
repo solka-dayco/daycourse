@@ -30,6 +30,8 @@ let state = {
   total: 0,
   loading: false,
   allLoaded: false,
+  userLat: null,
+  userLng: null,
 };
 
 let currentUser = null;
@@ -291,7 +293,24 @@ document.querySelectorAll('#filterTimeChips .chip').forEach(btn => {
 });
 
 document.querySelectorAll('#filterSortChips .chip').forEach(btn => {
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', async () => {
+    if (btn.dataset.sort === 'nearby') {
+      if (!state.userLat || !state.userLng) {
+        try {
+          const pos = await new Promise((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              timeout: 5000, maximumAge: 60000, enableHighAccuracy: false
+            })
+          );
+          state.userLat = pos.coords.latitude;
+          state.userLng = pos.coords.longitude;
+        } catch (_) {
+          showToast('위치 정보를 가져올 수 없습니다');
+          return;
+        }
+      }
+    }
+
     document.querySelectorAll('#filterSortChips .chip')
       .forEach(b => b.classList.remove('active'));
 
@@ -447,8 +466,19 @@ async function loadFeed(isFirstPage) {
         }));
       }
 
+      let sorted = courses;
+      if (state.sort === 'nearby' && state.userLat && state.userLng) {
+        sorted = [...courses].sort((a, b) => {
+          const firstPlaceA = (a.course_places || []).sort((x, y) => x.order_index - y.order_index)[0];
+          const firstPlaceB = (b.course_places || []).sort((x, y) => x.order_index - y.order_index)[0];
+          const distA = firstPlaceA ? haversine(state.userLat, state.userLng, firstPlaceA.lat, firstPlaceA.lng) : Infinity;
+          const distB = firstPlaceB ? haversine(state.userLat, state.userLng, firstPlaceB.lat, firstPlaceB.lng) : Infinity;
+          return distA - distB;
+        });
+      }
+
       const frag = document.createDocumentFragment();
-      for (const course of courses) {
+      for (const course of sorted) {
         const card = buildCard(course, likedMap[course.id] ?? false);
         frag.appendChild(card);
       }
@@ -601,6 +631,14 @@ function bindCardEvents(card, course) {
 }
 
 // ── 유틸 ─────────────────────────────────────────────────
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
 function escHtml(str) {
   if (str == null) return '';
   return String(str)
@@ -617,6 +655,15 @@ function escAttr(str) {
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function formatMinutes(min) {

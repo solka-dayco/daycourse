@@ -53,17 +53,20 @@ let userId_ = null;
     if (!user) { showError(); return; }
 
     document.title = `${user.nickname} — 데이코스`;
-    document.getElementById('headerTitle').textContent = user.nickname;
-    document.getElementById('userAvatar').textContent = user.nickname[0]?.toUpperCase() ?? '?';
+
+    const avatarEl = document.getElementById('userAvatar');
+    avatarEl.innerHTML = `<img src="${escHtml(user.profile_image_url || '/image/profile_icon.png')}" alt="${escHtml(user.nickname)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
+
     document.getElementById('userNickname').textContent = user.nickname;
+    document.getElementById('userBio').innerHTML = escHtml(user.bio || '').replace(/\n/g, '<br/>');
 
     const lv = user.level || calcLevel(user.user_xp || 0);
     document.getElementById('userLevel').textContent = `Lv${lv} ${getLevelTitle(lv)}`;
     document.getElementById('userLevel').style.display = '';
 
-    document.getElementById('statCourses').textContent = stats.course_count;
-    document.getElementById('statLikes').textContent   = stats.total_likes;
-    document.getElementById('statRefs').textContent    = stats.total_references;
+    document.getElementById('statCourses').textContent   = stats.course_count   ?? 0;
+    document.getElementById('statFollowers').textContent = stats.follower_count  ?? 0;
+    document.getElementById('statFollowing').textContent = stats.following_count ?? 0;
 
     // 팔로우 버튼
     const me = await getCurrentUser();
@@ -73,7 +76,7 @@ let userId_ = null;
 
       function renderFollowBtn() {
         followBtn.textContent = following ? '팔로잉' : '팔로우';
-        followBtn.className = following ? 'follow-btn follow-btn-active' : 'follow-btn';
+        followBtn.className   = following ? 'follow-btn follow-btn-active' : 'follow-btn';
         followBtn.style.display = '';
       }
       renderFollowBtn();
@@ -81,13 +84,8 @@ let userId_ = null;
       followBtn.addEventListener('click', async () => {
         followBtn.disabled = true;
         try {
-          if (following) {
-            await unfollowUser(me.id, userId);
-            following = false;
-          } else {
-            await followUser(me.id, userId);
-            following = true;
-          }
+          if (following) { await unfollowUser(me.id, userId); following = false; }
+          else           { await followUser(me.id, userId);   following = true;  }
           renderFollowBtn();
         } catch (_) {}
         followBtn.disabled = false;
