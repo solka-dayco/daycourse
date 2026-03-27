@@ -459,11 +459,19 @@ function bindTabEvents() {
   }
 
   tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
+    tab.addEventListener('click', async () => {
       if (tab.dataset.tab === state.tab) return;
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       state.tab = tab.dataset.tab;
+
+      if (state.tab === 'following') {
+        try {
+          const followings = await fetchFollowings(currentUser.id, { pageSize: 200 });
+          state.followingIds = followings.map(f => f.user_id).filter(Boolean);
+        } catch (_) {}
+      }
+
       reload();
     });
   });
