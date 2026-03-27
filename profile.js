@@ -259,9 +259,7 @@ function setupFollowPanel(userId) {
         li.className = 'follow-panel-item';
         li.innerHTML = `
           <div class="follow-panel-avatar">
-            ${u.profile_image_url
-              ? `<img src="${e(u.profile_image_url)}" alt="${e(u.nickname)}"/>`
-              : (u.nickname?.[0]?.toUpperCase() ?? '?')}
+            <img src="${e(u.profile_image_url || '/image/profile_icon.png')}" alt="${e(u.nickname)}"/>
           </div>
           <span class="follow-panel-nick">${e(u.nickname)}</span>
         `;
