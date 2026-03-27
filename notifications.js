@@ -1,7 +1,7 @@
 // notifications.js — 알림 페이지 (v3)
 import { getCurrentUser, fetchNotifications, markNotificationsRead, logEvent } from './db.js';
 import { initSidebar } from './sidebar.js';
-import { initIcons, initSidebarIcons } from './icons.js';
+import { initIcons, initSidebarIcons, ICONS } from './icons.js';
 
 initSidebar();
 initIcons();
@@ -74,12 +74,12 @@ async function loadNotifs() {
 // ── 알림 아이템 빌드 ───────────────────────────────────────
 function buildNotifItem(n) {
   const iconMap = {
-    course_like:      '♥',
-    course_comment:   '💬',
-    comment_reply:    '↩️',
-    course_reference: '🔄',
-    follow:           '👤',
-    comment_mention:  '@',
+    course_like:      ICONS.heart(16),
+    course_comment:   ICONS['message-circle'](16),
+    comment_reply:    ICONS['message-circle'](16),
+    course_reference: ICONS['git-fork'](16),
+    follow:           ICONS.users(16),
+    comment_mention:  ICONS['message-circle'](16),
   };
 
   const msgMap = {
@@ -91,7 +91,7 @@ function buildNotifItem(n) {
     comment_mention:  buildMentionMsg(n),
   };
 
-  const icon = iconMap[n.type] || '🔔';
+  const icon = iconMap[n.type] || ICONS.bell(16);
   const msg  = msgMap[n.type]  || '';
   const href = n.type === 'follow'
     ? `/user?id=${n.actor_user_id}`
