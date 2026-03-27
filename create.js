@@ -2059,7 +2059,7 @@ async function doSave({ isPublishing = false } = {}) {
   const regionSub = regionSubEl?.value || '';
 
   // plan 모드 여부 판별 (저장 시점 기준)
-  const currentPlanMode = mode === 'plan' || (mode === 'edit' && sourceCourse?.is_plan === true);
+  const currentPlanMode = (mode === 'plan' || (mode === 'edit' && sourceCourse?.is_plan === true)) && !isPublish;
 
   if (!name) {
     showToast('코스 이름을 입력해주세요');
