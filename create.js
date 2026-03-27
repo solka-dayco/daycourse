@@ -702,9 +702,11 @@ function applyPlanModeUI(isPlan) {
   const descEl = document.getElementById('courseDesc');
   if (descEl) descEl.placeholder = '계획 소개글 (선택)';
 
-  // 게시하기 숨김, 저장하기 텍스트 유지
-  const publishBtn = document.getElementById('publishBtn');
-  if (publishBtn) publishBtn.style.display = 'none';
+  // plan 단순 저장 모드일 때만 게시하기 숨김 (publish=1 이면 유지)
+  if (!isPublish) {
+    const publishBtn = document.getElementById('publishBtn');
+    if (publishBtn) publishBtn.style.display = 'none';
+  }
 }
 
 logEvent('course_create_start', 'page', null, { mode: mode || 'new' });
