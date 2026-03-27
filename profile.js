@@ -75,7 +75,6 @@ function renderProfile(user, stats) {
   const pct = nextFloor === 999999999 ? 100
     : Math.round((xp - curFloor) / (nextFloor - curFloor) * 100);
 
-  // 아바타
   const avatarEl = document.getElementById('profileAvatar');
   avatarEl.innerHTML = `<img src="${e(user.profile_image_url || '/image/profile_icon.png')}" alt="프로필"/>`;
 
@@ -90,10 +89,10 @@ function renderProfile(user, stats) {
     lv === 50 ? `${xp.toLocaleString()} XP` : `${xp.toLocaleString()} / ${nextFloor.toLocaleString()} XP`;
 
   document.getElementById('profileBio').innerHTML = e(user.bio || '').replace(/\n/g, '<br/>');
-  document.getElementById('statCourses').textContent     = stats.course_count  ?? 0;
-  document.getElementById('statFollowers').textContent   = stats.follower_count ?? 0;
-  document.getElementById('statFollowing').textContent   = stats.following_count ?? 0;
-  document.getElementById('viewPublicPage').href         = `/user?id=${user.id}`;
+  document.getElementById('statCourses').textContent   = stats.course_count  ?? 0;
+  document.getElementById('statFollowers').textContent = stats.follower_count ?? 0;
+  document.getElementById('statFollowing').textContent = stats.following_count ?? 0;
+  document.getElementById('viewPublicPage').href       = `/user?id=${user.id}`;
 }
 
 // ── 탭 ────────────────────────────────────────────────────
@@ -223,12 +222,12 @@ function setupInfiniteScroll() {
 
 // ── 팔로워/팔로잉 패널 ────────────────────────────────────
 function setupFollowPanel(userId) {
-  const overlay   = document.getElementById('followPanelOverlay');
-  const panel     = document.getElementById('followPanel');
-  const titleEl   = document.getElementById('followPanelTitle');
-  const listEl    = document.getElementById('followPanelList');
-  const closeBtn  = document.getElementById('followPanelClose');
-  const spinner   = document.getElementById('followPanelSpinner');
+  const overlay  = document.getElementById('followPanelOverlay');
+  const panel    = document.getElementById('followPanel');
+  const titleEl  = document.getElementById('followPanelTitle');
+  const listEl   = document.getElementById('followPanelList');
+  const closeBtn = document.getElementById('followPanelClose');
+  const spinner  = document.getElementById('followPanelSpinner');
 
   function openPanel(type) {
     titleEl.textContent = type === 'followers' ? '팔로워' : '팔로잉';
@@ -290,15 +289,14 @@ function setupEditSheet(user) {
   const fileInput  = document.getElementById('profileImageInput');
   const editAvatar = document.getElementById('editAvatar');
 
-  // 편집 아바타 초기 렌더
   function renderEditAvatar(url) {
     editAvatar.innerHTML = `<img src="${e(url || '/image/profile_icon.png')}" alt="프로필"/>`;
   }
   renderEditAvatar(user.profile_image_url);
 
   function openSheet() {
-    nickInput.value    = user.nickname || '';
-    bioInput.value     = user.bio || '';
+    nickInput.value        = user.nickname || '';
+    bioInput.value         = user.bio || '';
     bioCounter.textContent = (user.bio || '').length;
     overlay.classList.add('show');
     sheet.classList.add('open');
@@ -306,18 +304,16 @@ function setupEditSheet(user) {
   function closeSheet() {
     overlay.classList.remove('show');
     sheet.classList.remove('open');
-    hideCrop();
   }
 
   openBtn?.addEventListener('click', openSheet);
   closeBtn?.addEventListener('click', closeSheet);
-  overlay?.addEventListener('click', e => { if (e.target === overlay) closeSheet(); });
+  overlay?.addEventListener('click', ev => { if (ev.target === overlay) closeSheet(); });
 
   bioInput?.addEventListener('input', () => {
     bioCounter.textContent = bioInput.value.length;
   });
 
-  // 저장
   saveBtn?.addEventListener('click', async () => {
     const newNick = nickInput.value.trim();
     const newBio  = bioInput.value.trim().slice(0, 80);
@@ -336,8 +332,9 @@ function setupEditSheet(user) {
     finally { saveBtn.disabled = false; }
   });
 
-  // 사진 변경 버튼
+  // 사진 변경
   avatarBtn?.addEventListener('click', () => fileInput.click());
+
   // 사진 삭제
   document.getElementById('editAvatarDeleteBtn')?.addEventListener('click', async () => {
     if (!confirm('프로필 사진을 삭제할까요?')) return;
@@ -346,193 +343,238 @@ function setupEditSheet(user) {
       user.profile_image_url = null;
       const defaultImg = `<img src="/image/profile_icon.png" alt="프로필"/>`;
       document.getElementById('profileAvatar').innerHTML = defaultImg;
-      document.getElementById('editAvatar').innerHTML    = defaultImg;
+      editAvatar.innerHTML = defaultImg;
       const headerBtn = document.getElementById('headerProfileBtn');
       if (headerBtn) headerBtn.innerHTML = `<img src="/image/profile_icon.png" class="header-profile-img" alt="프로필"/>`;
       showToast('프로필 사진이 삭제됐습니다');
     } catch (_) { showToast('삭제 실패'); }
   });
+
   fileInput?.addEventListener('change', () => {
     const file = fileInput.files[0];
     if (!file) return;
-    startCrop(file, user, editAvatar);
+    openAvatarCropModal(file, user, editAvatar);
     fileInput.value = '';
   });
 }
 
-// ── 인터랙티브 크롭 ───────────────────────────────────────
-let cropState = null;
-
-function hideCrop() {
-  document.getElementById('cropWrap').style.display    = 'none';
-  document.getElementById('editAvatarBtn').style.display = '';
-  document.getElementById('editAvatar').style.display  = '';
-  cropState = null;
+// ── 프로필 사진 크롭 모달 (photo.js 방식) ────────────────
+function openAvatarCropModal(file, user, editAvatarEl) {
+  const reader = new FileReader();
+  reader.onload = ev => _showAvatarCropModal(ev.target.result, user, editAvatarEl);
+  reader.readAsDataURL(file);
 }
 
-function startCrop(file, user, editAvatar) {
-  const cropWrap   = document.getElementById('cropWrap');
-  const cropArea   = document.getElementById('cropArea');
-  const cropImg    = document.getElementById('cropImg');
-  const zoomSlider = document.getElementById('cropZoom');
-  const cancelBtn  = document.getElementById('cropCancelBtn');
-  const confirmBtn = document.getElementById('cropConfirmBtn');
+function _showAvatarCropModal(dataUrl, user, editAvatarEl) {
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,.92);
+    z-index:9999;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;touch-action:none;
+  `;
 
-  document.getElementById('editAvatarBtn').style.display = 'none';
-  document.getElementById('editAvatar').style.display    = 'none';
-  cropWrap.style.display = '';
+  modal.innerHTML = `
+    <div style="color:#fff;font-size:14px;font-weight:600;margin-bottom:12px">
+      프로필 사진 설정
+    </div>
+    <div id="avatarCropViewport" style="
+      position:relative;overflow:hidden;
+      width:min(80vw,320px);height:min(80vw,320px);
+      border-radius:50%;border:2px solid rgba(255,255,255,.6);
+      background:#000;cursor:grab;
+    ">
+      <img id="avatarCropImg" src="${dataUrl}" style="
+        position:absolute;user-select:none;-webkit-user-drag:none;max-width:none;
+      "/>
+      <div style="
+        position:absolute;inset:0;border-radius:50%;
+        box-shadow:0 0 0 9999px rgba(0,0,0,.5);
+        pointer-events:none;
+      "></div>
+    </div>
+    <div style="color:rgba(255,255,255,.6);font-size:12px;margin-top:10px">
+      드래그로 이동 · 핀치/휠로 확대/축소
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button id="avatarCropCancel" style="padding:10px 24px;border-radius:8px;border:1.5px solid rgba(255,255,255,.4);background:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">취소</button>
+      <button id="avatarCropConfirm" style="padding:10px 24px;border-radius:8px;border:none;background:#fff;color:#1a1a2e;font-size:13px;font-weight:700;cursor:pointer;">완료</button>
+    </div>
+  `;
 
-  const url = URL.createObjectURL(file);
-  cropImg.onload = () => {
-    const areaSize = cropArea.offsetWidth;
-    const scale    = Math.max(areaSize / cropImg.naturalWidth, areaSize / cropImg.naturalHeight);
+  document.body.appendChild(modal);
+  document.body.style.overflow = 'hidden';
+
+  const viewport  = modal.querySelector('#avatarCropViewport');
+  const img       = modal.querySelector('#avatarCropImg');
+  let cropState   = { x: 0, y: 0, scale: 1 };
+  let cropDrag    = null;
+  let lastTouches = null;
+
+  img.onload = () => {
+    const vpW = viewport.clientWidth;
+    const vpH = viewport.clientHeight;
+    const fit = Math.min(vpW / img.naturalWidth, vpH / img.naturalHeight);
     cropState = {
-      scale, zoom: 1,
-      x: (areaSize - cropImg.naturalWidth  * scale) / 2,
-      y: (areaSize - cropImg.naturalHeight * scale) / 2,
-      dragging: false, lastX: 0, lastY: 0,
-      naturalW: cropImg.naturalWidth,
-      naturalH: cropImg.naturalHeight,
-      areaSize,
-      baseScale: scale,
+      scale: fit,
+      x: (vpW - img.naturalWidth  * fit) / 2,
+      y: (vpH - img.naturalHeight * fit) / 2,
     };
-    zoomSlider.value = '1';
     applyTransform();
   };
-  cropImg.src = url;
 
   function applyTransform() {
-    if (!cropState) return;
-    const s = cropState.baseScale * cropState.zoom;
-    cropImg.style.transform = `translate(${cropState.x}px, ${cropState.y}px) scale(${s})`;
-    cropImg.style.transformOrigin = '0 0';
-    cropImg.style.left = '0';
-    cropImg.style.top  = '0';
-    cropImg.style.width  = `${cropState.naturalW}px`;
-    cropImg.style.height = `${cropState.naturalH}px`;
+    img.style.left   = `${cropState.x}px`;
+    img.style.top    = `${cropState.y}px`;
+    img.style.width  = `${img.naturalWidth  * cropState.scale}px`;
+    img.style.height = `${img.naturalHeight * cropState.scale}px`;
   }
 
-  function clamp() {
-    if (!cropState) return;
-    const s    = cropState.baseScale * cropState.zoom;
-    const imgW = cropState.naturalW * s;
-    const imgH = cropState.naturalH * s;
-    const sz   = cropState.areaSize;
-    cropState.x = Math.min(0, Math.max(sz - imgW, cropState.x));
-    cropState.y = Math.min(0, Math.max(sz - imgH, cropState.y));
+  // 마우스 드래그
+  viewport.addEventListener('mousedown', ev => {
+    cropDrag = { startX: ev.clientX - cropState.x, startY: ev.clientY - cropState.y };
+    viewport.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mousemove', ev => {
+    if (!cropDrag) return;
+    cropState.x = ev.clientX - cropDrag.startX;
+    cropState.y = ev.clientY - cropDrag.startY;
+    applyTransform();
+  });
+  window.addEventListener('mouseup', () => {
+    cropDrag = null;
+    viewport.style.cursor = 'grab';
+  });
+
+  // 터치 드래그 + 핀치줌
+  viewport.addEventListener('touchstart', ev => {
+    ev.preventDefault();
+    lastTouches = ev.touches;
+    if (ev.touches.length === 1) {
+      cropDrag = { startX: ev.touches[0].clientX - cropState.x, startY: ev.touches[0].clientY - cropState.y };
+    }
+  }, { passive: false });
+
+  viewport.addEventListener('touchmove', ev => {
+    ev.preventDefault();
+    const t = ev.touches;
+    if (t.length === 2 && lastTouches?.length === 2) {
+      const prevDist = getTouchDist(lastTouches);
+      const newDist  = getTouchDist(t);
+      const minS = Math.min(viewport.clientWidth / img.naturalWidth, viewport.clientHeight / img.naturalHeight);
+      const newS = Math.max(minS, Math.min(cropState.scale * (newDist / prevDist), minS * 6));
+      const cx = (t[0].clientX + t[1].clientX) / 2 - viewport.getBoundingClientRect().left;
+      const cy = (t[0].clientY + t[1].clientY) / 2 - viewport.getBoundingClientRect().top;
+      cropState.x = cx - (cx - cropState.x) * (newS / cropState.scale);
+      cropState.y = cy - (cy - cropState.y) * (newS / cropState.scale);
+      cropState.scale = newS;
+      applyTransform();
+    } else if (t.length === 1 && cropDrag) {
+      cropState.x = t[0].clientX - cropDrag.startX;
+      cropState.y = t[0].clientY - cropDrag.startY;
+      applyTransform();
+    }
+    lastTouches = t;
+  }, { passive: false });
+
+  viewport.addEventListener('touchend', ev => {
+    lastTouches = ev.touches.length ? ev.touches : null;
+    if (ev.touches.length === 0) cropDrag = null;
+  });
+
+  // 휠줌
+  viewport.addEventListener('wheel', ev => {
+    ev.preventDefault();
+    const minS = Math.min(viewport.clientWidth / img.naturalWidth, viewport.clientHeight / img.naturalHeight);
+    const newS = Math.max(minS, Math.min(cropState.scale * (ev.deltaY > 0 ? 0.9 : 1.1), minS * 6));
+    const rect = viewport.getBoundingClientRect();
+    const cx   = ev.clientX - rect.left;
+    const cy   = ev.clientY - rect.top;
+    cropState.x = cx - (cx - cropState.x) * (newS / cropState.scale);
+    cropState.y = cy - (cy - cropState.y) * (newS / cropState.scale);
+    cropState.scale = newS;
+    applyTransform();
+  }, { passive: false });
+
+  function cleanup() {
+    modal.remove();
+    document.body.style.overflow = '';
   }
 
-  // 드래그 (mouse)
-  cropArea.addEventListener('mousedown', e => {
-    if (!cropState) return;
-    cropState.dragging = true;
-    cropState.lastX = e.clientX;
-    cropState.lastY = e.clientY;
-  });
-  window.addEventListener('mousemove', e => {
-    if (!cropState?.dragging) return;
-    cropState.x += e.clientX - cropState.lastX;
-    cropState.y += e.clientY - cropState.lastY;
-    cropState.lastX = e.clientX;
-    cropState.lastY = e.clientY;
-    clamp(); applyTransform();
-  });
-  window.addEventListener('mouseup', () => { if (cropState) cropState.dragging = false; });
+  modal.querySelector('#avatarCropCancel').addEventListener('click', cleanup);
 
-  // 드래그 (touch)
-  cropArea.addEventListener('touchstart', e => {
-    if (!cropState || e.touches.length !== 1) return;
-    cropState.dragging = true;
-    cropState.lastX = e.touches[0].clientX;
-    cropState.lastY = e.touches[0].clientY;
-  }, { passive: true });
-  cropArea.addEventListener('touchmove', e => {
-    if (!cropState?.dragging || e.touches.length !== 1) return;
-    cropState.x += e.touches[0].clientX - cropState.lastX;
-    cropState.y += e.touches[0].clientY - cropState.lastY;
-    cropState.lastX = e.touches[0].clientX;
-    cropState.lastY = e.touches[0].clientY;
-    clamp(); applyTransform();
-  }, { passive: true });
-  cropArea.addEventListener('touchend', () => { if (cropState) cropState.dragging = false; });
-
-  // 줌 슬라이더
-  zoomSlider.addEventListener('input', () => {
-    if (!cropState) return;
-    const prevZoom = cropState.zoom;
-    cropState.zoom = parseFloat(zoomSlider.value);
-    // 중심 기준 줌
-    const sz = cropState.areaSize;
-    const ratio = cropState.zoom / prevZoom;
-    cropState.x = sz / 2 - ratio * (sz / 2 - cropState.x);
-    cropState.y = sz / 2 - ratio * (sz / 2 - cropState.y);
-    clamp(); applyTransform();
-  });
-
-  cancelBtn.addEventListener('click', () => { URL.revokeObjectURL(url); hideCrop(); });
-
-  confirmBtn.addEventListener('click', async () => {
-    if (!cropState) return;
+  modal.querySelector('#avatarCropConfirm').addEventListener('click', async () => {
+    const confirmBtn = modal.querySelector('#avatarCropConfirm');
     confirmBtn.disabled = true;
+    confirmBtn.textContent = '저장 중…';
     try {
-      const blob = await renderCrop(cropImg, cropState);
+      const blob = await renderAvatarCrop(img, viewport, cropState);
       const imgUrl = await uploadProfileImage(blob, user.id);
       await updateUserProfile(user.id, { profile_image_url: imgUrl });
       user.profile_image_url = imgUrl;
 
-      // 프로필 아바타 전체 갱신
-      const img = `<img src="${e(imgUrl)}" alt="프로필"/>`;
-      document.getElementById('profileAvatar').innerHTML = img;
-      document.getElementById('editAvatar').innerHTML    = img;
+      const imgTag = `<img src="${e(imgUrl)}" alt="프로필"/>`;
+      document.getElementById('profileAvatar').innerHTML = imgTag;
+      editAvatarEl.innerHTML = imgTag;
 
-      // 헤더 프로필 아이콘 갱신
       const headerBtn = document.getElementById('headerProfileBtn');
-      if (headerBtn) {
-        headerBtn.innerHTML = `<img src="${e(imgUrl)}" class="header-profile-img" alt="프로필"/>`;
-      }
-      // 사이드바 아바타 갱신
-      const sidebarAvatar = document.querySelector('.sidebar-avatar');
-      if (sidebarAvatar) {
-        sidebarAvatar.innerHTML = `<img src="${e(imgUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="프로필"/>`;
-      }
+      if (headerBtn) headerBtn.innerHTML = `<img src="${e(imgUrl)}" class="header-profile-img" alt="프로필"/>`;
 
-      URL.revokeObjectURL(url);
-      hideCrop();
-      document.getElementById('editAvatar').style.display = '';
-      document.getElementById('editAvatarBtn').style.display = '';
+      const sidebarAvatar = document.querySelector('.sidebar-avatar');
+      if (sidebarAvatar) sidebarAvatar.innerHTML = `<img src="${e(imgUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="프로필"/>`;
+
+      cleanup();
       showToast('프로필 사진이 변경됐습니다');
-    } catch (_) { showToast('업로드 실패'); }
-    finally { confirmBtn.disabled = false; }
+    } catch (_) {
+      showToast('업로드 실패');
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = '완료';
+    }
   });
 }
 
-function renderCrop(img, cs) {
+function renderAvatarCrop(img, viewport, state) {
   return new Promise((resolve, reject) => {
     const OUTPUT = 300;
+    const vpW = viewport.clientWidth;
+    const vpH = viewport.clientHeight;
+
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = OUTPUT;
     const ctx = canvas.getContext('2d');
-
-    const s    = cs.baseScale * cs.zoom;
-    const sz   = cs.areaSize;
-    // 원형 마스크 영역 (areaSize의 80%)
-    const maskR = sz * 0.8 / 2;
-    const maskX = sz / 2 - maskR;
-    const maskY = sz / 2 - maskR;
 
     // 원형 클리핑
     ctx.beginPath();
     ctx.arc(OUTPUT / 2, OUTPUT / 2, OUTPUT / 2, 0, Math.PI * 2);
     ctx.clip();
 
-    // 이미지 좌표 → 캔버스 좌표 변환
-    const srcX = (maskX - cs.x) / s;
-    const srcY = (maskY - cs.y) / s;
-    const srcW = (maskR * 2) / s;
+    // 검정 배경
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, OUTPUT, OUTPUT);
 
-    ctx.drawImage(img, srcX, srcY, srcW, srcW, 0, 0, OUTPUT, OUTPUT);
+    // 뷰포트 기준으로 이미지 렌더 (여백 포함)
+    const clipX = Math.max(0, state.x);
+    const clipY = Math.max(0, state.y);
+    const clipW = Math.min(vpW, state.x + img.naturalWidth  * state.scale) - clipX;
+    const clipH = Math.min(vpH, state.y + img.naturalHeight * state.scale) - clipY;
+
+    if (clipW > 0 && clipH > 0) {
+      ctx.drawImage(
+        img,
+        (clipX - state.x) / state.scale, (clipY - state.y) / state.scale,
+        clipW / state.scale, clipH / state.scale,
+        (clipX / vpW) * OUTPUT, (clipY / vpH) * OUTPUT,
+        (clipW / vpW) * OUTPUT, (clipH / vpH) * OUTPUT
+      );
+    }
+
     canvas.toBlob(b => b ? resolve(b) : reject(new Error('blob fail')), 'image/webp', 0.88);
   });
+}
+
+function getTouchDist(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
 }
 
 // ── 유틸 ─────────────────────────────────────────────────
