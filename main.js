@@ -525,7 +525,9 @@ function buildCard(course, liked) {
     <div class="feed-body">
       <div class="feed-course-name">${escHtml(course.name)}</div>
       <div class="feed-places-path">${escHtml(pathText)}</div>
-      ${course.description ? `<div class="feed-description">${escHtml(course.description)}</div>` : ''}
+      <div class="feed-description ${!course.description ? 'is-empty' : ''}">
+        ${course.description ? escHtml(course.description) : '&nbsp;'}
+      </div>
       <div class="feed-meta">
         <span
           class="feed-author"

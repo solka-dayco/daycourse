@@ -952,7 +952,6 @@ function createMentionDropdown(inputEl) {
     dropdown = null;
     items = [];
     selectedIdx = -1;
-    mentionStart = -1;
   }
 
   function highlight(idx) {
@@ -963,17 +962,24 @@ function createMentionDropdown(inputEl) {
 
   function select(idx) {
     if (!items[idx]) return;
-    const before = inputEl.value.slice(0, mentionStart);
-    const after  = inputEl.value.slice(inputEl.selectionStart);
-    inputEl.value = `${before}@${items[idx].nickname} ${after}`;
+    const val = inputEl.value;
+    console.log('select called | mentionStart:', mentionStart, '| val:', val, '| cursor:', inputEl.selectionStart);
+    // mentionStart(@위치)부터 @ 이후 키워드 끝까지 잘라냄
+    const atEnd = val.indexOf(' ', mentionStart) === -1 ? val.length : val.indexOf(' ', mentionStart);
+    const before = val.slice(0, mentionStart);
+    const after  = val.slice(atEnd);
+    inputEl.value = `${before}@${items[idx].nickname}${after}`;
+    const newCursor = before.length + 1 + items[idx].nickname.length + 1;
+    inputEl.setSelectionRange(newCursor, newCursor);
     close();
+    mentionStart = -1;
     inputEl.focus();
   }
 
   inputEl.addEventListener('input', () => {
     const val = inputEl.value;
     const cursor = inputEl.selectionStart;
-    const atIdx = val.lastIndexOf('@', cursor - 1);
+    const atIdx = val.lastIndexOf('@', cursor);
 
     if (atIdx === -1 || (atIdx > 0 && !/\s/.test(val[atIdx - 1]))) {
       close();
@@ -984,6 +990,7 @@ function createMentionDropdown(inputEl) {
     if (/\s/.test(keyword)) { close(); return; }
 
     mentionStart = atIdx;
+    console.log('mentionStart:', mentionStart, '| char:', val[mentionStart], '| val:', val);
 
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(async () => {
@@ -1121,6 +1128,24 @@ async function submitComment() {
       page: 'course',
       length: content.length,
     });
+
+    // @멘션 알림
+    const mentionedNicknames = [...new Set((content.match(/@([^\s@]+)/g) || []).map(m => m.slice(1)))];
+    for (const nick of mentionedNicknames) {
+      try {
+        const { data: mentionedUser } = await supabase.from('users').select('id').eq('nickname', nick).single();
+        if (mentionedUser && mentionedUser.id !== currentUser.id) {
+          await supabase.rpc('upsert_notification', {
+            p_actor_user_id:  currentUser.id,
+            p_actor_nickname: currentUser.nickname,
+            p_target_user_id: mentionedUser.id,
+            p_type:           'comment_mention',
+            p_course_id:      courseId,
+            p_course_name:    course.name,
+          });
+        }
+      } catch (_) {}
+    }
   } catch (e) {
     showToast('댓글 등록 실패');
   } finally {

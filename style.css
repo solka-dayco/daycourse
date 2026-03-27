@@ -400,12 +400,17 @@ img { display: block; max-width: 100%; }
 .feed-description {
   font-size: 14px;
   color: var(--sub);
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-bottom: 6px;
   line-height: 1.4;
   font-style: italic;
+  min-height: 19.6px; /* 14px * 1.4 = 19.6px, 1줄 높이 고정 */
+  white-space: nowrap;
+}
+
+.feed-description.is-empty {
+  visibility: hidden;
 }
 
 .feed-meta {

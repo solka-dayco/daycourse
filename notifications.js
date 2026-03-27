@@ -79,6 +79,7 @@ function buildNotifItem(n) {
     comment_reply:    '↩️',
     course_reference: '🔄',
     follow:           '👤',
+    comment_mention:  '@',
   };
 
   const msgMap = {
@@ -87,6 +88,7 @@ function buildNotifItem(n) {
     comment_reply:    buildReplyMsg(n),
     course_reference: buildReferenceMsg(n),
     follow:           buildFollowMsg(n),
+    comment_mention:  buildMentionMsg(n),
   };
 
   const icon = iconMap[n.type] || '🔔';
@@ -140,6 +142,12 @@ function buildReferenceMsg(n) {
 function buildFollowMsg(n) {
   const actor = `<strong>${escHtml(n.actor_nickname)}</strong>`;
   return `${actor}님이 회원님을 팔로우했습니다`;
+}
+
+function buildMentionMsg(n) {
+  const actor  = `<strong>${escHtml(n.actor_nickname)}</strong>`;
+  const course = n.course_name ? `<span class="notif-course">${escHtml(n.course_name)}</span>` : '코스';
+  return `${actor}님이 ${course} 댓글에서 회원님을 언급했습니다`;
 }
 
 // ── 무한 스크롤 ───────────────────────────────────────────
