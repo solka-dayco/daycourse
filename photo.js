@@ -263,6 +263,16 @@ function openCropModal(dataUrl, resolve, reject, initialBlurRegions) {
           selectedIdx = -1;
           renderSvg();
         });
+        delG.addEventListener('touchend', e => {
+          e.stopPropagation();
+          e.preventDefault();
+          ellipseDrag = null;
+          handleDrag = null;
+          saveHistory();
+          blurRegions.splice(i, 1);
+          selectedIdx = -1;
+          renderSvg();
+        }, { passive: false });
         svg.appendChild(delG);
 
         const copyG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -279,6 +289,13 @@ function openCropModal(dataUrl, resolve, reject, initialBlurRegions) {
           selectedIdx = blurRegions.length - 1;
           renderSvg();
         });
+        copyG.addEventListener('touchend', e => {
+          e.stopPropagation();
+          e.preventDefault();
+          blurRegions.push({ ...blurRegions[i], cx_r: blurRegions[i].cx_r + 0.04, cy_r: blurRegions[i].cy_r + 0.04 });
+          selectedIdx = blurRegions.length - 1;
+          renderSvg();
+        }, { passive: false });
         svg.appendChild(copyG);
       }
     });
