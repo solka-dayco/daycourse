@@ -1191,6 +1191,13 @@ function showKeywordResults(results) {
           lat: parseFloat(r.y),
           lng: parseFloat(r.x),
           name: r.place_name,
+          road_address_name: r.road_address_name || '',
+          address_name: r.address_name || '',
+          place_url: r.place_url || '',
+          phone: r.phone || '',
+          category_name: r.category_name || '',
+          x: r.x,
+          y: r.y,
         },
         () => {
           addPlace(r);
