@@ -132,8 +132,9 @@ async function handleSignup() {
     setFieldErr('errUsername', '');
   }
 
-  if (password.length < 6) {
-    setFieldErr('errPassword', '비밀번호는 6자 이상이어야 합니다');
+  const PW_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d!@#$%^&*]{8,}$/;
+  if (!PW_REGEX.test(password)) {
+    setFieldErr('errPassword', '비밀번호는 8자 이상, 영문+숫자를 포함해야 합니다');
     valid = false;
   } else {
     setFieldErr('errPassword', '');

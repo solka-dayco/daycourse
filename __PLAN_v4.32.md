@@ -28,6 +28,7 @@ Place → Course → Share
 | v4.1 | 2026.03.23 | URL 구조 정리, 드래프트 안정화, OG 미리보기 |
 | **v4.2** | 2026.03.27 | 코스 제작 UX 개선, 코스 계획 기능, 이미지 처리 개선, 레벨/XP 시스템, 커뮤니티 기능 |
 | v4.31 | 2026.03.27 | 팔로잉 피드 탭 분리 |
+| **v4.32** | 2026.03.30 | 로그인 보안 강화 — XSS 방어, config.js 분리, event_logs RLS, Storage 업로드 제한, 비밀번호 정책 |
 
 
 ---
@@ -193,6 +194,18 @@ Place → Course → Share
 - **main.js**: `state`에 `tab`, `followingIds`, `followingDone`, `followingPage`, `followingTotal` 추가. 초기화 시 `fetchFollowings`로 팔로잉 ID 목록 로드 (`f.user_id` 기준)
 - **index.html**: `<!-- 피드 탭 -->` 블록 추가 (`feedTabs`, `feed-tab`)
 - **main.css**: `.feed-tabs`, `.feed-tab`, `.feed-tab.active` 스타일 추가
+
+### 2.11 보안 강화 ✅ (v4.32 신규)
+
+- **XSS 방어**: `utils.js`에 `sanitize()` 함수 추가. `innerHTML` 전수 점검 → `textContent` 교체 또는 sanitize 적용. 점검 대상: main.js, course.js, create.js, user.js, profile.js, sidebar.js, notifications.js. @mention 드롭다운(`createMentionDropdown`) 최우선 적용.
+- **config.js 분리**: `.gitignore`에 `config.js` 추가. `config.example.js` 생성(빈 값). Vercel 환경변수로 이전. Supabase anon key Rotation.
+- **event_logs RLS 제한**: `rate_limit_event_logs` 정책 추가 — 동일 `anonymous_id` 기준 1분 100건 초과 시 INSERT 차단. `logEvent()`에 try-catch 확인.
+- **Storage 업로드 제한**: `course-photos` 버킷 정책 추가 — 5MB 이하, `image/jpeg` · `image/webp` · `image/png`만 허용. `photo.js` 클라이언트 이중 검증 추가.
+- **비밀번호 정책 강화**: Supabase Authentication 최소 8자 설정. `login.js` 회원가입 폼 + `profile.js` 비밀번호 변경 폼에 `validatePassword()` 클라이언트 검증 추가(8자 이상, 영문+숫자 필수). 기존 계정 소급 미적용.
+
+**변경 파일**: `utils.js`(신규), `login.js`, `profile.js`, `photo.js`, `config.js`, `.gitignore`, `config.example.js` + Supabase SQL/Storage 정책
+
+---
 
 ## 3. 보안 정책
 
@@ -394,3 +407,4 @@ admin/admin.js + 서브 모듈 ← supabase.js
 | 2026.03.23 | v4.1 | URL 구조 정리, DraftManager, OG Edge Function, RLS 점검 |
 | 2026.03.27 | v4.2 | **R1** 코스 제작 UX 개선 (시간 선택·토글·피커). **R2** 코스 계획 기능 (is_plan, plan/plan-detail 페이지, 사이드바 메뉴). **R3** 이미지 처리 개선 (letterbox, 블러, 원본 보존, 사진 재편집, photo.js v7 전면 재작성). **R4** 레벨/XP 시스템 전면 도입 (LV1~50, 칭호, pg_cron, profile/user UI). **R5** 커뮤니티 기능 (follows 테이블, 팔로우/언팔로우, @mention 자동완성, 프로필 편집 바텀시트, 알림 red dot). 피드 거리순 정렬, 지하철역 검색 상단 노출 버그픽스 |
 | 2026.03.27 | v4.31 | 팔로잉 피드 탭 — 전체/팔로잉 탭 분리, 팔로잉 코스 우선 노출 후 전체 최신순 혼합, fetchFollowingCourses 추가 |
+| 2026.03.30 | v4.32 | 보안 강화 — XSS 방어(sanitize 함수), config.js 분리(.gitignore+Vercel 환경변수), event_logs RLS rate limit, Storage 업로드 제한(5MB+MIME), 비밀번호 정책 강화(8자+영문+숫자) |

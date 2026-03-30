@@ -1,8 +1,8 @@
-# 데이코스 (DayCourse) — 설정 & 배포 가이드 v4.3
+# 데이코스 (DayCourse) — 설정 & 배포 가이드 v4.32
 
 > **배포 도메인**: https://daycourse.kr (GitHub Pages)  
 > **저장소**: https://github.com/solka-dayco/daycourse  
-> **최종 갱신**: 2026.03.27 (v4.2 — R1~R5 완료)
+> **최종 갱신**: 2026.03.30 (v4.32 — 보안 강화)
 
 ---
 
@@ -16,11 +16,17 @@
    1) schema.sql               ← 기본 테이블 + RLS + 기본 RPC
    2) schema_v3_additions.sql  ← v3/v4 신규 테이블·컬럼·RPC (멱등성 보장)
    3) schema_R5.sql            ← v4.2 follows, bio, profile_image_url, XP/레벨 RPC [v4.2]
+   4) schema_R6_security.sql   ← v4.32 event_logs rate limit RLS, Storage 정책 [v4.32]
    ```
 3. **Storage** → New bucket: `course-photos` (Public ON)
-4. (선택) **Authentication** → Providers → Kakao 활성화
+4. **Storage** → Policies → `course-photos` 버킷에 업로드 제한 정책 추가 [v4.32]
+5. **Authentication** → Password Settings → 최소 8자 설정 [v4.32]
+6. (선택) **Authentication** → Providers → Kakao 활성화
 
 ### 1-2. config.js 수정
+
+> ⚠️ `config.js`는 `.gitignore`에 포함됨. 저장소에 커밋하지 말 것. [v4.32]  
+> `config.example.js`를 복사해 `config.js`로 생성 후 값 입력.
 
 ```js
 export const SUPABASE_URL      = 'https://YOUR_PROJECT.supabase.co';
@@ -28,6 +34,8 @@ export const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
 export const KAKAO_APP_KEY     = 'YOUR_KAKAO_APP_KEY';
 export const STORAGE_BUCKET    = 'course-photos';
 ```
+
+Vercel 배포 시 환경변수로 주입 (Vercel Dashboard → Settings → Environment Variables).
 
 ### 1-3. 로컬 실행
 
@@ -53,33 +61,37 @@ daycourse/
 ├── plan.html / .css / .js      # 코스 계획 목록 [v4.2 신규]
 ├── plan-detail.html / .css / .js # 코스 계획 상세 [v4.2 신규]
 │
-├── login.html / .js            # 로그인 + 회원가입
+├── login.html / .js            # 로그인 + 회원가입 [v4.32: 비밀번호 정책 검증 추가]
 ├── signup.html                 # → /login#signup 리다이렉트
 ├── nickname.html / .js         # 프로필 설정 (가입 직후)
 ├── find.html / .js             # 아이디·비밀번호 찾기
 ├── auth.css                    # 인증 페이지 공통 스타일
 │
 ├── user.html / .css / .js      # 공개 유저 페이지 [v4.2: 팔로우, 소개글, 레벨]
-├── profile.html / .css / .js   # 마이페이지 [v4.2: XP바, 프로필 편집 바텀시트, 계획 탭]
+├── profile.html / .css / .js   # 마이페이지 [v4.2: XP바, 프로필 편집 바텀시트, 계획 탭] [v4.32: 비밀번호 정책 검증 추가]
 ├── bookmarks.html / .js        # 북마크 목록
 ├── notifications.html / .js    # 알림 목록 [v4.2: follow 알림 타입 추가]
 │
 ├── privacy.html                # 개인정보처리방침
 │
+├── utils.js        # 공통 유틸 [v4.32 신규: sanitize() XSS 방어]
 ├── sidebar.js      # 공통 사이드바 [v4.2: 프로필 아이콘 동적 주입, red dot, 드롭다운]
 ├── icons.js        # SVG 아이콘 초기화
 ├── map.js          # 카카오맵 유틸
-├── photo.js        # 크롭/블러/WebP [v4.2: 전면 재작성 v7 — letterbox, 블러, 재편집]
+├── photo.js        # 크롭/블러/WebP [v4.2: 전면 재작성 v7] [v4.32: 업로드 전 크기·MIME 검증]
 ├── app.js          # 비로그인 체크 진입점
 │
 ├── db.js           # DB/Storage 추상화 [v4.2: XP, 팔로우, 계획 코스 함수 추가]
 ├── supabase.js     # Supabase 클라이언트
-├── config.js       # 환경 변수
+├── config.js       # 환경 변수 [v4.32: .gitignore 추가, Vercel 환경변수로 이전]
+├── config.example.js  # 환경 변수 템플릿 [v4.32 신규]
 │
 ├── schema.sql
 ├── schema_v3_additions.sql
 ├── schema_R5.sql               # [v4.2 신규] follows, bio, profile_image_url, XP RPC
+├── schema_R6_security.sql      # [v4.32 신규] event_logs rate limit RLS, Storage 정책
 │
+├── .gitignore                  # [v4.32: config.js 추가]
 ├── sitemap.xml / robots.txt / CNAME
 ├── vercel.json     # [v4.2: /plan, /plan-detail 라우팅 추가]
 │
@@ -121,6 +133,18 @@ daycourse/
 | **팔로잉 탭 정책** | 팔로잉 코스 최신순 우선 → 소진 후 전체 최신순 혼합 노출 |
 | **신규 함수** | `fetchFollowingCourses` (db.js) |
 | **변경 파일** | index.html, main.css, main.js, db.js |
+
+### v4.32 (2026.03.30) — 보안 강화
+
+| 항목 | 내용 |
+|------|------|
+| **XSS 방어** | `utils.js` `sanitize()` 함수 추가. `innerHTML` 전수 점검 → `textContent` / sanitize 적용. `createMentionDropdown` 최우선 적용 |
+| **config.js 분리** | `.gitignore` 추가, `config.example.js` 생성, Vercel 환경변수로 이전, anon key Rotation |
+| **event_logs RLS** | `rate_limit_event_logs` 정책 — `anonymous_id` 기준 1분 100건 초과 시 INSERT 차단 |
+| **Storage 업로드 제한** | `course-photos` 버킷 — 5MB 이하, `image/jpeg` · `image/webp` · `image/png`만 허용. `photo.js` 클라이언트 이중 검증 |
+| **비밀번호 정책** | Supabase 최소 8자 설정. `login.js` · `profile.js`에 `validatePassword()` 추가 (8자 이상, 영문+숫자 필수). 기존 계정 소급 미적용 |
+| **변경 파일** | `utils.js`(신규), `login.js`, `profile.js`, `photo.js`, `config.js`, `.gitignore`, `config.example.js`, `schema_R6_security.sql`(신규) |
+
 ---
 
 ## 4. DB 스키마 요약
@@ -139,7 +163,7 @@ daycourse/
 | `replies` / `reply_likes` | 답글 + 좋아요 |
 | `notifications` | 알림 (aggregation, is_read, agg_count) |
 | `reports` | 신고 (target_type: course/comment, status: pending/resolved) |
-| `event_logs` | 행동 로그 (user_id nullable, anonymous_id, session_id, event_name, jsonb) |
+| `event_logs` | 행동 로그 (user_id nullable, anonymous_id, session_id, event_name, jsonb) [v4.32: rate limit RLS 추가] |
 
 ### 4-2. 주요 RPC 함수
 
@@ -174,7 +198,7 @@ daycourse/
 | `comments` / `replies` | 누구나 | user | admin | 작성자+admin |
 | `notifications` | 본인 | (RPC) | 본인 | ❌ |
 | `reports` | admin | user(본인) | admin | admin |
-| `event_logs` | admin | 누구나 | ❌ | admin |
+| `event_logs` | admin | 누구나 (1분 100건 rate limit) **[v4.32]** | ❌ | admin |
 | `users` | 누구나(공개 필드) | Supabase Auth | 본인+admin | ❌ |
 
 ---
@@ -198,7 +222,7 @@ daycourse/
 ```
 1. config.js 수정 → python -m http.server 8080
 2. 기능 개발 + 테스트
-3. git add → git commit (feat:/fix:/refactor:)
+3. git add → git commit (feat:/fix:/refactor:/security:)
 4. git push → GitHub Pages 자동 배포 (~1~2분) → https://daycourse.kr
 ```
 
@@ -207,11 +231,13 @@ daycourse/
 ## 7. 개발 컨벤션
 
 - DB 접근 로직은 `db.js`로 완전 분리
+- 공통 유틸(`sanitize` 등)은 `utils.js`로 분리 [v4.32]
 - 카카오맵 SDK: `autoload=false` 방식
 - 검색 마커(`searchMarkers`)와 코스 마커(`courseMarkers`) 배열 분리
 - 모든 좋아요 버튼: `♥` 텍스트, liked 시 `#333`
-- 커밋 이름: `feat:`, `fix:`, `refactor:` 컨벤션
+- 커밋 이름: `feat:`, `fix:`, `refactor:`, `security:` 컨벤션
 - 카카오 로그인: 구현 완료, 현재 주석 처리 (비즈 앱 전환 후 활성화)
+- `innerHTML` 사용 시 반드시 `sanitize()` 적용 [v4.32]
 
 ---
 
@@ -237,8 +263,11 @@ daycourse/
   HAVING c.like_count <> count(cl.user_id);
   ```
 
+### 보안 (보류 — 시점이 정해진 것)
+- [ ] **비밀번호 변경 권장 안내 배너** — 수개월 후, 기존 계정 대상
+- [ ] 유료 전환 시 — 이메일 인증 강제, 2FA, 세션 관리 강화, PG사 연동, 개인정보처리방침 재작성, 어드민 2FA 강제, Audit Log 확장
+
 ### Post-MVP
-- [ ] 피드 팔로잉 기반 필터
 - [ ] 공개/비공개 코스 설정
 - [ ] 개인화 추천 알고리즘
 - [ ] 해시태그 기능

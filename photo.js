@@ -6,8 +6,13 @@ const OUTPUT_QUALITY = 0.82;
 const ASPECT         = 4 / 5;
 const BLUR_STRENGTH  = 8; // 고정 블러 강도
 
+const MAX_SIZE = 5 * 1024 * 1024;
+const ALLOWED_TYPES = ['image/jpeg', 'image/webp', 'image/png'];
+
 export function cropAndCompress(file) {
   return new Promise((resolve, reject) => {
+    if (file.size > MAX_SIZE) { reject(new Error('파일 크기는 5MB 이하여야 합니다.')); return; }
+    if (!ALLOWED_TYPES.includes(file.type)) { reject(new Error('이미지 파일만 업로드 가능합니다.')); return; }
     const reader = new FileReader();
     reader.onload = e => openCropModal(e.target.result, resolve, reject, []);
     reader.onerror = reject;
