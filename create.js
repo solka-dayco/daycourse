@@ -1487,7 +1487,7 @@ function renderPlaceList() {
             >${(p.comment || '').length}/100</span>
           </div>
         </div>
-        <div class="place-photo-slot" data-idx="${i}" title="사진 추가">
+        <div class="place-photo-slot ${photoSrc ? 'has-photo' : ''}" data-idx="${i}" title="사진 추가">
           ${
             photoSrc
               ? `<img src="${escHtml(photoSrc)}" alt="장소 사진"/>`
@@ -1628,7 +1628,6 @@ function bindPlaceListEvents(ul) {
       const input = wrap.querySelector('.place-photo-input');
       const idx = parseInt(wrap.dataset.idx ?? input?.dataset.idx, 10);
       if (!places[idx]) return;
-      if (e.target === input) return;
       if (places[idx]._photoBlob || places[idx].photo_url || places[idx]._photoPreview) {
         e.preventDefault();
         if (!confirm('사진 편집은 지원되지 않습니다. 새 사진으로 교체하시겠어요?')) return;
