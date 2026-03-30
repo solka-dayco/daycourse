@@ -986,7 +986,6 @@ document.getElementById('toggleDetailBtn')?.addEventListener('click', () => {
     if (e.target === removeBtn || removeBtn.contains(e.target)) return;
     if (thumbnailBlob || thumbnailExistingUrl) {
       e.preventDefault();
-      if (!confirm('사진 편집은 지원되지 않습니다. 새 사진으로 교체하시겠어요?')) return;
       input.click();
     }
   });
@@ -1629,6 +1628,7 @@ function bindPlaceListEvents(ul) {
       const input = wrap.querySelector('.place-photo-input');
       const idx = parseInt(wrap.dataset.idx ?? input?.dataset.idx, 10);
       if (!places[idx]) return;
+      if (e.target === input) return;
       if (places[idx]._photoBlob || places[idx].photo_url || places[idx]._photoPreview) {
         e.preventDefault();
         if (!confirm('사진 편집은 지원되지 않습니다. 새 사진으로 교체하시겠어요?')) return;
