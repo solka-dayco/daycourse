@@ -1047,6 +1047,8 @@ kakao.maps.load(async () => {
   kakao.maps.event.addListener(mapInstance, 'click', async (e) => {
     // 코스에 추가 버튼 클릭 중이면 지도 클릭 무시
     if (_isAddingPlace) return;
+    // 한줄평 입력 중 지도 클릭 시 포커스 해제
+    document.activeElement?.blur();
     const lat = e.latLng.getLat();
     const lng = e.latLng.getLng();
     let results = [];
