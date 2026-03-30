@@ -984,9 +984,13 @@ document.getElementById('toggleDetailBtn')?.addEventListener('click', () => {
 
   wrap.addEventListener('click', async (e) => {
     if (e.target === removeBtn || removeBtn.contains(e.target)) return;
+    if (wrap._confirming) return;
     if (thumbnailBlob || thumbnailExistingUrl) {
       e.preventDefault();
+      if (!confirm('사진 편집은 지원되지 않습니다. 새 사진으로 교체하시겠어요?')) return;
+      wrap._confirming = true;
       input.click();
+      setTimeout(() => { wrap._confirming = false; }, 300);
     }
   });
 
