@@ -29,6 +29,7 @@ Place → Course → Share
 | **v4.2** | 2026.03.27 | 코스 제작 UX 개선, 코스 계획 기능, 이미지 처리 개선, 레벨/XP 시스템, 커뮤니티 기능 |
 | v4.31 | 2026.03.27 | 팔로잉 피드 탭 분리 |
 | **v4.32** | 2026.03.30 | 로그인 보안 강화 — XSS 방어, config.js 분리, event_logs RLS, Storage 업로드 제한, 비밀번호 정책 |
+| **v4.33** | 2026.03.30 | 버그픽스 및 UX 개선 — 한줄평 줄바꿈, 로컬 서버, 마커 모바일 지원, 사진 시스템 개편, 되돌리기 기능 |
 
 
 ---
@@ -205,9 +206,39 @@ Place → Course → Share
 
 **변경 파일**: `utils.js`(신규), `login.js`, `profile.js`, `photo.js`, `config.js`, `.gitignore`, `config.example.js` + Supabase SQL/Storage 정책
 
----
+### 2.12 버그픽스 및 UX 개선 ✅ (v4.33 신규)
 
-## 3. 보안 정책
+**코스 상세 (`course.js`)**
+- 한줄평 줄바꿈 `<hr class="tl-comment-rule"/>` → `<br/>` 교체 (불필요한 구분선 제거)
+
+**로컬 개발 환경**
+- `server.py` 추가 — `.html` 없는 URL 처리, 자동 브라우저 실행(`webbrowser.open`)
+
+**지도 마커 (`map.js`)**
+- '코스에 추가' 버튼 모바일 터치 지원 — `touchstart` 플래그 세팅, `touchend` 핸들러 추가
+- 마커 `tap` 이벤트 추가 (모바일 툴팁 토글)
+- 검색 결과 마커 생성 시 `road_address_name`, `address_name`, `place_url`, `phone`, `category_name`, `x`, `y` 전달
+
+**코스 만들기 (`create.js`, `create.css`)**
+- 지도 클릭 시 한줄평 포커스 해제 (`document.activeElement?.blur()`)
+- 사진 시스템 개편 — 기존 사진 클릭 시 `confirm` 안내 후 새 사진 교체 방식으로 변경 (`reopenCrop` 제거)
+- `confirm` 중복 발화 버그 수정 — `wrap._confirming` 플래그로 slot click 핸들러 중복 차단
+- `has-photo` CSS 클래스 추가 — 사진 있을 때 `input[type="file"]` `pointer-events: none` 적용
+- 썸네일도 동일하게 `confirm` + `_confirming` 플래그 적용
+
+**사진 편집 (`photo.js`)**
+- 되돌리기 버튼(`cropUndoBtn`) 추가 — 최대 20단계 히스토리 스택
+- `saveHistory()` 적용 위치: 드래그 시작(`onDown`), 휠줌, 핀치줌 시작, 블러 타원 이동(`ellEl mousedown/touchstart`), 핸들 조절(`c mousedown/touchstart`), 타원 삭제(`delG click`)
+- 핀치줌 히스토리 중복 저장 수정 — `touchmove` 진입 시 1회만 저장
+- 모바일 블러 타원 이동 — `ellEl`에 `touchmove`/`touchend` 직접 추가
+- 모바일 블러 핸들 조절 — `c`에 `touchmove`/`touchend` 직접 추가
+- 모바일 삭제 아이콘 — `delG`에 `touchend` 추가, `ellipseDrag`/`handleDrag` null 초기화
+- 모바일 복사 아이콘 — `copyG`에 `touchend` 추가
+- 사진 변경 시 `cropHistory = []` 초기화 (이전 사진 상태 불일치 방지)
+
+**변경 파일**: `course.js`, `create.js`, `create.css`, `map.js`, `photo.js`, `server.py`(신규)
+
+---
 
 ### 3.1 역할 (Role)
 
@@ -408,3 +439,4 @@ admin/admin.js + 서브 모듈 ← supabase.js
 | 2026.03.27 | v4.2 | **R1** 코스 제작 UX 개선 (시간 선택·토글·피커). **R2** 코스 계획 기능 (is_plan, plan/plan-detail 페이지, 사이드바 메뉴). **R3** 이미지 처리 개선 (letterbox, 블러, 원본 보존, 사진 재편집, photo.js v7 전면 재작성). **R4** 레벨/XP 시스템 전면 도입 (LV1~50, 칭호, pg_cron, profile/user UI). **R5** 커뮤니티 기능 (follows 테이블, 팔로우/언팔로우, @mention 자동완성, 프로필 편집 바텀시트, 알림 red dot). 피드 거리순 정렬, 지하철역 검색 상단 노출 버그픽스 |
 | 2026.03.27 | v4.31 | 팔로잉 피드 탭 — 전체/팔로잉 탭 분리, 팔로잉 코스 우선 노출 후 전체 최신순 혼합, fetchFollowingCourses 추가 |
 | 2026.03.30 | v4.32 | 보안 강화 — XSS 방어(sanitize 함수), config.js 분리(.gitignore+Vercel 환경변수), event_logs RLS rate limit, Storage 업로드 제한(5MB+MIME), 비밀번호 정책 강화(8자+영문+숫자) |
+| 2026.03.30 | v4.33 | 버그픽스 및 UX 개선 — 코스 상세 한줄평 줄바꿈 `<br/>` 처리, 로컬 개발 서버(`server.py`) 추가, 마커 '코스에 추가' 모바일 터치 지원, 지도 클릭 시 한줄평 포커스 해제, 사진 시스템 개편(사진 편집→교체 방식, confirm 중복 버그 수정, `has-photo` 클래스), photo.js 되돌리기 기능 추가(드래그/줌/블러 조작 히스토리), 모바일 블러 타원 이동·삭제·복사 touchmove/touchend 추가, 사진 변경 시 cropHistory 초기화 |

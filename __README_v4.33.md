@@ -1,8 +1,8 @@
-# 데이코스 (DayCourse) — 설정 & 배포 가이드 v4.32
+# 데이코스 (DayCourse) — 설정 & 배포 가이드 v4.33
 
 > **배포 도메인**: https://daycourse.kr (GitHub Pages)  
 > **저장소**: https://github.com/solka-dayco/daycourse  
-> **최종 갱신**: 2026.03.30 (v4.32 — 보안 강화)
+> **최종 갱신**: 2026.03.30 (v4.33 — 버그픽스 및 UX 개선)
 
 ---
 
@@ -40,10 +40,11 @@ Vercel 배포 시 환경변수로 주입 (Vercel Dashboard → Settings → Envi
 ### 1-3. 로컬 실행
 
 ```bash
-python -m http.server 8080
-# 브라우저: http://localhost:8080
+python server.py
+# 브라우저 자동 실행: http://localhost:8080
 ```
 
+> `server.py`는 `.html` 없는 URL을 자동 처리해 배포 환경과 동일하게 로컬 테스트 가능.  
 > ⚠️ Supabase 무료 플랜은 **1주일 미활동 시 자동 중지**됩니다.
 
 ---
@@ -77,9 +78,11 @@ daycourse/
 ├── utils.js        # 공통 유틸 [v4.32 신규: sanitize() XSS 방어]
 ├── sidebar.js      # 공통 사이드바 [v4.2: 프로필 아이콘 동적 주입, red dot, 드롭다운]
 ├── icons.js        # SVG 아이콘 초기화
-├── map.js          # 카카오맵 유틸
-├── photo.js        # 크롭/블러/WebP [v4.2: 전면 재작성 v7] [v4.32: 업로드 전 크기·MIME 검증]
+├── map.js          # 카카오맵 유틸 [v4.33: 마커 모바일 터치 지원]
+├── photo.js        # 크롭/블러/WebP [v4.2: 전면 재작성 v7] [v4.32: 업로드 전 크기·MIME 검증] [v4.33: 되돌리기, 모바일 블러 개선]
 ├── app.js          # 비로그인 체크 진입점
+│
+├── server.py       # 로컬 개발 서버 [v4.33 신규: .html 없는 URL 처리, 자동 브라우저 실행]
 │
 ├── db.js           # DB/Storage 추상화 [v4.2: XP, 팔로우, 계획 코스 함수 추가]
 ├── supabase.js     # Supabase 클라이언트
@@ -145,9 +148,21 @@ daycourse/
 | **비밀번호 정책** | Supabase 최소 8자 설정. `login.js` · `profile.js`에 `validatePassword()` 추가 (8자 이상, 영문+숫자 필수). 기존 계정 소급 미적용 |
 | **변경 파일** | `utils.js`(신규), `login.js`, `profile.js`, `photo.js`, `config.js`, `.gitignore`, `config.example.js`, `schema_R6_security.sql`(신규) |
 
----
+### v4.33 (2026.03.30) — 버그픽스 및 UX 개선
 
-## 4. DB 스키마 요약
+| 항목 | 내용 |
+|------|------|
+| **한줄평 줄바꿈** | `course.js` 타임라인 한줄평 `<hr>` → `<br/>` 교체 |
+| **로컬 개발 서버** | `server.py` 추가 — `.html` 없는 URL 처리, 자동 브라우저 실행 |
+| **마커 모바일 지원** | `map.js` '코스에 추가' `touchstart`/`touchend` 추가, `tap` 이벤트 추가 |
+| **지도 포커스 해제** | 지도 클릭 시 한줄평 입력 포커스 자동 해제 |
+| **사진 시스템 개편** | 사진 편집 → 새 사진 교체 방식으로 변경. `confirm` 중복 버그 수정. `has-photo` CSS 클래스 추가 |
+| **되돌리기 기능** | `photo.js` 최대 20단계 히스토리. 드래그/줌/블러 조작 모두 적용 |
+| **모바일 블러 개선** | 타원 이동·핸들 조절·삭제·복사에 `touchmove`/`touchend` 직접 추가 |
+| **사진 변경 히스토리 초기화** | 사진 변경 시 `cropHistory = []` 초기화 |
+| **변경 파일** | `course.js`, `create.js`, `create.css`, `map.js`, `photo.js`, `server.py`(신규) |
+
+---
 
 ### 4-1. 테이블 목록
 
