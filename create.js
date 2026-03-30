@@ -986,27 +986,8 @@ document.getElementById('toggleDetailBtn')?.addEventListener('click', () => {
     if (e.target === removeBtn || removeBtn.contains(e.target)) return;
     if (thumbnailBlob || thumbnailExistingUrl) {
       e.preventDefault();
-      try {
-        let dataUrl = thumbnailBlob
-          ? await blobToDataUrl(thumbnailBlob)
-          : null;
-        if (!dataUrl && thumbnailExistingUrl) {
-          try {
-            const res = await fetch(thumbnailExistingUrl);
-            const blob = await res.blob();
-            dataUrl = await blobToDataUrl(blob);
-            thumbnailExistingUrl = dataUrl;
-          } catch (_) { showToast('사진을 불러올 수 없습니다'); return; }
-        }
-        if (!dataUrl) { showToast('사진을 불러올 수 없습니다'); return; }
-        const result = await reopenCrop(dataUrl);
-        thumbnailBlob = result.blob;
-        thumbnailExistingUrl = '';
-        setThumbnailPreview(URL.createObjectURL(thumbnailBlob));
-        scheduleDraft();
-      } catch (err) {
-        if (err.message !== '취소됨') showToast('사진 처리 오류');
-      }
+      if (!confirm('사진 편집은 지원되지 않습니다. 새 사진으로 교체하시겠어요?')) return;
+      input.click();
     }
   });
 
@@ -1650,31 +1631,8 @@ function bindPlaceListEvents(ul) {
       if (!places[idx]) return;
       if (places[idx]._photoBlob || places[idx].photo_url || places[idx]._photoPreview) {
         e.preventDefault();
-        try {
-          let dataUrl = places[idx]._originalBase64
-            || (places[idx]._photoBlob ? await blobToDataUrl(places[idx]._photoBlob) : null)
-            || places[idx]._photoPreview;
-          if (!dataUrl && places[idx].photo_url) {
-            try {
-              const res = await fetch(places[idx].photo_url);
-              const blob = await res.blob();
-              dataUrl = await blobToDataUrl(blob);
-              places[idx]._originalBase64 = dataUrl;
-            } catch (_) { showToast('사진을 불러올 수 없습니다'); return; }
-          }
-          if (!dataUrl) { showToast('사진을 불러올 수 없습니다'); return; }
-          const result = await reopenCrop(dataUrl, places[idx]._blurRegions || []);
-          if (result.changedOriginal) places[idx]._originalBase64 = result.changedOriginal;
-          places[idx]._photoBlob = result.blob;
-          places[idx]._blurRegions = result.blurRegions;
-          places[idx]._photoPreview = URL.createObjectURL(result.blob);
-          places[idx]._photoBase64 = await blobToDataUrl(result.blob);
-          places[idx].photo_url = '';
-          renderPlaceList();
-          scheduleDraft();
-        } catch (err) {
-          if (err.message !== '취소됨') showToast('사진 처리 오류');
-        }
+        if (!confirm('사진 편집은 지원되지 않습니다. 새 사진으로 교체하시겠어요?')) return;
+        input.click();
       }
     });
   });

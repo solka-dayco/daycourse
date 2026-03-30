@@ -90,6 +90,7 @@ function openCropModal(dataUrl, resolve, reject, initialBlurRegions) {
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;justify-content:center">
       <input id="cropChangeInput" type="file" accept="image/*" style="display:none"/>
       <button id="cropCancel" style="padding:10px 20px;border-radius:8px;border:1.5px solid rgba(255,255,255,.4);background:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">취소</button>
+      <button id="cropUndoBtn" style="padding:10px 20px;border-radius:8px;border:1.5px solid rgba(255,255,255,.4);background:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">되돌리기</button>
       <button id="cropChangeBtn" style="padding:10px 20px;border-radius:8px;border:1.5px solid rgba(255,255,255,.4);background:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">사진 변경</button>
       <button id="blurModeBtn" style="padding:10px 20px;border-radius:8px;border:1.5px solid rgba(255,255,255,.4);background:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">블러</button>
       <button id="cropConfirm" style="padding:10px 24px;border-radius:8px;border:none;background:#fff;color:#1a1a2e;font-size:13px;font-weight:700;cursor:pointer;">완료</button>
@@ -113,6 +114,7 @@ function openCropModal(dataUrl, resolve, reject, initialBlurRegions) {
   let selectedIdx = -1;
 
   let _changedOriginal = null;
+  let cropHistory = []; // { cropState, blurRegions } 스냅샷 스택
   let cropDrag    = null;
   let blurDraw    = null; // { sx, sy } 뷰포트 좌표
   let ellipseDrag = null; // { idx, lastX, lastY }
@@ -145,6 +147,14 @@ function openCropModal(dataUrl, resolve, reject, initialBlurRegions) {
     cropState = { scale: fit, x: (vpW - img.naturalWidth * fit) / 2, y: (vpH - img.naturalHeight * fit) / 2 };
     applyTransform();
   };
+
+  function saveHistory() {
+    cropHistory.push({
+      cropState: { ...cropState },
+      blurRegions: blurRegions.map(r => ({ ...r })),
+    });
+    if (cropHistory.length > 20) cropHistory.shift();
+  }
 
   function applyTransform() {
     img.style.left   = `${cropState.x}px`;
@@ -195,12 +205,14 @@ function openCropModal(dataUrl, resolve, reject, initialBlurRegions) {
 
       ellEl.addEventListener('mousedown', e => {
         e.stopPropagation();
+        saveHistory();
         selectedIdx = i;
         ellipseDrag = { idx: i, lastX: e.clientX, lastY: e.clientY };
         renderSvg();
       });
       ellEl.addEventListener('touchstart', e => {
         e.stopPropagation(); e.preventDefault();
+        saveHistory();
         selectedIdx = i;
         ellipseDrag = { idx: i, lastX: e.touches[0].clientX, lastY: e.touches[0].clientY };
         renderSvg();
@@ -221,10 +233,12 @@ function openCropModal(dataUrl, resolve, reject, initialBlurRegions) {
           c.style.pointerEvents = 'all';
           c.addEventListener('mousedown', e => {
             e.stopPropagation();
+            saveHistory();
             handleDrag = { idx: i, handle: h, lastX: e.clientX, lastY: e.clientY };
           });
           c.addEventListener('touchstart', e => {
             e.stopPropagation(); e.preventDefault();
+            saveHistory();
             handleDrag = { idx: i, handle: h, lastX: e.touches[0].clientX, lastY: e.touches[0].clientY };
           }, { passive: false });
           svg.appendChild(c);
@@ -244,6 +258,7 @@ function openCropModal(dataUrl, resolve, reject, initialBlurRegions) {
         delG.addEventListener('touchstart', e => { e.stopPropagation(); e.preventDefault(); }, { passive: false });
         delG.addEventListener('click', e => {
           e.stopPropagation();
+          saveHistory();
           blurRegions.splice(i, 1);
           selectedIdx = -1;
           renderSvg();
@@ -293,6 +308,8 @@ function openCropModal(dataUrl, resolve, reject, initialBlurRegions) {
   function onDown(clientX, clientY) {
     // handleDrag/ellipseDrag는 SVG 요소에서 직접 설정되므로 여기선 건드리지 않음
     if (handleDrag || ellipseDrag) return;
+
+    saveHistory();
 
     if (!blurMode) {
       cropDrag = { startX: clientX - cropState.x, startY: clientY - cropState.y };
@@ -397,8 +414,10 @@ function openCropModal(dataUrl, resolve, reject, initialBlurRegions) {
 
     // 크롭 이동 모드
     if (!blurMode) {
-      if (t.length === 2 && lastTouches?.length === 2) {
-        // 핀치줌
+      if (t.length === 2) {
+        // 핀치줌 시작 시 1회만 저장
+        if (!lastTouches || lastTouches.length !== 2) saveHistory();
+        if (lastTouches?.length !== 2) { lastTouches = t; return; }
         const cur  = getTouchDist(t), prev = getTouchDist(lastTouches);
         if (prev === 0) { lastTouches = t; return; }
         const minS = Math.min(viewport.clientWidth / img.naturalWidth, viewport.clientHeight / img.naturalHeight);
@@ -432,6 +451,7 @@ function openCropModal(dataUrl, resolve, reject, initialBlurRegions) {
   // ── 휠줌 ────────────────────────────────────────────────
   viewport.addEventListener('wheel', e => {
     e.preventDefault();
+    saveHistory();
     const minS = Math.min(viewport.clientWidth / img.naturalWidth, viewport.clientHeight / img.naturalHeight);
     const newS = Math.max(minS, Math.min(cropState.scale * (e.deltaY > 0 ? 0.9 : 1.1), minS * 6));
     const rect = viewport.getBoundingClientRect();
@@ -448,6 +468,15 @@ function openCropModal(dataUrl, resolve, reject, initialBlurRegions) {
     reject(new Error('취소됨'));
   });
 
+  modal.querySelector('#cropUndoBtn').addEventListener('click', () => {
+    if (!cropHistory.length) return;
+    const prev = cropHistory.pop();
+    cropState = { ...prev.cropState };
+    blurRegions = prev.blurRegions.map(r => ({ ...r }));
+    selectedIdx = -1;
+    applyTransform();
+  });
+
   const cropChangeInput = modal.querySelector('#cropChangeInput');
   modal.querySelector('#cropChangeBtn').addEventListener('click', () => {
     cropChangeInput.click();
@@ -461,6 +490,7 @@ function openCropModal(dataUrl, resolve, reject, initialBlurRegions) {
       img.src = e.target.result;
       blurRegions = [];
       selectedIdx = -1;
+      cropHistory = [];
       renderSvg();
     };
     reader.readAsDataURL(file);
