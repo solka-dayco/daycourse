@@ -1642,10 +1642,18 @@ function bindPlaceListEvents(ul) {
       if (places[idx]._photoBlob || places[idx].photo_url || places[idx]._photoPreview) {
         e.preventDefault();
         try {
-          const dataUrl = places[idx]._originalBase64
+          let dataUrl = places[idx]._originalBase64
             || (places[idx]._photoBlob ? await blobToDataUrl(places[idx]._photoBlob) : null)
-            || places[idx]._photoPreview
-            || places[idx].photo_url;
+            || places[idx]._photoPreview;
+          if (!dataUrl && places[idx].photo_url) {
+            try {
+              const res = await fetch(places[idx].photo_url);
+              const blob = await res.blob();
+              dataUrl = await blobToDataUrl(blob);
+              places[idx]._originalBase64 = dataUrl;
+            } catch (_) { showToast('사진을 불러올 수 없습니다'); return; }
+          }
+          if (!dataUrl) { showToast('사진을 불러올 수 없습니다'); return; }
           const result = await reopenCrop(dataUrl, places[idx]._blurRegions || []);
           if (result.changedOriginal) places[idx]._originalBase64 = result.changedOriginal;
           places[idx]._photoBlob = result.blob;
