@@ -217,6 +217,16 @@ function openCropModal(dataUrl, resolve, reject, initialBlurRegions) {
         ellipseDrag = { idx: i, lastX: e.touches[0].clientX, lastY: e.touches[0].clientY };
         renderSvg();
       }, { passive: false });
+      ellEl.addEventListener('touchmove', e => {
+        e.stopPropagation(); e.preventDefault();
+        if (!ellipseDrag) return;
+        onMove(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: false });
+      ellEl.addEventListener('touchend', e => {
+        e.stopPropagation();
+        ellipseDrag = null;
+        renderSvg();
+      }, { passive: false });
       svg.appendChild(ellEl);
 
       // 선택된 타원 핸들 + 아이콘
@@ -240,6 +250,16 @@ function openCropModal(dataUrl, resolve, reject, initialBlurRegions) {
             e.stopPropagation(); e.preventDefault();
             saveHistory();
             handleDrag = { idx: i, handle: h, lastX: e.touches[0].clientX, lastY: e.touches[0].clientY };
+          }, { passive: false });
+          c.addEventListener('touchmove', e => {
+            e.stopPropagation(); e.preventDefault();
+            if (!handleDrag) return;
+            onMove(e.touches[0].clientX, e.touches[0].clientY);
+          }, { passive: false });
+          c.addEventListener('touchend', e => {
+            e.stopPropagation();
+            handleDrag = null;
+            renderSvg();
           }, { passive: false });
           svg.appendChild(c);
         });
