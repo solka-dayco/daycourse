@@ -546,7 +546,7 @@ function renderTimeline() {
             : `<div class="tl-photo-empty"></div>`
           }
         </div>
-        ${p.comment ? `<div class="tl-comment">${escHtml(p.comment).replace(/\n/g, '<hr class="tl-comment-rule"/>')}</div>` : ''}
+        ${p.comment ? `<div class="tl-comment">${escHtml(p.comment).replace(/\n/g, '<br/>')}</div>` : ''}
       </div>
     `;
 
