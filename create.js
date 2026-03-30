@@ -987,9 +987,18 @@ document.getElementById('toggleDetailBtn')?.addEventListener('click', () => {
     if (thumbnailBlob || thumbnailExistingUrl) {
       e.preventDefault();
       try {
-        const dataUrl = thumbnailBlob
+        let dataUrl = thumbnailBlob
           ? await blobToDataUrl(thumbnailBlob)
-          : thumbnailExistingUrl;
+          : null;
+        if (!dataUrl && thumbnailExistingUrl) {
+          try {
+            const res = await fetch(thumbnailExistingUrl);
+            const blob = await res.blob();
+            dataUrl = await blobToDataUrl(blob);
+            thumbnailExistingUrl = dataUrl;
+          } catch (_) { showToast('사진을 불러올 수 없습니다'); return; }
+        }
+        if (!dataUrl) { showToast('사진을 불러올 수 없습니다'); return; }
         const result = await reopenCrop(dataUrl);
         thumbnailBlob = result.blob;
         thumbnailExistingUrl = '';
