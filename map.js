@@ -109,11 +109,22 @@ export function addSearchMarker(map, place, onAdd) {
     _isAddingPlace = true;
     setTimeout(() => { _isAddingPlace = false; }, 300);
   });
+  tooltipEl.querySelector('button').addEventListener('touchstart', (e) => {
+    e.stopPropagation();
+    _isAddingPlace = true;
+    setTimeout(() => { _isAddingPlace = false; }, 300);
+  }, { passive: true });
   tooltipEl.querySelector('button').addEventListener('click', (e) => {
     e.stopPropagation();
     tooltip.setMap(null);
     onAdd(place);
   });
+  tooltipEl.querySelector('button').addEventListener('touchend', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    tooltip.setMap(null);
+    onAdd(place);
+  }, { passive: false });
 
   // 마커 클릭 → 툴팁 토글
   kakao.maps.event.addListener(marker, 'click', () => {
