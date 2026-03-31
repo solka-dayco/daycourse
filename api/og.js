@@ -14,6 +14,9 @@ function isCrawler(userAgent) {
   // 카카오 공유 크롤러는 Mozilla/5.0으로 시작하지만 명시적으로 크롤러 처리
   if (ua.includes('kakaotalk-scrap')) return true;
 
+  // 구글봇, 빙봇 등 주요 검색엔진 크롤러 명시적 처리
+  if (ua.includes('googlebot') || ua.includes('bingbot') || ua.includes('yandexbot') || ua.includes('applebot')) return true;
+
   // Mozilla/5.0으로 시작하면 일반 브라우저 (Chrome, Safari, Firefox, 인앱 브라우저 전부 포함)
   if (userAgent.startsWith('Mozilla/5.0')) return false;
 
