@@ -391,43 +391,30 @@ admin/admin.js + 서브 모듈 ← supabase.js
 
 ## 6. 향후 작업 기획
 
-### 미완료 — v4.2에서 보류된 항목
-
-- [ ] **@mention 알림** — `comment_mention` 타입. `addComment`/`addReply`에 멘션 파싱 후 알림 발송
-- [ ] **팔로워/팔로잉 목록에서 언팔로우 버튼**
-- [ ] **동적 sitemap** — `api/sitemap.js` Vercel Edge Function. 코스 전체 URL 동적 생성 (10,000개 초과 시 sitemap index 전환)
 - [ ] **카카오 로그인 활성화** — 코드 준비 완료, 비즈 앱 전환 필요
 - [ ] **피드 BFCache 스크롤 위치 복원**
-- [ ] **카운터 캐시 정합성 정기 점검** (배포 후 월 1회 권장)
-  ```sql
-  SELECT c.id, c.name, c.like_count AS cached, count(cl.user_id) AS actual
-  FROM public.courses c
-  LEFT JOIN public.course_likes cl ON cl.course_id = c.id
-  GROUP BY c.id, c.name, c.like_count
-  HAVING c.like_count <> count(cl.user_id);
-  ```
-- [ ] **pg_cron** — `refresh-user-ages`, 레벨 갱신 30초 스케줄 등록
-
-### v4.3 기획 — 사진 도용 대응
-
-#### 저장 방지
-- 우클릭 방지, 드래그 방지, 이미지 선택 방지
-
-#### 워터마크 오버레이
-- 중앙: `@username` (낮은 opacity)
-- 우측 하단: `데이코스` (작은 크기 + 낮은 opacity)
-- 이미지 품질 훼손 최소화 원칙
 
 ### Post-MVP (보류)
 
-- 피드 팔로잉 기반 필터
+- 피드 팔로잉 기반 필터 — 일부 구현
 - 공개/비공개 코스 설정
 - 개인화 추천 알고리즘
 - 해시태그 기능
 
 ---
 
-## 7. 작업 이력
+## 7. 운영
+
+- [ ] **카운터 캐시 정합성 정기 점검** (배포 후 월 1회 권장)
+```sql
+  SELECT c.id, c.name, c.like_count AS cached, count(cl.user_id) AS actual
+  FROM public.courses c
+  LEFT JOIN public.course_likes cl ON cl.course_id = c.id
+  GROUP BY c.id, c.name, c.like_count
+  HAVING c.like_count <> count(cl.user_id);
+```
+
+## 8. 작업 이력
 
 | 날짜 | 버전 | 작업 내용 |
 |------|------|-----------|
@@ -440,3 +427,4 @@ admin/admin.js + 서브 모듈 ← supabase.js
 | 2026.03.27 | v4.31 | 팔로잉 피드 탭 — 전체/팔로잉 탭 분리, 팔로잉 코스 우선 노출 후 전체 최신순 혼합, fetchFollowingCourses 추가 |
 | 2026.03.30 | v4.32 | 보안 강화 — XSS 방어(sanitize 함수), config.js 분리(.gitignore+Vercel 환경변수), event_logs RLS rate limit, Storage 업로드 제한(5MB+MIME), 비밀번호 정책 강화(8자+영문+숫자) |
 | 2026.03.30 | v4.33 | 버그픽스 및 UX 개선 — 코스 상세 한줄평 줄바꿈 `<br/>` 처리, 로컬 개발 서버(`server.py`) 추가, 마커 '코스에 추가' 모바일 터치 지원, 지도 클릭 시 한줄평 포커스 해제, 사진 시스템 개편(사진 편집→교체 방식, confirm 중복 버그 수정, `has-photo` 클래스), photo.js 되돌리기 기능 추가(드래그/줌/블러 조작 히스토리), 모바일 블러 타원 이동·삭제·복사 touchmove/touchend 추가, 사진 변경 시 cropHistory 초기화 |
+| 2026.03.31 | v4.34 | 사진 도용 대응 — 우클릭/드래그 방지, 워터마크 오버레이(코스 작성자 닉네임+데이코스). 이동수단 태그 — `course_places.transport` 컬럼 추가, create 세부사항 모드 아이콘 선택 UI(도보/대중교통/자차), course 타임라인 아이콘 표시, 임시저장/수정/복사 모드 유지. 캐러셀 한줄평 `white-space: pre-wrap` 적용. 구글 색인 생성 요청(9건 수동 제출) |

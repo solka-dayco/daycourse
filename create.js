@@ -254,6 +254,7 @@ class DraftManager {
         comment:     p.comment     || '',
         stay_time:   p.stay_time   || null,
         travel_time: idx === 0 ? null : (p.travel_time || null),
+        transport:   idx === 0 ? null : (p.transport || null),
         photo_url:   p.photo_url   || '',
         _photoPreview: p._photoBase64 || p._photoPreview || '',
         _photoBase64: p._photoBase64 || '',
@@ -411,6 +412,7 @@ function normalizePlace(raw, index = 0) {
         : Number.isFinite(Number(raw.travel_time))
           ? Number(raw.travel_time)
           : null,
+    transport: index === 0 ? null : (raw.transport || null),
     photo_url: raw.photo_url || '',
     _photoBlob: null,
     _photoPreview: raw._photoBase64 || raw._photoPreview || '',
@@ -571,6 +573,7 @@ function applySourceCourseToForm(course) {
         : Number.isFinite(Number(p.travel_time))
           ? Number(p.travel_time)
           : null,
+    transport: p.transport || null,
     photo_url: mode === 'edit' ? (p.photo_url || '') : '',
     _photoBlob: null,
     _photoPreview: '',
@@ -1351,6 +1354,7 @@ function addPlace(r) {
     comment: '',
     stay_time: null,
     travel_time: places.length === 0 ? null : null,
+    transport: null,
     photo_url: '',
     _photoBlob: null,
     _photoPreview: '',
@@ -1441,9 +1445,12 @@ function renderPlaceList() {
           <div class="place-connector-line">
             ${dist ? `<span class="place-connector-dist">${dist}</span>` : ''}
           </div>
-          ${showDetail ? `
           <div class="place-connector-right">
-            <div class="time-inline-label">이동 시간</div>
+            ${showDetail ? `
+            
+            ` : ''}
+            ${showDetail ? `
+            <div class="time-inline-label" style="margin-top:6px">이동 시간</div>
             <div class="time-inline-row">
               <input
                 type="text"
@@ -1454,9 +1461,15 @@ function renderPlaceList() {
                 autocomplete="off"
               />
               <button type="button" class="time-inline-pick-btn place-travel-pick" data-idx="${i}">${ICONS.clock(13)} 선택</button>
+              <span class="transport-row">
+              <button type="button" class="transport-btn ${p.transport === 'walk' ? 'active' : ''}" data-idx="${i}" data-transport="walk" title="도보">${ICONS.walk(16)}</button>
+              <button type="button" class="transport-btn ${p.transport === 'transit' ? 'active' : ''}" data-idx="${i}" data-transport="transit" title="대중교통">${ICONS.bus(16)}</button>
+              <button type="button" class="transport-btn ${p.transport === 'car' ? 'active' : ''}" data-idx="${i}" data-transport="car" title="자차">${ICONS.car(16)}</button>
+              </span>
             </div>
+      
+            ` : ''}
           </div>
-          ` : ''}
         </div>
       `;
       ul.appendChild(connector);
@@ -1625,6 +1638,21 @@ function bindPlaceListEvents(ul) {
     };
     btn.addEventListener('click', openChip);
     btn.addEventListener('touchend', openChip, { passive: false });
+  });
+
+  // 이동수단 버튼
+  ul.querySelectorAll('.transport-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const idx = parseInt(btn.dataset.idx, 10);
+      const transport = btn.dataset.transport;
+      if (!places[idx]) return;
+      places[idx].transport = places[idx].transport === transport ? null : transport;
+      ul.querySelectorAll(`.transport-btn[data-idx="${idx}"]`).forEach(b => {
+        b.classList.toggle('active', b.dataset.transport === places[idx].transport);
+      });
+      scheduleDraft();
+    });
   });
 
   ul.querySelectorAll('.place-photo-slot').forEach((wrap) => {
@@ -2137,6 +2165,7 @@ async function doSave({ isPublishing = false } = {}) {
       photo_url: currentPlanMode ? null : (p.photo_url || null),
       stay_time:   showDetail ? (p.stay_time   || null) : null,
       travel_time: showDetail ? (i === 0 ? null : (p.travel_time || null)) : null,
+      transport:   i === 0 ? null : (p.transport || null),
       order_index: i,
     }));
 

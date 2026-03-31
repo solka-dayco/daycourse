@@ -88,6 +88,7 @@
   overflow: hidden;
   line-height: 1.5;
   word-break: break-all;
+  white-space: pre-wrap;
 }
 
 .carousel-counter {
@@ -383,4 +384,51 @@
 /* 썸네일 슬라이드 — 오버레이 없음 */
 .carousel-slide:first-child .carousel-overlay {
   display: none;
+}
+/* ── 사진 도용 방지 ───────────────────────────────────────── */
+.carousel-slide img,
+.tl-photo img,
+.photo-viewer-img {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  pointer-events: none;
+}
+
+/* ── 워터마크 오버레이 ────────────────────────────────────── */
+.wm-wrap {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  overflow: hidden;
+}
+.wm-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-20deg);
+  font-size: clamp(14px, 4vw, 22px);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.18);
+  white-space: nowrap;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.wm-corner {
+  position: absolute;
+  bottom: 10px;
+  right: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.25);
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.tl-transport-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--sub);
+  margin-left: 4px;
+  vertical-align: middle;
 }

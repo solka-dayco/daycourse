@@ -828,3 +828,27 @@
   height: calc(100vh - var(--header-h) - 60px);
   border-radius: 0;
 }
+/* ── 이동수단 태그 ───────────────────────────────────────── */
+.transport-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: auto 0;
+}
+
+.transport-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  background: #fff;
+  color: #ccc;
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+  flex-shrink: 0;
+}
+.transport-btn:hover { border-color: var(--primary); color: var(--primary); }
+.transport-btn.active { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }

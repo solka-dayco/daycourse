@@ -20,7 +20,7 @@ import {
   searchUsersForMention,
 } from './db.js';
 import { initSidebar } from './sidebar.js';
-import { initIcons, initSidebarIcons } from './icons.js';
+import { initIcons, initSidebarIcons, ICONS } from './icons.js';
 import { supabase } from './supabase.js';
 
 // ── 안전한 DOM 헬퍼 ──────────────────────────────────────
@@ -63,6 +63,12 @@ if (!courseId) {
 let course = null;
 let currentUser = null;
 let commentSort = 'latest';
+
+// ── 워터마크 헬퍼 ─────────────────────────────────────────
+function wmHtml() {
+  const label = course?.author_nickname ? `@${course.author_nickname}` : '데이코스';
+  return `<div class="wm-wrap"><div class="wm-center">${escHtml(label)}</div><div class="wm-corner">데이코스</div></div>`;
+}
 
 // ── 요소 참조 ─────────────────────────────────────────────
 const spinner = $id('spinner');
@@ -354,6 +360,7 @@ function renderCarousel() {
   track.innerHTML = slides.map((p, i) => `
     <div class="carousel-slide" data-idx="${i}">
       <img src="${escHtml(p.photo_url)}" alt="${escHtml(p.name)}" loading="${i === 0 ? 'eager' : 'lazy'}"/>
+      ${wmHtml()}
       <div class="carousel-overlay">
         ${p.type === 'thumbnail' ? '' : (() => {
           const parts = p.name.trim().split(' ');
@@ -443,6 +450,12 @@ function renderCarousel() {
       document.querySelector('.carousel-wrap')?.scrollIntoView({ behavior: 'smooth' });
     }
   };
+
+  // 이미지 저장 방지
+  track.querySelectorAll('img').forEach(img => {
+    img.addEventListener('contextmenu', e => e.preventDefault());
+    img.addEventListener('dragstart', e => e.preventDefault());
+  });
 }
 
 // ── 전체화면 뷰어 ─────────────────────────────────────────
@@ -453,6 +466,8 @@ function openViewer(idx, photos) {
   viewerPhotos = photos;
   viewerCurrent = idx;
   renderViewer();
+  const wmEl = $id('viewerWatermark');
+  if (wmEl) wmEl.innerHTML = wmHtml();
   show('photoViewer');
   document.body.style.overflow = 'hidden';
 }
@@ -471,6 +486,13 @@ on('viewerClose', 'click', () => {
   hide('photoViewer');
   document.body.style.overflow = '';
 });
+
+// 뷰어 이미지 저장 방지
+const viewerImg = $id('viewerImg');
+if (viewerImg) {
+  viewerImg.addEventListener('contextmenu', e => e.preventDefault());
+  viewerImg.addEventListener('dragstart', e => e.preventDefault());
+}
 
 on('viewerPrev', 'click', () => {
   if (viewerCurrent > 0) {
@@ -519,6 +541,7 @@ function renderTimeline() {
           <span class="tl-travel-dist">${formatDist(dist)}</span>
         </div>
         ${p.travel_time ? `<span class="tl-travel-time">이동 ${formatMinutes(p.travel_time)}</span>` : ''}
+        ${p.transport === 'walk' ? `<span class="tl-transport-icon">${ICONS.walk(13)}</span>` : p.transport === 'transit' ? `<span class="tl-transport-icon">${ICONS.bus(13)}</span>` : p.transport === 'car' ? `<span class="tl-transport-icon">${ICONS.car(13)}</span>` : ''}
       `;
       container.appendChild(travelEl);
     }
