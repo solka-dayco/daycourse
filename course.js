@@ -363,13 +363,11 @@ function renderCarousel() {
       ${wmHtml()}
       <div class="carousel-overlay">
         ${p.type === 'thumbnail' ? '' : (() => {
-          const parts = p.name.trim().split(' ');
-          if (parts.length >= 2) {
-            const loc = escHtml(parts[parts.length - 1]);
-            const name = escHtml(parts.slice(0, -1).join(' '));
-            return `<span class="carousel-place-name-main">${name}<span class="carousel-place-name-sub"> ${loc}</span></span>`;
-          }
-          return `<span class="carousel-place-name-main">${escHtml(p.name)}</span>`;
+          const addrParts = (p.address || '').trim().split(' ');
+          const loc = addrParts.length >= 2 ? escHtml(addrParts.slice(0, 2).join(' ')) : '';
+          return loc
+            ? `<span class="carousel-place-name-main">${escHtml(p.name)}<span class="carousel-place-name-sub"> ${loc}</span></span>`
+            : `<span class="carousel-place-name-main">${escHtml(p.name)}</span>`;
         })()}
         ${p.type !== 'thumbnail' && p.comment ? `<div class="carousel-place-comment">${escHtml(p.comment)}</div>` : ''}
       </div>
