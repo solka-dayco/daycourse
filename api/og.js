@@ -40,6 +40,20 @@ async function fetchCourse(courseId) {
   return data?.[0] ?? null;
 }
 
+async function fetchPlaces(courseId) {
+  const res = await fetch(
+    `${process.env.SUPABASE_URL}/rest/v1/course_places?course_id=eq.${encodeURIComponent(courseId)}&select=name,address,comment&order=order_index.asc`,
+    {
+      headers: {
+        'apikey':        process.env.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+      },
+    }
+  );
+  if (!res.ok) return [];
+  return (await res.json()) ?? [];
+}
+
 async function fetchFallbackImage(courseId) {
   const res = await fetch(
     `${process.env.SUPABASE_URL}/rest/v1/course_places?course_id=eq.${encodeURIComponent(courseId)}&select=photo_url&order=order_index.asc&limit=1`,
@@ -65,11 +79,17 @@ function esc(str) {
 }
 
 // ── OG HTML 생성 ──────────────────────────────────────────
-function buildOgHtml(course, courseId, imageUrl) {
+function buildOgHtml(course, courseId, imageUrl, places = []) {
   const title       = course.name ? `${course.name} — 데이코스` : '데이코스 — 나만의 하루 코스';
   const description = course.description ?? '데이코스에서 코스 정보를 확인해보세요.';
   const pageUrl     = `https://daycourse.kr/course?id=${encodeURIComponent(courseId)}`;
   const image       = imageUrl || '';
+
+  const placesHtml = places.length
+    ? `<ol>${places.map(p =>
+        `<li><strong>${esc(p.name)}</strong>${p.address ? ` — ${esc(p.address)}` : ''}${p.comment ? `<br/>${esc(p.comment)}` : ''}</li>`
+      ).join('')}</ol>`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="ko">
@@ -91,7 +111,10 @@ function buildOgHtml(course, courseId, imageUrl) {
   <meta name="twitter:image"       content="${esc(image)}"/>
 </head>
 <body>
-  <p><a href="${esc(pageUrl)}">${esc(title)}</a></p>
+  <h1>${esc(course.name ?? '데이코스')}</h1>
+  <p>${esc(description)}</p>
+  ${placesHtml}
+  <p><a href="${esc(pageUrl)}">데이코스에서 전체 코스 보기</a></p>
 </body>
 </html>`;
 }
@@ -330,7 +353,10 @@ export default async function handler(req) {
 
   // 크롤러 → OG 태그 채운 HTML 반환
   try {
-    const course = await fetchCourse(courseId);
+    const [course, places] = await Promise.all([
+      fetchCourse(courseId),
+      fetchPlaces(courseId),
+    ]);
 
     if (!course) {
       return new Response(COURSE_HTML, {
@@ -340,7 +366,7 @@ export default async function handler(req) {
     }
 
     const imageUrl = course.thumbnail_url || await fetchFallbackImage(courseId);
-    const html     = buildOgHtml(course, courseId, imageUrl);
+    const html     = buildOgHtml(course, courseId, imageUrl, places);
 
     return new Response(html, {
       status: 200,
