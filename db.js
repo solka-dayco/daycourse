@@ -946,6 +946,9 @@ export async function logEvent(
   targetId = null,
   metadata = {}
 ) {
+  // 개발자 기기에서는 이벤트 로그 수집 제외
+  if (canUseStorage() && localStorage.getItem('dc_is_dev') === '1') return;
+
   try {
     const session = await getSession();
     const sessionId = getOrCreateSessionIdForEvent();
