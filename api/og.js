@@ -27,7 +27,7 @@ function isCrawler(userAgent) {
 // ── Supabase 조회 ─────────────────────────────────────────
 async function fetchCourse(courseId) {
   const res = await fetch(
-    `${process.env.SUPABASE_URL}/rest/v1/courses?id=eq.${encodeURIComponent(courseId)}&select=name,description,thumbnail_url&limit=1`,
+    `${process.env.SUPABASE_URL}/rest/v1/courses?id=eq.${encodeURIComponent(courseId)}&select=name,description,thumbnail_url,region_main,region_sub&limit=1`,
     {
       headers: {
         'apikey':        process.env.SUPABASE_ANON_KEY,
@@ -81,7 +81,10 @@ function esc(str) {
 // ── OG HTML 생성 ──────────────────────────────────────────
 function buildOgHtml(course, courseId, imageUrl, places = []) {
   const title       = course.name ? `${course.name} — 데이코스` : '데이코스 — 나만의 하루 코스';
-  const description = course.description ?? '데이코스에서 코스 정보를 확인해보세요.';
+  const region      = [course.region_main, course.region_sub].filter(Boolean).join(' ');
+  const placeCount  = places.length ? `장소 ${places.length}곳 · ` : '';
+  const baseDesc    = course.description ?? '데이코스에서 코스 정보를 확인해보세요.';
+  const description = [region, `${placeCount}${baseDesc}`].filter(Boolean).join(' · ');
   const pageUrl     = `https://daycourse.kr/course?id=${encodeURIComponent(courseId)}`;
   const image       = imageUrl || '';
 
