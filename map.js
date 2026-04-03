@@ -292,7 +292,24 @@ export function searchNearby(lat, lng, radius = 50) {
     return [...seen.values()].sort((a, b) => parseInt(a.distance) - parseInt(b.distance));
   });
 }
-
+/** 주소 검색 → 좌표 반환 */
+export function searchAddress(address) {
+  return new Promise((resolve) => {
+    const geocoder = new kakao.maps.services.Geocoder();
+    geocoder.addressSearch(address, (result, status) => {
+      if (status === kakao.maps.services.Status.OK) {
+        resolve(result.map(r => ({
+          lat: parseFloat(r.y),
+          lng: parseFloat(r.x),
+          address_name: r.address_name,
+          road_address_name: r.road_address?.address_name || '',
+        })));
+      } else {
+        resolve([]);
+      }
+    });
+  });
+}
 /** 좌표 → 도로명/지번 주소 변환 */
 export function coordsToAddress(lat, lng) {
   return new Promise((resolve) => {

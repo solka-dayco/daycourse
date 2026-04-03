@@ -1,8 +1,8 @@
-# 데이코스 (DayCourse) — 설정 & 배포 가이드 v4.34
+# 데이코스 (DayCourse) — 설정 & 배포 가이드 v4.35
 
 > **배포 도메인**: https://daycourse.kr (Vercel)
 > **저장소**: https://github.com/solka-dayco/daycourse
-> **최종 갱신**: 2026.03.31 (v4.34 — 사진 도용 대응, 이동수단 태그, 캐러셀 개선)
+> **최종 갱신**: 2026.04.03 (v4.35 — 지도 검색 개선, 임시저장 로직 개편)
 
 ---
 
@@ -56,7 +56,7 @@ daycourse/
 ├── style.css               # 공통 스타일
 │
 ├── course.html / .css / .js    # 코스 상세 [v4.34: 워터마크, 이동수단 아이콘]
-├── create.html / .css / .js    # 코스 만들기 (plan 모드 분기 포함) [v4.34: 이동수단 태그]
+├── create.html / .css / .js    # 코스 만들기 (plan 모드 분기 포함) [v4.34: 이동수단 태그] [v4.35: 지도 검색 개선, 임시저장 개편]
 ├── plan.html / .css / .js      # 코스 계획 목록 [v4.2 신규]
 ├── plan-detail.html / .css / .js # 코스 계획 상세 [v4.2 신규]
 │
@@ -76,7 +76,7 @@ daycourse/
 ├── utils.js        # 공통 유틸 [v4.32 신규: sanitize() XSS 방어]
 ├── sidebar.js      # 공통 사이드바 [v4.2: 프로필 아이콘 동적 주입, red dot, 드롭다운]
 ├── icons.js        # SVG 아이콘 초기화 [v4.34: walk/bus/car 아이콘 추가]
-├── map.js          # 카카오맵 유틸 [v4.33: 마커 모바일 터치 지원]
+├── map.js          # 카카오맵 유틸 [v4.33: 마커 모바일 터치 지원] [v4.35: searchAddress 추가]
 ├── photo.js        # 크롭/블러/WebP [v4.2: 전면 재작성 v7] [v4.32: 업로드 전 크기·MIME 검증] [v4.33: 되돌리기, 모바일 블러 개선]
 ├── app.js          # 비로그인 체크 진입점
 │
@@ -170,6 +170,20 @@ daycourse/
 | **캐러셀 한줄평** | `white-space: pre-wrap` 적용으로 띄어쓰기 반영 |
 | **구글 색인** | 동적 sitemap 정상 동작 확인. 코스 9건 수동 색인 생성 요청 완료 |
 | **변경 파일** | `course.js`, `course.css`, `course.html`, `create.js`, `create.css`, `icons.js` |
+
+### v4.35 (2026.04.03) — 지도 검색 개선 및 임시저장 로직 개편
+
+| 항목 | 내용 |
+|------|------|
+| **키워드 정렬** | 정확일치→시작일치→포함→지하철역 우선. 동일 score 내 거리 보조 정렬 |
+| **주소 검색** | 키워드 입력 시 Geocoder 병렬 실행. [주소] 항목 클릭 → 위치 마커 + 직접 입력 폼 |
+| **지도 이동** | 엔터/검색버튼 시에만 첫 번째 결과로 지도 이동 |
+| **모바일 버그픽스** | 장소 추가 후 직접입력칸 미노출 수정 (`ul.style.display` 복구) |
+| **DraftManager 키 고정** | `dc_draft_create` (신규/edit/copy 통합) / `dc_draft_plan` (plan 전용) 2개로 고정 |
+| **리다이렉트 제거** | `restoreLatest` URL 파라미터, `redirectedToLatestDraft` 플래그, `loadLatest()` 메서드 제거 |
+| **초기화 단순화** | 진입 → `load()` → 바로 복구. 리다이렉트 없음 |
+| **삭제 범위 수정** | `clearAll()` → `clear()` 교체 — 현재 모드 키만 삭제, 타 모드 드래프트 보존 |
+| **변경 파일** | `create.js`, `map.js` |
 
 ---
 

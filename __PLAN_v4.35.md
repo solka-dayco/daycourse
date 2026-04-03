@@ -1,7 +1,7 @@
-# 데이코스 (DayCourse) 개발 플랜 v4.3
+# 데이코스 (DayCourse) 개발 플랜 v4.35
 
 > 기능 기획, 구현 현황, DB 설계, 작업 이력을 관리합니다.  
-> **최종 갱신: 2026.03.27 (v4.2 — R1~R5 + 버그픽스 완료)**
+> **최종 갱신: 2026.04.03 (v4.35 — 지도 검색 개선, 임시저장 로직 개편)**
 
 ### 프로젝트 핵심 구조
 ```
@@ -30,7 +30,8 @@ Place → Course → Share
 | v4.31 | 2026.03.27 | 팔로잉 피드 탭 분리 |
 | **v4.32** | 2026.03.30 | 로그인 보안 강화 — XSS 방어, config.js 분리, event_logs RLS, Storage 업로드 제한, 비밀번호 정책 |
 | **v4.33** | 2026.03.30 | 버그픽스 및 UX 개선 — 한줄평 줄바꿈, 로컬 서버, 마커 모바일 지원, 사진 시스템 개편, 되돌리기 기능 |
-
+| **v4.34** | 2026.03.31 | 사진 도용 대응 — 워터마크, 우클릭/드래그 방지. 이동수단 태그 추가. 캐러셀 한줄평 개선 |
+| **v4.35** | 2026.04.03 | 지도 검색 개선 — 키워드+거리 혼합 정렬, 주소 검색 추가. 임시저장 로직 개편 — 키 2개 고정, 리다이렉트 제거 |
 
 ---
 
@@ -187,6 +188,7 @@ Place → Course → Share
 **notifications.js**: follow 알림 타입 렌더링 추가
 
 ---
+
 ### 2.10 팔로잉 피드 ✅ (v4.31 신규)
 
 - **피드 탭**: `전체` / `팔로잉` 탭 분리 (비로그인 시 탭 숨김)
@@ -237,6 +239,38 @@ Place → Course → Share
 - 사진 변경 시 `cropHistory = []` 초기화 (이전 사진 상태 불일치 방지)
 
 **변경 파일**: `course.js`, `create.js`, `create.css`, `map.js`, `photo.js`, `server.py`(신규)
+
+---
+
+### 2.13 사진 도용 대응 및 이동수단 태그 ✅ (v4.34 신규)
+
+- **사진 도용 대응**: 캐러셀·뷰어 이미지 우클릭/드래그 방지. 워터마크 오버레이 — 중앙 `@코스작성자닉네임`, 우측 하단 `데이코스` (낮은 opacity, CSS 방식)
+- **이동수단 태그**: `course_places.transport` 컬럼 추가. create 세부사항 모드에서 도보/대중교통/자차 아이콘 버튼 선택 UI. course 타임라인 이동시간 옆 아이콘 표시. 임시저장/수정/복사 모드 transport 필드 유지
+- **캐러셀 한줄평**: `white-space: pre-wrap` 적용으로 띄어쓰기 반영
+- **구글 색인**: 동적 sitemap 정상 동작 확인. 코스 9건 수동 색인 생성 요청 완료
+
+**변경 파일**: `course.js`, `course.css`, `course.html`, `create.js`, `create.css`, `icons.js`
+
+---
+
+### 2.14 지도 검색 개선 ✅ (v4.35 신규)
+
+- **키워드 일치 정렬**: 정확일치 → 시작일치 → 포함 → 지하철역 → 나머지 순. 동일 score 내 현위치 기준 거리 보조 정렬
+- **주소 검색 추가**: 키워드 검색과 병렬로 `Geocoder.addressSearch()` 실행. 결과 리스트 하단에 [주소] 항목 노출 → 클릭 시 해당 위치 마커 표시 + 장소명 직접 입력 폼 노출
+- **엔터/확인 시 지도 이동**: 검색버튼 클릭 또는 엔터 시에만 첫 번째 결과로 지도 이동 (자동 이동 제거)
+- **모바일 터치 버그픽스**: `showManualInputCard` 내 `ul.style.display = ''` 누락으로 장소 추가 후 직접입력칸 미노출 문제 수정
+- **`map.js`**: `searchAddress(keyword)` 함수 추가 (Geocoder 주소검색 → 좌표 반환)
+
+**변경 파일**: `create.js`, `map.js`
+
+### 2.15 임시저장 로직 개편 ✅ (v4.35 신규)
+
+- **DraftManager 키 고정**: `dc_draft_create` (신규/edit/copy 통합) / `dc_draft_plan` (plan 전용) 2개로 고정
+- **리다이렉트 제거**: `restoreLatest` URL 파라미터, `redirectedToLatestDraft` 플래그, `loadLatest()` 메서드 제거
+- **초기화 단순화**: 진입 → `load()` → 바로 복구. 리다이렉트 없음
+- **삭제 범위 수정**: `clearAll()` → `clear()` 교체 — 현재 모드 키만 삭제, 타 모드 드래프트 보존
+
+**변경 파일**: `create.js`
 
 ---
 
@@ -319,6 +353,7 @@ course_places
 ├── comment     text       -- 한줄평 (선택)
 ├── stay_time   integer    -- 선택 [v4.2]
 ├── travel_time integer    -- 선택 [v4.2]
+├── transport   text       -- 선택 [v4.34]
 └── photo_url   text
 ```
 
@@ -428,3 +463,4 @@ admin/admin.js + 서브 모듈 ← supabase.js
 | 2026.03.30 | v4.32 | 보안 강화 — XSS 방어(sanitize 함수), config.js 분리(.gitignore+Vercel 환경변수), event_logs RLS rate limit, Storage 업로드 제한(5MB+MIME), 비밀번호 정책 강화(8자+영문+숫자) |
 | 2026.03.30 | v4.33 | 버그픽스 및 UX 개선 — 코스 상세 한줄평 줄바꿈 `<br/>` 처리, 로컬 개발 서버(`server.py`) 추가, 마커 '코스에 추가' 모바일 터치 지원, 지도 클릭 시 한줄평 포커스 해제, 사진 시스템 개편(사진 편집→교체 방식, confirm 중복 버그 수정, `has-photo` 클래스), photo.js 되돌리기 기능 추가(드래그/줌/블러 조작 히스토리), 모바일 블러 타원 이동·삭제·복사 touchmove/touchend 추가, 사진 변경 시 cropHistory 초기화 |
 | 2026.03.31 | v4.34 | 사진 도용 대응 — 우클릭/드래그 방지, 워터마크 오버레이(코스 작성자 닉네임+데이코스). 이동수단 태그 — `course_places.transport` 컬럼 추가, create 세부사항 모드 아이콘 선택 UI(도보/대중교통/자차), course 타임라인 아이콘 표시, 임시저장/수정/복사 모드 유지. 캐러셀 한줄평 `white-space: pre-wrap` 적용. 구글 색인 생성 요청(9건 수동 제출) |
+| 2026.04.03 | v4.35 | 지도 검색 개선 — 키워드+거리 혼합 정렬, 주소 검색(Geocoder 병렬), 엔터 시 지도 이동 개선, 모바일 터치 버그픽스. 임시저장 로직 개편 — DraftManager 키 2개 고정(`dc_draft_create`/`dc_draft_plan`), loadLatest 제거, 리다이렉트 제거, clearAll→clear 교체 |

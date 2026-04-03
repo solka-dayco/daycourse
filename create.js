@@ -19,6 +19,7 @@ import {
   searchPlaces,
   getCurrentPosition,
   coordsToAddress,
+  searchAddress,
   _isAddingPlace,
 } from './map.js';
 import { cropAndCompress, reopenCrop } from './photo.js';
@@ -55,7 +56,7 @@ const REGION_SUB = {
 const params = new URLSearchParams(location.search);
 const mode = params.get('mode'); // 'edit' | 'copy' | 'plan' | null
 const sourceId = params.get('id');
-const restoreLatest = params.get('restoreLatest') === '1';
+
 const isPublish = params.get('publish') === '1'; // plan → 경험 코스 전환
 const isPlanMode = mode === 'plan' || (mode === 'edit' && !isPublish && (() => {
   // edit 모드에서 원본이 is_plan=true인지는 fetchCourseById 후 판별
@@ -89,12 +90,7 @@ class DraftManager {
   constructor(draftMode, draftSourceId) {
     this._mode     = draftMode     || null;
     this._sourceId = draftSourceId || null;
-    this._key =
-      draftMode === 'edit'
-        ? `dc_draft_edit_${draftSourceId}`
-        : draftMode === 'copy'
-          ? `dc_draft_copy_${draftSourceId}`
-          : 'dc_draft_new';
+    this._key = draftMode === 'plan' ? 'dc_draft_plan' : 'dc_draft_create';
     this._timer   = null;
     this._enabled = false;
     this._saved   = false;
@@ -134,24 +130,6 @@ class DraftManager {
     } catch (_) {
       return null;
     }
-  }
-
-  // 모든 dc_draft_ 키에서 가장 최근 의미있는 드래프트 반환
-  loadLatest() {
-    const all = [];
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (!key || !key.startsWith('dc_draft_')) continue;
-        const raw = JSON.parse(localStorage.getItem(key) || 'null');
-        if (!raw || typeof raw !== 'object') continue;
-        if ((raw.version || 0) < 5) continue;
-        const draft = this._normalize(raw);
-        if (draft && this._hasContent(draft)) all.push({ ...draft, _key: key });
-      }
-    } catch (_) {}
-    all.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
-    return all.length ? all[0] : null;
   }
 
   // 복구 제안 표시 여부 단일 판단
@@ -714,23 +692,6 @@ function applyPlanModeUI(isPlan) {
 
 logEvent('course_create_start', 'page', null, { mode: mode || 'new' });
 
-// ── + 버튼 진입 시 최신 draft 자동 연결 ───────────────────
-let redirectedToLatestDraft = false;
-
-if (!mode && !sourceId && !restoreLatest) {
-  const latest = draft.loadLatest();
-
-  if (latest && draft.hasContent(latest)) {
-    redirectedToLatestDraft = true;
-
-    if ((latest.mode === 'edit' || latest.mode === 'copy') && latest.sourceId) {
-      location.replace(`/create?mode=${latest.mode}&id=${latest.sourceId}&restoreLatest=1`);
-    } else {
-      location.replace('/create?restoreLatest=1');
-    }
-  }
-}
-
 // ── 임시저장 버튼 ─────────────────────────────────────────
 draftSaveBtnEl?.addEventListener('click', () => {
   draft.save();
@@ -843,35 +804,23 @@ function showDraftDeleteConfirmSheet() {
 }
 
 // ── 초기 데이터 로드 ──────────────────────────────────────
-if (!redirectedToLatestDraft) {
-  let initialDraft = null;
-
-  if (mode || sourceId) {
-    initialDraft = draft.load();
-  } else {
-    initialDraft = draft.loadLatest();
-  }
-
+{
+  const initialDraft = draft.load();
   let shouldRestoreDraft = false;
   let shouldResetToEmpty = false;
 
   if (draft.hasContent(initialDraft)) {
-    // 1단계: 복구 여부 선택
     const restoreChoice = await showDraftRestoreSheet(initialDraft);
 
     if (restoreChoice === 'restore') {
       shouldRestoreDraft = true;
     } else {
-      // 2단계: 삭제 재확인
       const deleteChoice = await showDraftDeleteConfirmSheet();
 
       if (deleteChoice === 'delete') {
-        draft.clearAll();
-        initialDraft  = null;
-        sourceCourse  = null;
+        draft.clear();
         shouldResetToEmpty = true;
       } else {
-        // 돌아가기 → 복구로 처리 (데이터 보호)
         shouldRestoreDraft = true;
       }
     }
@@ -880,9 +829,7 @@ if (!redirectedToLatestDraft) {
   if (!shouldResetToEmpty && sourceId && (mode === 'edit' || mode === 'copy')) {
     try {
       sourceCourse = await fetchCourseById(sourceId);
-      console.log('[create] 코스 로드 성공:', sourceCourse?.id, '장소수:', sourceCourse?.course_places?.length);
     } catch (e) {
-      console.error('[create] 코스 로드 실패:', e);
       sourceCourse = null;
     }
   }
@@ -895,8 +842,6 @@ if (!redirectedToLatestDraft) {
     applySourceCourseToForm(sourceCourse);
   }
 
-  // plan 모드 UI 적용
-  // mode=plan 이거나, edit 모드인데 원본이 계획 코스인 경우
   effectivePlanMode = (mode === 'plan') || (mode === 'edit' && sourceCourse?.is_plan === true && !isPublish);
   applyPlanModeUI(effectivePlanMode);
 }
@@ -1068,9 +1013,9 @@ kakao.maps.load(async () => {
     mapInstance.setCenter(new kakao.maps.LatLng(places[0].lat, places[0].lng));
   }
 
-  searchBtn?.addEventListener('click', doSearch);
+  searchBtn?.addEventListener('click', () => doSearch(true));
   searchInput?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') doSearch();
+    if (e.key === 'Enter') doSearch(true);
   });
 });
 
@@ -1105,7 +1050,7 @@ searchInput?.addEventListener('input', () => {
   searchTimer = setTimeout(doSearch, 400);
 });
 
-async function doSearch() {
+async function doSearch(move = false) {
   const keyword = searchInput?.value.trim();
   if (!keyword) return;
 
@@ -1115,28 +1060,44 @@ async function doSearch() {
   }
 
   try {
-    let searchCenter = {};
+    // 거리 보조 정렬용 현위치만 보관 (location 옵션 제거 → 카카오 관련도순 반환)
+    let refLat = null;
+    let refLng = null;
     if (mapInstance) {
       const center = mapInstance.getCenter();
-      searchCenter = {
-        lat: center.getLat(),
-        lng: center.getLng(),
-        radius: 0,
-      };
+      refLat = center.getLat();
+      refLng = center.getLng();
     } else if (myLat && myLng) {
-      searchCenter = {
-        lat: myLat,
-        lng: myLng,
-        radius: 0,
-      };
+      refLat = myLat;
+      refLng = myLng;
     }
 
-    const raw = await searchPlaces(keyword, searchCenter);
-    const results = [
-      ...raw.filter(r => r.category_group_code === 'SW8'),
-      ...raw.filter(r => r.category_group_code !== 'SW8'),
-    ];
-    showKeywordResults(results);
+    const [raw, addrResults] = await Promise.all([
+      searchPlaces(keyword, {}),
+      searchAddress(keyword),
+    ]);
+    const kw = keyword.toLowerCase();
+    const scored = [...raw].sort((a, b) => {
+      const score = (name, code) => {
+        const n = (name || '').toLowerCase();
+        if (n === kw) return 0;
+        if (n.startsWith(kw)) return 1;
+        if (n.includes(kw)) return 2;
+        if (code === 'SW8') return 3;
+        return 4;
+      };
+      const sa = score(a.place_name, a.category_group_code);
+      const sb = score(b.place_name, b.category_group_code);
+      if (sa !== sb) return sa - sb;
+      // 동일 score 내 거리 보조 정렬
+      if (refLat && refLng) {
+        const da = haversineDist({ lat: refLat, lng: refLng }, { lat: parseFloat(a.y), lng: parseFloat(a.x) });
+        const db = haversineDist({ lat: refLat, lng: refLng }, { lat: parseFloat(b.y), lng: parseFloat(b.x) });
+        return da - db;
+      }
+      return 0;
+    });
+    showKeywordResults(scored, addrResults, keyword, move);
   } catch (e) {
     showToast('검색 오류: ' + (e?.message || '알 수 없는 오류'));
   }
@@ -1161,11 +1122,19 @@ function buildCategorySelect(selectedVal = '') {
   `;
 }
 
-function showKeywordResults(results) {
+function showKeywordResults(results, addrResults = [], keyword = '', move = false) {
   const ul = document.getElementById('keywordResults');
   if (!ul) return;
 
   ul.innerHTML = '';
+
+  if (move) {
+    const first = results[0] || (addrResults[0] ? { x: String(addrResults[0].lng), y: String(addrResults[0].lat) } : null);
+    if (first && mapInstance) {
+      mapInstance.setCenter(new kakao.maps.LatLng(parseFloat(first.y), parseFloat(first.x)));
+      mapInstance.setLevel(4);
+    }
+  }
 
   if (!Array.isArray(results) || !results.length) {
     ul.innerHTML = '<li class="search-result-item" style="color:var(--sub);font-size:13px">검색 결과가 없습니다</li>';
@@ -1207,12 +1176,29 @@ function showKeywordResults(results) {
   }
 
   ul.querySelectorAll('.search-result-item[data-idx]').forEach((li) => {
-    li.addEventListener('click', () => {
+    const handler = () => {
       addPlace(results[parseInt(li.dataset.idx, 10)]);
       ul.style.display = 'none';
       ul.innerHTML = '';
-    });
+    };
+    li.addEventListener('click', handler);
+    li.addEventListener('touchend', (e) => { e.preventDefault(); handler(); }, { passive: false });
   });
+
+  // 주소 검색 결과 항목 추가
+  if (addrResults.length) {
+    addrResults.forEach((addr) => {
+      const li = document.createElement('li');
+      li.className = 'search-result-item';
+      li.innerHTML = `
+        <span class="result-name" style="color:var(--sub);font-size:12px">[주소]</span>
+        <span class="result-name">${escHtml(addr.road_address_name || addr.address_name)}</span>
+      `;
+      li.addEventListener('click', () => showAddressManualCard(addr, keyword));
+      li.addEventListener('touchend', (e) => { e.preventDefault(); showAddressManualCard(addr, keyword); }, { passive: false });
+      ul.appendChild(li);
+    });
+  }
 
   ul.style.display = 'block';
   ul.style.zIndex = '9999';
@@ -1239,12 +1225,14 @@ function showMapClickResults(results, lat, lng, addr) {
         <span class="result-name">${escHtml(r.place_name)}</span>
         <span class="result-address">${escHtml(r.road_address_name || r.address_name || '')}</span>
       `;
-      li.addEventListener('click', () => {
+      const mapClickHandler = () => {
         addPlace(r);
         overlayUl.style.display = 'none';
         overlayUl.innerHTML = '';
         if (mapInstance) clearSearchMarkers();
-      });
+      };
+      li.addEventListener('click', mapClickHandler);
+      li.addEventListener('touchend', (e) => { e.preventDefault(); mapClickHandler(); }, { passive: false });
       overlayUl.appendChild(li);
 
       if (mapInstance) {
@@ -1299,9 +1287,10 @@ function showManualInputCard(lat, lng, addr) {
     <button id="manualAddBtn" class="create-search-btn" style="width:100%;margin-top:6px">직접 추가</button>
   `;
   ul.appendChild(li);
+  ul.style.display = '';
   card.style.display = '';
 
-  li.querySelector('#manualAddBtn')?.addEventListener('click', () => {
+  const manualAddHandler = () => {
     const name = (li.querySelector('#manualPlaceName')?.value || '').trim();
     if (!name) {
       showToast('장소 이름을 입력해주세요');
@@ -1320,9 +1309,79 @@ function showManualInputCard(lat, lng, addr) {
 
     card.style.display = 'none';
     ul.innerHTML = '';
-  });
+  };
+  li.querySelector('#manualAddBtn')?.addEventListener('click', manualAddHandler);
+  li.querySelector('#manualAddBtn')?.addEventListener('touchend', (e) => { e.preventDefault(); manualAddHandler(); }, { passive: false });
 }
+function showAddressManualCard(addr, defaultName = '') {
+  const ul = document.getElementById('keywordResults');
+  if (ul) { ul.style.display = 'none'; ul.innerHTML = ''; }
+  if (mapInstance) {
+    clearSearchMarkers();
+    mapInstance.setCenter(new kakao.maps.LatLng(addr.lat, addr.lng));
+    mapInstance.setLevel(3);
+    addSearchMarker(mapInstance, {
+      lat: addr.lat,
+      lng: addr.lng,
+      name: addr.road_address_name || addr.address_name,
+      road_address_name: addr.road_address_name || '',
+      address_name: addr.address_name || '',
+    }, (p) => {
+      addPlace({
+        place_name: document.getElementById('addrManualPlaceName')?.value.trim() || p.name,
+        road_address_name: addr.road_address_name || '',
+        address_name: addr.address_name || '',
+        x: String(addr.lng),
+        y: String(addr.lat),
+      });
+    });
+  }
 
+  const card = document.getElementById('mapClickCard');
+  const cardUl = document.getElementById('mapClickResults');
+  if (!card || !cardUl) return;
+
+  cardUl.innerHTML = '';
+  const li = document.createElement('li');
+  li.className = 'search-result-item manual-input-item';
+  li.style.cursor = 'default';
+  li.innerHTML = `
+    <div style="font-size:12px;color:var(--sub);margin-bottom:8px">
+      ${escHtml(addr.road_address_name || addr.address_name)} — 직접 입력
+    </div>
+    <input
+      type="text"
+      id="addrManualPlaceName"
+      class="create-search-input"
+      placeholder="장소 이름"
+      style="margin-bottom:6px;width:100%"
+      autocomplete="off"
+    />
+    ${buildCategorySelect()}
+    <button id="addrManualAddBtn" class="create-search-btn" style="width:100%;margin-top:6px">직접 추가</button>
+  `;
+  cardUl.appendChild(li);
+  card.style.display = '';
+
+  const addHandler = () => {
+    const name = (li.querySelector('#addrManualPlaceName')?.value || '').trim();
+    if (!name) { showToast('장소 이름을 입력해주세요'); return; }
+    const category = li.querySelector('#manualPlaceCategory')?.value || '';
+    addPlace({
+      place_name: name,
+      category_name: category,
+      road_address_name: addr.road_address_name || '',
+      address_name: addr.address_name || '',
+      x: String(addr.lng),
+      y: String(addr.lat),
+    });
+    card.style.display = 'none';
+    cardUl.innerHTML = '';
+  };
+
+  li.querySelector('#addrManualAddBtn')?.addEventListener('click', addHandler);
+  li.querySelector('#addrManualAddBtn')?.addEventListener('touchend', (e) => { e.preventDefault(); addHandler(); }, { passive: false });
+}
 // ── 장소 추가 ─────────────────────────────────────────────
 function addPlace(r) {
   if (places.length >= MAX_PLACES) {
