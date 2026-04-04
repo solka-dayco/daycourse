@@ -946,8 +946,9 @@ export async function logEvent(
   targetId = null,
   metadata = {}
 ) {
-  // 개발자 기기에서는 이벤트 로그 수집 제외
+  // 개발자 기기 및 Vercel 프리뷰 환경에서는 이벤트 로그 수집 제외
   if (canUseStorage() && localStorage.getItem('dc_is_dev') === '1') return;
+  if (typeof window !== 'undefined' && window.location.hostname.endsWith('.vercel.app')) return;
 
   try {
     const session = await getSession();
