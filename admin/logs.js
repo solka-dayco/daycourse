@@ -35,7 +35,7 @@ async function fetchLogs() {
   let q = supabase
     .from('event_logs')
     .select(
-      'id, user_id, anonymous_id, event_name, target_type, target_id, session_id, event_page, created_at',
+      'id, user_id, anonymous_id, event_name, target_type, target_id, session_id, event_page, referrer, current_url, utm_source, utm_medium, utm_campaign, created_at',
       { count: 'exact' }
     )
     .order('created_at', { ascending: false })
@@ -77,6 +77,9 @@ async function fetchLogs() {
           <th>session_id</th>
           <th>event_name</th>
           <th>event_page</th>
+          <th>referrer</th>
+          <th>current_url</th>
+          <th>utm</th>
           <th>target_type</th>
           <th>target_id</th>
           <th>생성일</th>
@@ -101,6 +104,9 @@ async function fetchLogs() {
               <td style="font-size:11px;color:#888">${sessionId}</td>  
               <td>${eventName}</td>
               <td title="${eventPageEscaped}" style="max-width:260px">${eventPageShort}</td>
+              <td style="font-size:11px;color:#888" title="${escHtml(l.referrer || '')}">${truncate(escHtml(l.referrer || '-'), 30)}</td>
+              <td style="font-size:11px;color:#888" title="${escHtml(l.current_url || '')}">${truncate(escHtml(l.current_url || '-'), 30)}</td>
+              <td style="font-size:11px;color:#888">${escHtml([l.utm_source, l.utm_medium, l.utm_campaign].filter(Boolean).join(' / ') || '-')}</td>
               <td>${targetType}</td>
               <td style="font-size:11px;color:#888">${targetId}</td>
               <td>${fmtDate(l.created_at)}</td>
