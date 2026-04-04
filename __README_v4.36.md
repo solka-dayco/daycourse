@@ -2,7 +2,7 @@
 
 > **배포 도메인**: https://daycourse.kr (Vercel)
 > **저장소**: https://github.com/solka-dayco/daycourse
-> **최종 갱신**: 2026.04.03 (v4.35 — 지도 검색 개선, 임시저장 로직 개편)
+> **최종 갱신**: 2026.04.04 (v4.36 — 개발자 이벤트 로그 제외, 유입 경로 수집)
 
 ---
 
@@ -185,6 +185,15 @@ daycourse/
 | **삭제 범위 수정** | `clearAll()` → `clear()` 교체 — 현재 모드 키만 삭제, 타 모드 드래프트 보존 |
 | **변경 파일** | `create.js`, `map.js` |
 
+### v4.36 (2026.04.04) — 이벤트 로그 개선
+
+| 항목 | 내용 |
+|------|------|
+| **개발자 기기 수집 제외** | `localStorage`의 `dc_is_dev` 플래그로 차단 — 로그인/로그아웃/익명 상태 모두 적용 |
+| **유입 경로 수집** | `logEvent()`에 `referrer`, `current_url`, `utm_source`, `utm_medium`, `utm_campaign` 추가 |
+| **DB 컬럼 추가** | `event_logs` 테이블에 유입 경로 컬럼 5개 추가 |
+| **변경 파일** | `db.js` |
+
 ---
 
 ### 4-1. 테이블 목록
@@ -201,7 +210,7 @@ daycourse/
 | `replies` / `reply_likes` | 답글 + 좋아요 |
 | `notifications` | 알림 (aggregation, is_read, agg_count) |
 | `reports` | 신고 (target_type: course/comment, status: pending/resolved) |
-| `event_logs` | 행동 로그 (user_id nullable, anonymous_id, session_id, event_name, jsonb) [v4.32: rate limit RLS 추가] |
+| `event_logs` | 행동 로그 (user_id nullable, anonymous_id, session_id, event_name, jsonb, **referrer, current_url, utm_source, utm_medium, utm_campaign**) [v4.32: rate limit RLS 추가] [v4.36: 유입 경로 컬럼 추가] |
 
 ### 4-2. 주요 RPC 함수
 
