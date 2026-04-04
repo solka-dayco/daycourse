@@ -954,6 +954,14 @@ export async function logEvent(
     const sessionId = getOrCreateSessionIdForEvent();
     const anonymousId = getOrCreateAnonymousIdForEvent();
 
+    // 유입 경로 수집
+    const params = new URLSearchParams(window.location.search);
+    const referrer = document.referrer || null;
+    const currentUrl = window.location.href || null;
+    const utmSource   = params.get('utm_source')   || null;
+    const utmMedium   = params.get('utm_medium')   || null;
+    const utmCampaign = params.get('utm_campaign') || null;
+
     const payload = {
       user_id: session?.user?.id ?? null,
       anonymous_id: anonymousId,
@@ -962,6 +970,11 @@ export async function logEvent(
       target_id: targetId != null ? String(targetId) : null,
       session_id: sessionId,
       event_page: metadata || {},
+      referrer,
+      current_url: currentUrl,
+      utm_source: utmSource,
+      utm_medium: utmMedium,
+      utm_campaign: utmCampaign,
     };
 
     const { error } = await supabase.from('event_logs').insert(payload);
