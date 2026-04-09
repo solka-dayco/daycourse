@@ -1270,7 +1270,7 @@ function buildSeoDescription(course) {
 
 //코스 제목 노출
 function updateSeoTags() {
-  const canonicalUrl = `${location.origin}/course?id=${encodeURIComponent(courseId)}`;
+  const canonicalUrl = `https://daycourse.kr/course?id=${encodeURIComponent(courseId)}`;
   const title = `${course.name} | 데이코스`;
   const description = buildSeoDescription(course);
   const image =
