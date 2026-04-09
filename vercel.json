@@ -4,9 +4,9 @@
       "source": "/sitemap.xml",
       "destination": "/api/sitemap"
     },
-    {
+    { 
       "source": "/course",
-      "destination": "/course.html"
+      "destination": "/api/og"
     },
     {
       "source": "/create",
