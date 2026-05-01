@@ -21,6 +21,20 @@ initSidebarIcons();
 // 최초 페이지 진입 로그
 logEvent('page_view', 'page', null, { page: 'feed' });
 
+// Google OAuth 콜백 후 신규 유저 감지 (세션 비동기 확립 대응)
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' && session) {
+    const { data: profile } = await supabase
+      .from('users')
+      .select('id, nickname')
+      .eq('id', session.user.id)
+      .maybeSingle();
+    if (!profile || !profile.nickname) {
+      location.href = '/nickname';
+    }
+  }
+});
+
 // ── 상태 ──────────────────────────────────────────────────
 const PAGE_SIZE = 20;
 let state = {
