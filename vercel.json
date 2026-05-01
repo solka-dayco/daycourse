@@ -59,6 +59,10 @@
     {
       "source": "/admin",
       "destination": "/admin/admin.html"
+    },
+    {
+      "source": "/account",
+      "destination": "/account.html"
     }
   ],
   "redirects": [

@@ -61,10 +61,10 @@ const filterBadge = document.getElementById('filterBadge');
     // Google OAuth 신규 유저: users 테이블에 없으면 프로필 설정으로 이동
     const { data: profile } = await supabase
       .from('users')
-      .select('id')
+      .select('id, nickname')
       .eq('id', currentUser.id)
       .maybeSingle();
-    if (!profile) {
+    if (!profile || !profile.nickname) {
       location.href = '/nickname';
       return;
     }
