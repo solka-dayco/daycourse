@@ -11,5 +11,5 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 import webbrowser
 webbrowser.open('http://localhost:8080')
-with socketserver.TCPServer(('', 8080), Handler) as httpd:
+with socketserver.ThreadingTCPServer(('', 8080), Handler) as httpd:
     httpd.serve_forever()

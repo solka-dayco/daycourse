@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Python Local Server",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["server.py"],
+      "port": 8080
+    },
+    {
+      "name": "Vercel Dev",
+      "runtimeExecutable": "vercel",
+      "runtimeArgs": ["dev"],
+      "port": 3000
+    }
+  ]
+}

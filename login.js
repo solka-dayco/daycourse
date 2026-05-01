@@ -210,12 +210,16 @@ async function handleSignup() {
   }
 }
 
-// ── 카카오 로그인 (활성화 시 주석 해제) ──────────────────
-// document.getElementById('kakaoLoginBtn')?.addEventListener('click', async () => {
-//   const { signInWithKakao } = await import('./db.js');
-//   try {
-//     await signInWithKakao(`${location.origin}/`);
-//   } catch (e) {
-//     showMsg('loginMsg', '카카오 로그인 실패: ' + e.message);
-//   }
-// });
+// ── 구글 로그인 ──────────────────────────────────────────
+async function handleGoogleLogin() {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${location.origin}/`,
+    },
+  });
+  if (error) showMsg('loginMsg', '구글 로그인 실패: ' + error.message);
+}
+
+document.getElementById('googleLoginBtn')?.addEventListener('click', handleGoogleLogin);
+document.getElementById('googleSignupBtn')?.addEventListener('click', handleGoogleLogin);

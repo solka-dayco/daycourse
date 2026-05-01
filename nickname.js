@@ -8,11 +8,19 @@ if (!sessionData.session) { location.href = '/login'; }
 
 logEvent('page_view', 'page', null, { page: 'nickname_setup' });
 const userId = sessionData.session.user.id;
+const authUser = sessionData.session.user;
 
 // 이미 닉네임 설정된 경우
-const { data: existingUser } = await supabase.from('users').select('id, username, nickname').eq('id', userId).single();
+const { data: existingUser } = await supabase.from('users').select('id, username, nickname').eq('id', userId).maybeSingle();
 if (existingUser?.nickname && existingUser.nickname !== existingUser.username) {
   // 이미 설정한 경우 스킵 가능하지만 재설정도 허용
+}
+
+// Google 유저인 경우 닉네임 초기값 설정
+const isGoogleUser = authUser.app_metadata?.provider === 'google';
+if (isGoogleUser) {
+  const googleName = (authUser.user_metadata?.full_name || authUser.user_metadata?.name || '').trim();
+  if (googleName) document.getElementById('nicknameInput').value = googleName;
 }
 
 // 나이 입력 (number input — 1~100)
@@ -75,7 +83,7 @@ async function save(skipNickname = false) {
   try {
     const payload = {
       id:       userId,
-      username: existingUser?.username ?? '',
+      username: existingUser?.username ?? (isGoogleUser ? '' : ''),
       nickname: skipNickname ? (existingUser?.nickname ?? '') : nickname,
     };
     if (selectedGender)        payload.gender     = selectedGender;

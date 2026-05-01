@@ -465,6 +465,14 @@ img { display: block; max-width: 100%; }
 .feed-like-btn:hover, .feed-comment-btn:hover { color: var(--dark); }
 .feed-like-btn.liked { color: var(--liked-color); font-weight: 700; }
 .feed-like-btn .heart { font-size: 12px; }
+.feed-view-count {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--sub);
+  padding: 3px 5px;
+}
 
 /* 모바일 피드 단순화: 썸네일 + 코스 제목만 노출 */
 @media (max-width: 767px) {

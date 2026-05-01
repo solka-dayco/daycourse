@@ -162,6 +162,25 @@
   background: var(--border);
 }
 
+/* 구글 버튼 */
+.google-btn {
+  width: 100%;
+  padding: 12px;
+  background: #fff;
+  color: rgba(0,0,0,.75);
+  border: 1.5px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background .15s, border-color .15s;
+}
+.google-btn:hover { background: #f5f5f5; }
+
 /* 카카오 버튼 */
 .kakao-btn {
   width: 100%;

@@ -58,6 +58,17 @@ const filterBadge = document.getElementById('filterBadge');
 (async () => {
   currentUser = await getCurrentUser();
   if (currentUser) {
+    // Google OAuth 신규 유저: users 테이블에 없으면 프로필 설정으로 이동
+    const { data: profile } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', currentUser.id)
+      .maybeSingle();
+    if (!profile) {
+      location.href = '/nickname';
+      return;
+    }
+
     document.getElementById('headerCreateBtn').style.display = '';
     // 팔로잉 목록 미리 로드
     try {
@@ -639,12 +650,16 @@ function buildCard(course, liked) {
           ${timeText ? `<span class="feed-time-badge">⏱ ${escHtml(timeText)}</span>` : ''}
           <button class="feed-like-btn ${liked ? 'liked' : ''}" data-id="${escAttr(course.id)}" aria-label="좋아요">
             <span class="heart">♥</span>
-            <span class="like-count">${course.like_count ?? 0}</span>
+            <span class="like-count">${fmtCount(course.like_count)}</span>
           </button>
           <button class="feed-comment-btn" data-id="${escAttr(course.id)}" aria-label="댓글">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            <span class="comment-count">${course.comment_count ?? 0}</span>
+            <span class="comment-count">${fmtCount(course.comment_count)}</span>
           </button>
+          <span class="feed-view-count">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            ${fmtCount(course.view_count)}
+          </span>
         </div>
       </div>
     </div>
@@ -766,6 +781,13 @@ function haversine(lat1, lng1, lat2, lng2) {
   const a = Math.sin(dLat / 2) ** 2
     + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function fmtCount(n) {
+  n = n ?? 0;
+  if (n >= 1_000_000) return (Math.round(n / 100_000) / 10).toFixed(1) + 'M';
+  if (n >= 1_000) return (Math.round(n / 100) / 10).toFixed(1) + 'K';
+  return String(n);
 }
 
 function formatMinutes(min) {

@@ -18,6 +18,7 @@ import {
   logEvent,
   submitReport,
   searchUsersForMention,
+  incrementViewCount,
 } from './db.js';
 import { initSidebar } from './sidebar.js';
 import { initIcons, initSidebarIcons, ICONS } from './icons.js';
@@ -103,6 +104,16 @@ const commentSubmitBtn = $id('commentSubmitBtn');
       has_thumbnail: !!course.thumbnail_url,
       place_count: Array.isArray(course.course_places) ? course.course_places.length : 0,
     });
+    (() => {
+      const key = `dc_view_${courseId}`;
+      const last = parseInt(localStorage.getItem(key) || '0', 10);
+      const WEEK = 7 * 24 * 60 * 60 * 1000;
+      if (Date.now() - last < WEEK) return;
+      setTimeout(() => {
+        incrementViewCount(courseId);
+        localStorage.setItem(key, String(Date.now()));
+      }, 10000);
+    })();
 
     renderCourseHeader();
     renderCarousel();

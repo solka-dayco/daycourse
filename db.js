@@ -107,7 +107,7 @@ export async function fetchCourses({ //DB courses 데이터 불러오는 함수)
       .from('courses')
       .select(
         `id, name, description, region_main, region_sub, total_time,
-         like_count, comment_count, reference_count, thumbnail_url,
+         like_count, comment_count, reference_count, view_count, thumbnail_url,
          author_id, author_nickname, created_at,
          course_places(order_index, name, photo_url, lat, lng)`,
         { count: 'exact' }
@@ -135,6 +135,11 @@ export async function fetchCourses({ //DB courses 데이터 불러오는 함수)
         break;
       case 'time_desc':
         query = query.order('total_time', { ascending: false });
+        break;
+      case 'most_viewed':
+        query = query
+          .order('view_count', { ascending: false })
+          .order('created_at', { ascending: false });
         break;
       default:
         query = query.order('created_at', { ascending: false });
@@ -1237,7 +1242,7 @@ export async function fetchFollowingCourses(followingIds, { page = 0, pageSize =
     .from('courses')
     .select(
       `id, name, description, region_main, region_sub, total_time,
-       like_count, comment_count, reference_count, thumbnail_url,
+       like_count, comment_count, reference_count, view_count, thumbnail_url,
        author_id, author_nickname, created_at,
        course_places(order_index, name, photo_url, lat, lng)`,
       { count: 'exact' }
@@ -1268,7 +1273,7 @@ export async function fetchNonFollowingCourses(excludeIds, {
     .from('courses')
     .select(
       `id, name, description, region_main, region_sub, total_time,
-       like_count, comment_count, reference_count, thumbnail_url,
+       like_count, comment_count, reference_count, view_count, thumbnail_url,
        author_id, author_nickname, created_at,
        course_places(order_index, name, photo_url, lat, lng)`,
       { count: 'exact' }
@@ -1289,4 +1294,8 @@ export async function fetchNonFollowingCourses(excludeIds, {
   const { data, error, count } = await query;
   if (error) throw error;
   return { courses: data || [], total: count || 0 };
+}
+
+export async function incrementViewCount(courseId) {
+  await supabase.rpc('increment_view_count', { p_course_id: courseId });
 }
