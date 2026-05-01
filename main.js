@@ -23,7 +23,7 @@ logEvent('page_view', 'page', null, { page: 'feed' });
 
 // Google OAuth 신규 유저 감지 — created_at 기준 5분 이내면 /nickname으로 이동
 supabase.auth.onAuthStateChange((event, session) => {
-  if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+  if (event === 'SIGNED_IN' && session) {
     const provider = session.user.app_metadata?.provider;
     if (provider !== 'google') return;
     const createdAt = new Date(session.user.created_at);
