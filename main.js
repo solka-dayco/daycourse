@@ -21,14 +21,16 @@ initSidebarIcons();
 // 최초 페이지 진입 로그
 logEvent('page_view', 'page', null, { page: 'feed' });
 
-// Google OAuth 신규 유저 감지 — created_at 기준 5분 이내면 /nickname으로 이동
+// Google OAuth 신규 유저 감지 — 온보딩 미완료 시 /nickname으로 이동
 supabase.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_IN' && session) {
     const provider = session.user.app_metadata?.provider;
     if (provider !== 'google') return;
     const createdAt = new Date(session.user.created_at);
     const isNew = Date.now() - createdAt.getTime() < 5 * 60 * 1000;
-    if (isNew) location.href = '/nickname';
+    if (!isNew) return;
+    if (localStorage.getItem(`dc_onboard_${session.user.id}`)) return;
+    location.href = '/nickname';
   }
 });
 

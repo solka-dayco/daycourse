@@ -92,6 +92,7 @@ async function save(skipNickname = false) {
 
     await upsertUserProfile(payload);
     await logEvent('profile_setup_complete', 'user', null, { nickname });
+    localStorage.setItem(`dc_onboard_${userId}`, '1');
     location.href = '/';
   } catch (e) {
     showMsg('저장 실패: ' + e.message);
