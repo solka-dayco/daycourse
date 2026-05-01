@@ -335,6 +335,7 @@ function buildCourseHtml(courseId) {
   <script type="module" src="course.js"></script>
 </body>
 </html>`;
+}
 
 // ── 핸들러 ────────────────────────────────────────────────
 export default async function handler(req) {
