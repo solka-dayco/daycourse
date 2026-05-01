@@ -123,7 +123,11 @@ function buildOgHtml(course, courseId, imageUrl, places = []) {
 }
 
 // ── course.html 정적 콘텐츠 (무한루프 방지용 인라인) ────────
-const COURSE_HTML = `<!DOCTYPE html>
+function buildCourseHtml(courseId) {
+  const canonical = courseId
+    ? `https://daycourse.kr/course?id=${encodeURIComponent(courseId)}`
+    : `https://daycourse.kr/`;
+  return `<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8"/>
@@ -132,7 +136,7 @@ const COURSE_HTML = `<!DOCTYPE html>
   <title>데이코스 코스 상세</title>
   <meta name="description" content="데이코스에서 코스 정보를 확인해보세요." />
   <meta name="robots" content="index,follow" />
-  <link rel="canonical" href="https://daycourse.kr/course" />
+  <link rel="canonical" href="${canonical}" />
 
   <meta property="og:type" content="website" />
   <meta property="og:title" content="데이코스 코스 상세" />
@@ -340,12 +344,12 @@ export default async function handler(req) {
 
   // id 없으면 피드로 리다이렉트
   if (!courseId) {
-    return Response.redirect('https://daycourse.kr/', 302);
+    return Response.redirect('https://daycourse.kr/', 301);
   }
 
   // 일반 유저 → course.html 인라인 반환 (fetch 루프 없음)
   if (!isCrawler(userAgent)) {
-    return new Response(COURSE_HTML, {
+    return new Response(buildCourseHtml(courseId), {
       status: 200,
       headers: {
         'Content-Type':  'text/html; charset=utf-8',
@@ -362,7 +366,7 @@ export default async function handler(req) {
     ]);
 
     if (!course) {
-      return new Response(COURSE_HTML, {
+      return new Response(buildCourseHtml(courseId), {
         status: 200,
         headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
       });
@@ -380,7 +384,7 @@ export default async function handler(req) {
     });
   } catch (e) {
     console.error('[og.js] error:', e);
-    return new Response(COURSE_HTML, {
+    return new Response(buildCourseHtml(courseId), {
       status: 200,
       headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
     });
